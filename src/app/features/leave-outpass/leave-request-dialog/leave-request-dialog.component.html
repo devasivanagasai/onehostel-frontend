@@ -1,0 +1,147 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    title="New Leave / Outpass Request"
+    subtitle="Raise a request on a resident's behalf. It stays pending until it is approved."
+    icon="luggage"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <div class="lr">
+      <!-- Resident -->
+      <div class="fk-field">
+        <label class="fk-label" for="lr-resident">Resident<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="residentError">
+          <mat-icon class="fk-lead">search</mat-icon>
+          <input id="lr-resident" [formControl]="residentSearch" [matAutocomplete]="residentAuto" placeholder="Search by name, ID or room" autocomplete="off" />
+        </span>
+        <mat-autocomplete #residentAuto="matAutocomplete" [displayWith]="displayResident" (optionSelected)="onResidentSelected($event)">
+          @for (r of filteredResidents; track r.id) {
+            <mat-option [value]="r">
+              <span class="lr-opt">
+                @if (r.photoUrl) { <img class="lr-avatar" [src]="r.photoUrl" alt="" /> }
+                @else { <span class="lr-avatar">{{ initials(r.name) }}</span> }
+                <span class="lr-opt__text"><strong>{{ r.name }}</strong><small>{{ r.id }} · {{ r.location }}</small></span>
+              </span>
+            </mat-option>
+          } @empty {
+            <mat-option disabled>No current residents match</mat-option>
+          }
+        </mat-autocomplete>
+        @if (residentError) { <span class="fk-error">{{ residentError }}</span> }
+        @else if (selected) { <span class="fk-hint">{{ selected.id }} · {{ selected.location }}</span> }
+      </div>
+
+      <!-- Type -->
+      <div class="fk-field">
+        <span class="fk-label">Request Type<span class="req">*</span></span>
+        <div class="lr-chips" role="radiogroup" aria-label="Request type">
+          @for (t of types; track t) {
+            <button type="button" role="radio" class="lr-opt-btn" [class.is-on]="type === t" [attr.aria-checked]="type === t" (click)="setType(t)">
+              <mat-icon fontSet="material-icons-outlined">{{ typeIcons[t] }}</mat-icon>
+              <span>{{ t }}</span>
+              @if (type === t) { <mat-icon class="lr-check">check_circle</mat-icon> }
+            </button>
+          }
+        </div>
+        <span class="fk-hint">{{ type === 'Outpass' ? 'Short trip out, up to ' + policy.outpassMaxHours + ' hours.' : 'Overnight or multi-day absence.' }}</span>
+      </div>
+
+      <!-- Reason -->
+      <div class="fk-field lr-wide">
+        <label class="fk-label" for="lr-reason">Reason<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="reasonError">
+          <textarea id="lr-reason" rows="2" formControlName="reason" [maxlength]="reasonMax" placeholder="Why is the resident going out?"></textarea>
+        </span>
+        @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+      </div>
+
+      <!-- Times -->
+      <div class="fk-field">
+        <label class="fk-label" for="lr-depart">Departure<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="departError">
+          <input id="lr-depart" type="datetime-local" formControlName="departAt" [min]="minDepart" />
+        </span>
+        @if (departError) { <span class="fk-error">{{ departError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="lr-return">Expected Return<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="returnError">
+          <input id="lr-return" type="datetime-local" formControlName="returnAt" [min]="form.controls.departAt.value || minDepart" />
+        </span>
+        @if (returnError) { <span class="fk-error">{{ returnError }}</span> }
+        @else if (duration) { <span class="fk-hint">Away for {{ duration }}</span> }
+      </div>
+
+      <!-- Destination -->
+      <div class="fk-field lr-wide">
+        <label class="fk-label" for="lr-dest">
+          Destination @if (destinationRequired) { <span class="req">*</span> } @else { <span class="opt">(Optional)</span> }
+        </label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="destinationError">
+          <mat-icon class="fk-lead" fontSet="material-icons-outlined">place</mat-icon>
+          <input id="lr-dest" formControlName="destination" maxlength="120" placeholder="City, address or place" />
+        </span>
+        @if (destinationError) { <span class="fk-error">{{ destinationError }}</span> }
+      </div>
+
+      <!-- Emergency contact: from the profile; "Other" needs a reason -->
+      <div class="fk-field lr-wide">
+        <span class="fk-label">Emergency Contact<span class="req">*</span></span>
+        @if (selected) {
+          <div class="lr-chips">
+            @for (c of selected.contacts; track c.source) {
+              <button type="button" class="lr-opt-btn lr-contact" [class.is-on]="form.controls.contact.value === c.source" (click)="setContact(c.source)">
+                <mat-icon fontSet="material-icons-outlined">{{ c.source === 'Guardian' ? 'family_restroom' : 'contact_emergency' }}</mat-icon>
+                <span><strong>{{ c.name }}</strong><small>{{ c.source === 'Guardian' ? 'Guardian' + (c.relationship ? ' · ' + c.relationship : '') : 'Emergency contact' }} · {{ c.mobile }}</small></span>
+                @if (form.controls.contact.value === c.source) { <mat-icon class="lr-check">check_circle</mat-icon> }
+              </button>
+            }
+            <button type="button" class="lr-opt-btn" [class.is-on]="form.controls.contact.value === 'Other'" (click)="setContact('Other')">
+              <mat-icon fontSet="material-icons-outlined">person_add</mat-icon><span>Other</span>
+              @if (form.controls.contact.value === 'Other') { <mat-icon class="lr-check">check_circle</mat-icon> }
+            </button>
+          </div>
+          @if (!selected.contacts.length) {
+            <span class="fk-hint lr-warn">No emergency contact or guardian on this resident's profile — add one in Residents, or enter another contact with a reason.</span>
+          }
+          @if (form.controls.contact.value === 'Other') {
+            <div class="lr-other">
+              <div class="fk-field">
+                <span class="fk-control" [class.is-invalid]="otherErrors.name"><input formControlName="otherName" placeholder="Contact name" aria-label="Contact name" maxlength="80" /></span>
+                @if (otherErrors.name) { <span class="fk-error">{{ otherErrors.name }}</span> }
+              </div>
+              <div class="fk-field">
+                <span class="fk-control fk-control--lead" [class.is-invalid]="otherErrors.mobile"><span class="fk-lead">+91</span><input formControlName="otherMobile" inputmode="numeric" maxlength="10" placeholder="Mobile number" aria-label="Contact mobile" /></span>
+                @if (otherErrors.mobile) { <span class="fk-error">{{ otherErrors.mobile }}</span> }
+              </div>
+              <div class="fk-field">
+                <span class="fk-control"><input formControlName="otherRelationship" placeholder="Relationship (optional)" aria-label="Relationship" maxlength="40" /></span>
+              </div>
+              <div class="fk-field">
+                <span class="fk-control" [class.is-invalid]="otherErrors.reason"><input formControlName="otherReason" placeholder="Why not the profile contact?" aria-label="Reason for another contact" maxlength="160" /></span>
+                @if (otherErrors.reason) { <span class="fk-error">{{ otherErrors.reason }}</span> }
+              </div>
+            </div>
+          }
+        } @else {
+          <span class="fk-hint">Pick a resident to use the contact on their profile.</span>
+        }
+      </div>
+    </div>
+
+    @if (selected) {
+      <p class="lr-note">
+        <mat-icon fontSet="material-icons-outlined">notifications</mat-icon>
+        <span>{{ selected.name }} is notified of the decision.
+          {{ guardianNote ? 'Guardian will not be notified: ' + guardianNote.toLowerCase() + '.' : 'Their guardian is notified too (consent on record).' }}</span>
+      </p>
+    }
+    @if (saveError) { <p class="lr-banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="send" [loading]="saving">Submit Request</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

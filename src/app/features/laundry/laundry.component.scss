@@ -1,0 +1,146 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.laundry-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+/* ---- Underline tabs (as in the bed modal) ---- */
+.ld-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: -6px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.ld-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); }
+  &:hover { color: #1e293b; }
+
+  &.is-active {
+    color: $teal;
+    border-bottom-color: $teal;
+  }
+}
+
+.ld-table-card {
+  padding-top: 8px;
+}
+
+.ld-table {
+  .nowrap { white-space: nowrap; }
+
+  .ld-wrap {
+    white-space: normal;
+    max-width: 200px;
+  }
+
+  .ld-hint {
+    display: block;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ld-billed {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: #16a34a;
+
+    mat-icon { @include icon(14px); }
+  }
+
+  .ld-to-bill { color: #ea580c; font-weight: 600; }
+  .ld-muted-icon { color: #64748b; }
+
+  // Machine / service icon in a tinted circle
+  .ld-dot {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon { @include icon(17px); }
+
+    &--teal { background: #e6f7f5; color: $teal; }
+    &--purple { background: #f1e8ff; color: #7c3aed; }
+  }
+
+  .ld-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  // Plain icon actions: blue; green for positive, amber for maintenance, red for destructive
+  .ld-act ::ng-deep button { color: #2563eb; }
+  .ld-act--ok ::ng-deep button { color: #16a34a; }
+  .ld-act--warn ::ng-deep button { color: #d97706; }
+  .ld-act--danger ::ng-deep button { color: #dc2626; }
+
+  .ld-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}
+
+.muted { color: #94a3b8; }
+
+.kpi-card__value small {
+  font-size: 15px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+// Each KPI number in its card's colour
+.ld-kpi--teal .kpi-card__value { color: $teal; }
+.ld-kpi--blue .kpi-card__value { color: #2563eb; }
+.ld-kpi--orange .kpi-card__value { color: #ea580c; }
+.ld-kpi--red .kpi-card__value { color: #dc2626; }
+.ld-kpi--indigo .kpi-card__value { color: #6d28d9; }

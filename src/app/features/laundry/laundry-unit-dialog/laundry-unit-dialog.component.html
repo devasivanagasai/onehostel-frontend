@@ -1,0 +1,121 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog
+    [title]="isEdit ? 'Edit ' + form.controls.name.value : 'Add Machine / Service'"
+    subtitle="Set where it is, when it can be booked, slot length, price and the per-resident limit."
+    icon="local_laundry_service"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <div class="lu">
+      <div class="fk-field">
+        <span class="fk-label">Service Type<span class="req">*</span></span>
+        <div class="lu__chips" role="radiogroup" aria-label="Service type">
+          @for (t of types; track t) {
+            <button type="button" role="radio" class="lu__opt" [class.is-on]="form.controls.type.value === t" [attr.aria-checked]="form.controls.type.value === t" (click)="setType(t)">
+              <mat-icon fontSet="material-icons-outlined">{{ t === 'Laundry Service' ? 'dry_cleaning' : 'local_laundry_service' }}</mat-icon>
+              <span>{{ t }}</span>
+              @if (form.controls.type.value === t) { <mat-icon class="lu__check">check_circle</mat-icon> }
+            </button>
+          }
+        </div>
+        <span class="fk-hint">{{ isService ? 'Staff collect the laundry; residents book a pickup slot.' : 'Residents book the machine for a cycle.' }}</span>
+      </div>
+
+      <div class="lu__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="lu-name">Name<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="err('name')">
+            <input id="lu-name" formControlName="name" maxlength="60" [placeholder]="isService ? 'e.g. Wash & Iron Service' : 'e.g. Washing Machine 3'" />
+          </span>
+          @if (err('name')) { <span class="fk-error">{{ err('name') }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="lu-loc">Location<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="err('location')">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">place</mat-icon>
+            <input id="lu-loc" formControlName="location" list="lu-locations" placeholder="Building · floor · room" />
+            <datalist id="lu-locations">
+              @for (l of locations; track l) { <option [value]="l"></option> }
+            </datalist>
+          </span>
+          @if (err('location')) { <span class="fk-error">{{ err('location') }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="lu-price">Price @if (isService) { <span class="req">*</span> } @else { <span class="opt">(0 = free)</span> }</label>
+          <div class="lu__pair">
+            <span class="fk-control fk-control--lead" [class.is-invalid]="err('price')">
+              <span class="fk-lead">₹</span>
+              <input id="lu-price" type="number" min="0" formControlName="price" />
+            </span>
+            <span class="fk-control">
+              <select formControlName="priceUnit" aria-label="Price unit">
+                @for (p of priceUnits; track p) { <option [value]="p">{{ p }}</option> }
+              </select>
+              <mat-icon class="fk-caret">expand_more</mat-icon>
+            </span>
+          </div>
+          @if (err('price')) { <span class="fk-error">{{ err('price') }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="lu-slot">{{ isService ? 'Pickup Slot' : 'Slot Duration' }}<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="err('slotMinutes')">
+            <input id="lu-slot" type="number" min="5" step="5" formControlName="slotMinutes" />
+            <span class="lu__unit">minutes</span>
+          </span>
+          @if (err('slotMinutes')) { <span class="fk-error">{{ err('slotMinutes') }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <span class="fk-label">Operating Hours<span class="req">*</span></span>
+          <div class="lu__pair">
+            <span class="fk-control" [class.is-invalid]="err('hours')"><input type="time" formControlName="openTime" aria-label="Opens at" /></span>
+            <span class="fk-control" [class.is-invalid]="err('hours')"><input type="time" formControlName="closeTime" aria-label="Closes at" /></span>
+          </div>
+          @if (err('hours')) { <span class="fk-error">{{ err('hours') }}</span> }
+          @else { <span class="fk-hint">{{ slotsPerDay }} slot{{ slotsPerDay === 1 ? '' : 's' }} a day</span> }
+        </div>
+
+        <div class="fk-field">
+          <span class="fk-label">Booking Limit<span class="req">*</span></span>
+          <div class="lu__pair">
+            <span class="fk-control" [class.is-invalid]="err('limitCount')">
+              <input type="number" min="1" formControlName="limitCount" aria-label="Bookings per resident" />
+              <span class="lu__unit">per resident</span>
+            </span>
+            <span class="fk-control">
+              <select formControlName="limitPeriod" aria-label="Limit period">
+                <option value="day">per day</option>
+                <option value="week">per week</option>
+              </select>
+              <mat-icon class="fk-caret">expand_more</mat-icon>
+            </span>
+          </div>
+          @if (err('limitCount')) { <span class="fk-error">{{ err('limitCount') }}</span> }
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label">Operating Days<span class="req">*</span></span>
+        <div class="lu__chips">
+          @for (d of weekDays; track d.value) {
+            <button type="button" class="lu__day" [class.is-on]="days.includes(d.value)" [attr.aria-pressed]="days.includes(d.value)" (click)="toggleDay(d.value)">{{ d.label }}</button>
+          }
+        </div>
+        @if (err('days')) { <span class="fk-error">{{ err('days') }}</span> }
+      </div>
+
+      @if (isEdit && existing?.state !== 'Active') {
+        <p class="lu__note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>This is {{ existing?.state === 'Maintenance' ? 'under maintenance' : 'inactive' }} — use “Back in service” in the list to open its slots again.</p>
+      }
+      @if (saveError) { <p class="lu__banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [iconOutlined]="true">{{ isEdit ? 'Save Changes' : 'Add' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

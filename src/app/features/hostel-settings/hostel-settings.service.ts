@@ -44,9 +44,10 @@ const RULE_LABELS: Record<string, string> = {
   visitorIdRequired: 'Visitor ID Required',
 };
 
-/** Modules on the Standard plan (ids from Subscription Plans → features). */
+/** Modules enabled for this hostel (ids from Subscription Plans → features), including the Phase 2 daily-operations modules. */
 const STANDARD_MODULES = new Set([
   'residentManagement', 'roomManagement', 'payments', 'complaints', 'visitors', 'announcements', 'attendance', 'reports',
+  'laundry', 'washingMachine', 'mess', 'leaveOutpass',
 ]);
 
 /** The hostel's subscription, assigned by SuperAdmin (Standard plan in Subscription Plans). */

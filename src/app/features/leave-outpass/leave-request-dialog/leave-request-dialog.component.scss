@@ -1,0 +1,127 @@
+// New request. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.lr {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 4px;
+
+  @media (max-width: 620px) { grid-template-columns: 1fr; }
+}
+
+.lr-wide { grid-column: 1 / -1; }
+
+.lr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+// Chip-style options with a check, as in the announcement compose dialog
+.lr-opt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  > mat-icon:first-child { @include icon(18px); color: #64748b; }
+
+  &:hover { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+
+    > mat-icon:first-child { color: $teal; }
+  }
+}
+
+.lr-contact {
+  padding: 6px 14px;
+  text-align: left;
+
+  span { display: flex; flex-direction: column; line-height: 1.3; }
+  small { font-size: 12px; color: #64748b; font-weight: 400; }
+}
+
+.lr-check { @include icon(20px); margin-right: -4px; color: $teal; }
+
+.lr-other {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafb;
+}
+
+.lr-warn { color: #b45309; }
+
+.lr-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.lr-opt__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+
+  small { font-size: 12px; color: #64748b; }
+}
+
+.lr-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  background: #ccfbf1;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lr-note,
+.lr-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; }
+}
+
+.lr-note { background: #eff6ff; color: #1d4ed8; }
+.lr-banner { background: #fef2f2; color: #b91c1c; }

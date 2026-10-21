@@ -1,0 +1,112 @@
+<app-dialog
+  [title]="mode === 'collect' ? 'Mark Collected' : 'Return to Sender'"
+  [subtitle]="mode === 'collect' ? 'Record who picked the parcel up.' : 'Record why the parcel is going back and who took it.'"
+  [icon]="mode === 'collect' ? 'task_alt' : 'assignment_return'"
+  [tone]="mode === 'collect' ? 'green' : 'red'"
+  (closed)="close()"
+>
+  <div class="ph">
+    <div class="ph__summary">
+      <span class="ph__icon"><mat-icon fontSet="material-icons-outlined">local_shipping</mat-icon></span>
+      <div>
+        <strong>{{ p.courier }}{{ p.tracking ? ' · ' + p.tracking : '' }}</strong>
+        <small>{{ p.id }} · {{ p.storage || 'No storage location' }} · received {{ fmt.date(p.receivedAt, 'datetime') }} ({{ age === 0 ? 'today' : age + 'd ago' }})</small>
+      </div>
+      <div class="ph__for">
+        <small>For</small>
+        <strong>{{ residentName }}</strong>
+        <small>{{ location }}</small>
+      </div>
+    </div>
+
+    @if (mode === 'collect') {
+      <div class="fk-field">
+        <span class="fk-label">Collected By<span class="req">*</span></span>
+        <div class="ph__opts" role="radiogroup" aria-label="Collected by">
+          <button type="button" role="radio" class="ph__opt" [class.is-on]="self" [attr.aria-checked]="self" (click)="self = true">
+            <mat-icon fontSet="material-icons-outlined">person</mat-icon><span>{{ residentName }} (resident)</span>
+            @if (self) { <mat-icon class="ph__check">check_circle</mat-icon> }
+          </button>
+          <button type="button" role="radio" class="ph__opt" [class.is-on]="!self" [attr.aria-checked]="!self" (click)="self = false">
+            <mat-icon fontSet="material-icons-outlined">group</mat-icon><span>Another authorized person</span>
+            @if (!self) { <mat-icon class="ph__check">check_circle</mat-icon> }
+          </button>
+        </div>
+      </div>
+
+      @if (!self) {
+        <div class="ph__grid">
+          <div class="fk-field">
+            <label class="fk-label" for="ph-name">Collector Name<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="nameError">
+              <input id="ph-name" [(ngModel)]="name" maxlength="80" placeholder="Full name" autocomplete="off" />
+            </span>
+            @if (nameError) { <span class="fk-error">{{ nameError }}</span> }
+          </div>
+          <div class="fk-field">
+            <label class="fk-label" for="ph-relation">Relation to Resident<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="relationError">
+              <select id="ph-relation" [(ngModel)]="relation" [class.is-placeholder]="!relation">
+                <option value="" disabled>Select relation</option>
+                @for (r of relations; track r) { <option [value]="r">{{ r }}</option> }
+              </select>
+              <mat-icon class="fk-caret">expand_more</mat-icon>
+            </span>
+            @if (relationError) { <span class="fk-error">{{ relationError }}</span> }
+          </div>
+          <div class="fk-field ph__wide">
+            <label class="fk-label" for="ph-id">ID / Reference <span class="opt">(Optional)</span></label>
+            <span class="fk-control">
+              <input id="ph-id" [(ngModel)]="idReference" maxlength="40" placeholder="Resident ID, ID card number or phone" autocomplete="off" />
+            </span>
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="fk-field">
+        <label class="fk-label" for="ph-to">Handed To<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="returnedToError">
+          <input id="ph-to" [(ngModel)]="returnedTo" maxlength="80" placeholder="e.g. Delhivery delivery associate (name)" autocomplete="off" />
+        </span>
+        @if (returnedToError) { <span class="fk-error">{{ returnedToError }}</span> }
+      </div>
+    }
+
+    @if (mode === 'return' || !self) {
+      <div class="fk-field">
+        <label class="fk-label" for="ph-reason">Reason<span class="req">*</span></label>
+        @if (mode === 'return') {
+          <div class="ph__chips">
+            @for (r of returnReasons; track r) {
+              <button type="button" class="ph__chip" (click)="pickReason(r)">{{ r }}</button>
+            }
+          </div>
+        }
+        <span class="fk-control" [class.is-invalid]="reasonError">
+          <textarea id="ph-reason" rows="3" [(ngModel)]="reason" maxlength="200"
+            [placeholder]="mode === 'return' ? 'Why is the parcel being returned?' : 'Why is someone else collecting? e.g. resident asked on call'"></textarea>
+        </span>
+        @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+      </div>
+    }
+
+    @if (mode === 'collect') {
+      <label class="ph__confirm" [class.is-invalid]="confirmError">
+        <input type="checkbox" [(ngModel)]="confirmed" />
+        I handed over the parcel and checked the collector's identity{{ self ? '' : ' and the resident’s authorisation' }}.
+      </label>
+      @if (confirmError) { <span class="fk-error">{{ confirmError }}</span> }
+    }
+
+    @if (error) { <p class="ph__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+  </div>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+    @if (mode === 'collect') {
+      <app-button variant="accent" icon="task_alt" (clicked)="submit()">Confirm Pickup</app-button>
+    } @else {
+      <app-button variant="danger" icon="assignment_return" (clicked)="submit()">Return Parcel</app-button>
+    }
+  </ng-container>
+</app-dialog>

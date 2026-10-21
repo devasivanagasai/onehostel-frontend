@@ -1,0 +1,355 @@
+<div class="onboarding-page laundry-page">
+  <!-- KPI Summary -->
+  @if (stats$ | async; as s) {
+    <section class="kpi-row" aria-label="Laundry summary">
+      <div class="kpi-card ld-kpi--teal">
+        <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">local_laundry_service</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Available Now</span>
+          <span class="kpi-card__value">{{ s.available }}<small> / {{ s.bookable }}</small></span>
+          <span class="kpi-card__sub">Machines &amp; services free</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ld-kpi--blue">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">event_available</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Today's Bookings</span>
+          <span class="kpi-card__value">{{ s.today }}</span>
+          <span class="kpi-card__sub">Not cancelled</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ld-kpi--orange">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">pending_actions</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Requests</span>
+          <span class="kpi-card__value">{{ s.requested }}</span>
+          <span class="kpi-card__sub">Waiting for confirmation</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ld-kpi--red">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">build</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Under Maintenance</span>
+          <span class="kpi-card__value">{{ s.maintenance }}</span>
+          <span class="kpi-card__sub">Future slots blocked</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ld-kpi--indigo">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">receipt_long</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Billed This Month</span>
+          <span class="kpi-card__value">{{ fmt.money(s.billedThisMonth, 0) }}</span>
+          <span class="kpi-card__sub">{{ s.toBill ? s.toBill + ' completed, not billed' : 'All completed bookings billed' }}</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <nav class="ld-tabs" role="tablist">
+    <button type="button" role="tab" class="ld-tab" [class.is-active]="tab === 'bookings'" [attr.aria-selected]="tab === 'bookings'" (click)="setTab('bookings')">
+      <mat-icon fontSet="material-icons-outlined">event_note</mat-icon>Bookings
+    </button>
+    <button type="button" role="tab" class="ld-tab" [class.is-active]="tab === 'units'" [attr.aria-selected]="tab === 'units'" (click)="setTab('units')">
+      <mat-icon fontSet="material-icons-outlined">local_laundry_service</mat-icon>Services &amp; Machines
+    </button>
+  </nav>
+
+  <!-- Filter card -->
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" [placeholder]="tab === 'bookings' ? 'Search booking, resident or machine' : 'Search name, ID or location'" aria-label="Search"
+        [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+
+    @if (tab === 'bookings') {
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+            <option value="All">All Status</option>
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Machine or service" [(ngModel)]="filters.unit" (ngModelChange)="currentPage = 0">
+            <option value="All">All Machines</option>
+            @for (u of service.units; track u.id) { <option [value]="u.id">{{ u.name }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="When" [(ngModel)]="filters.when" (ngModelChange)="currentPage = 0">
+            <option value="All">All Dates</option>
+            <option value="Today">Today</option>
+            <option value="Upcoming">Today &amp; upcoming</option>
+            <option value="Past">Past</option>
+            <option value="ToBill">Completed, not billed</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+    } @else {
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Type" [(ngModel)]="filters.type">
+            <option value="All">All Types</option>
+            @for (t of types; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Availability" [(ngModel)]="filters.status">
+            <option value="All">All Availability</option>
+            @for (a of availabilities; track a) { <option [value]="a">{{ a }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+    }
+
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    @if (tab === 'bookings') {
+      <app-button class="filter-card__add" icon="add" (clicked)="openBooking()">New Booking</app-button>
+    } @else {
+      <app-button class="filter-card__add" icon="add" (clicked)="openUnit()">Add Machine / Service</app-button>
+    }
+  </div>
+
+  @if (tab === 'bookings') {
+    <app-table-card
+      class="ld-table-card"
+      [empty]="filteredBookings.length === 0"
+      [emptyIcon]="hasFilters ? 'search_off' : 'local_laundry_service'"
+      [emptyMessage]="hasFilters ? 'No bookings match your filters' : 'No bookings yet'"
+      [emptyHint]="hasFilters ? 'Try a different search, status, machine or date.' : 'Book a slot for a resident to get started.'"
+      [clearable]="hasFilters"
+      (clear)="clearFilters()"
+      [page]="safePage"
+      [totalPages]="totalPages"
+      [pageSize]="pageSize"
+      (pageChange)="currentPage = $event"
+      (pageSizeChange)="onPageSizeChange($event)"
+    >
+      <table mat-table [dataSource]="pagedBookings" class="saas-table ld-table">
+        <ng-container matColumnDef="booking">
+          <th mat-header-cell *matHeaderCellDef> Booking </th>
+          <td mat-cell *matCellDef="let b">
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ b.id }}</span>
+              <span class="list-entity__sub">by {{ b.createdBy }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="resident">
+          <th mat-header-cell *matHeaderCellDef> Resident </th>
+          <td mat-cell *matCellDef="let b">
+            <span class="with-icon">
+              <span class="ld-avatar">{{ initials(b.residentName) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ b.residentName }}</span>
+                <span class="list-entity__sub">{{ service.roomOf(b.residentId) }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="unit">
+          <th mat-header-cell *matHeaderCellDef> Machine / Service </th>
+          <td mat-cell *matCellDef="let b">
+            <span class="with-icon">
+              <span class="ld-dot ld-dot--{{ unitTone(service.unit(b.unitId)) }}"><mat-icon fontSet="material-icons-outlined">{{ unitIcon(service.unit(b.unitId)) }}</mat-icon></span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ unitName(b.unitId) }}</span>
+                <span class="list-entity__sub">{{ service.unit(b.unitId)?.type }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="slot">
+          <th mat-header-cell *matHeaderCellDef> Slot </th>
+          <td mat-cell *matCellDef="let b" class="nowrap">
+            <span class="with-icon">
+              <mat-icon class="ld-muted-icon" fontSet="material-icons-outlined">calendar_month</mat-icon>
+              <span class="list-entity__text">
+                <span>{{ fmt.date(b.date, 'dayDate') }}</span>
+                <span class="list-entity__sub">{{ clock(b.start) }} – {{ clock(b.end) }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <td mat-cell *matCellDef="let b">
+            <span class="list-entity__text">
+              <span><span class="status-badge status-badge--{{ bookingTone(b) }}">{{ b.status }}</span></span>
+              @if (statusHint(b); as hint) { <span class="list-entity__sub ld-hint" [title]="hint">{{ hint }}</span> }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="charge">
+          <th mat-header-cell *matHeaderCellDef> Charge </th>
+          <td mat-cell *matCellDef="let b" class="nowrap">
+            @if (b.amount > 0) {
+              <span class="list-entity__text">
+                <span>{{ fmt.money(b.amount, 0) }}</span>
+                @if (b.chargeId) {
+                  <span class="list-entity__sub ld-billed"><mat-icon>check</mat-icon>Billed · {{ b.chargeId }}</span>
+                } @else if (service.needsBilling(b)) {
+                  <span class="list-entity__sub ld-to-bill">Not billed yet</span>
+                } @else {
+                  <span class="list-entity__sub">{{ b.items ? b.items + ' items' : b.status === 'Completed' ? '' : 'Billed on completion' }}</span>
+                }
+              </span>
+            } @else {
+              <span class="muted">No charge</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let b" class="actions-cell">
+            <span class="ld-actions">
+              @switch (b.status) {
+                @case ('Requested') {
+                  <app-button class="ld-act ld-act--ok" variant="icon" size="sm" icon="check_circle" matTooltip="Confirm" [ariaLabel]="'Confirm ' + b.id" (clicked)="confirmBooking(b)"></app-button>
+                  <app-button class="ld-act ld-act--danger" variant="icon" size="sm" icon="event_busy" matTooltip="Cancel booking" [ariaLabel]="'Cancel ' + b.id" (clicked)="cancelBooking(b)"></app-button>
+                }
+                @case ('Confirmed') {
+                  @if (service.started(b)) {
+                    <app-button class="ld-act ld-act--ok" variant="icon" size="sm" icon="task_alt" matTooltip="Mark complete" [ariaLabel]="'Complete ' + b.id" (clicked)="complete(b)"></app-button>
+                    <app-button class="ld-act" variant="icon" size="sm" icon="person_off" matTooltip="Mark no-show" [ariaLabel]="'No-show ' + b.id" (clicked)="noShow(b)"></app-button>
+                  }
+                  <app-button class="ld-act ld-act--danger" variant="icon" size="sm" icon="event_busy" matTooltip="Cancel booking" [ariaLabel]="'Cancel ' + b.id" (clicked)="cancelBooking(b)"></app-button>
+                }
+                @case ('Completed') {
+                  @if (service.needsBilling(b)) {
+                    <app-button class="ld-act" variant="icon" size="sm" icon="receipt_long" matTooltip="Post charge to resident bill" [ariaLabel]="'Bill ' + b.id" (clicked)="postCharge(b)"></app-button>
+                  } @else { <span class="muted">—</span> }
+                }
+                @default { <span class="muted">—</span> }
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="bookingColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: bookingColumns" class="table-row" [class.is-muted]="row.status === 'Cancelled' || row.status === 'No-show'"></tr>
+      </table>
+    </app-table-card>
+  } @else {
+    <app-table-card
+      class="ld-table-card"
+      [paginate]="false"
+      [empty]="filteredUnits.length === 0"
+      [emptyIcon]="hasFilters ? 'search_off' : 'local_laundry_service'"
+      [emptyMessage]="hasFilters ? 'Nothing matches your filters' : 'No machines or services yet'"
+      [emptyHint]="hasFilters ? 'Try a different search, type or availability.' : 'Add a washing machine or a laundry service.'"
+      [clearable]="hasFilters"
+      (clear)="clearFilters()"
+    >
+      <table mat-table [dataSource]="filteredUnits" class="saas-table ld-table">
+        <ng-container matColumnDef="unit">
+          <th mat-header-cell *matHeaderCellDef> Machine / Service </th>
+          <td mat-cell *matCellDef="let u">
+            <span class="with-icon">
+              <span class="ld-dot ld-dot--{{ unitTone(u) }}"><mat-icon fontSet="material-icons-outlined">{{ unitIcon(u) }}</mat-icon></span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ u.name }}</span>
+                <span class="list-entity__sub">{{ u.id }} · {{ u.type }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="location">
+          <th mat-header-cell *matHeaderCellDef> Location </th>
+          <td mat-cell *matCellDef="let u">
+            <span class="with-icon"><mat-icon class="ld-muted-icon" fontSet="material-icons-outlined">place</mat-icon><span class="ld-wrap">{{ u.location }}</span></span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="hours">
+          <th mat-header-cell *matHeaderCellDef> Operating Hours </th>
+          <td mat-cell *matCellDef="let u" class="nowrap">
+            <span class="list-entity__text">
+              <span>{{ clock(u.openTime) }} – {{ clock(u.closeTime) }}</span>
+              <span class="list-entity__sub">{{ daysLabel(u.days) }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="pricing">
+          <th mat-header-cell *matHeaderCellDef> Price &amp; Slot </th>
+          <td mat-cell *matCellDef="let u" class="nowrap">
+            <span class="list-entity__text">
+              <span>{{ u.price > 0 ? fmt.money(u.price, 0) + ' ' + u.priceUnit : 'Free' }}</span>
+              <span class="list-entity__sub">{{ u.slotMinutes }} min {{ u.type === 'Laundry Service' ? 'pickup slot' : 'slot' }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="limit">
+          <th mat-header-cell *matHeaderCellDef> Booking Limit </th>
+          <td mat-cell *matCellDef="let u" class="nowrap">{{ u.limitCount }} per resident / {{ u.limitPeriod }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="availability">
+          <th mat-header-cell *matHeaderCellDef> Availability </th>
+          <td mat-cell *matCellDef="let u">
+            <span class="list-entity__text">
+              <span><span class="status-badge status-badge--{{ availabilityTone(u) }}">{{ service.availability(u) }}</span></span>
+              @if (u.state === 'Maintenance') {
+                <span class="list-entity__sub ld-hint" [title]="u.maintenanceNote ?? ''">{{ u.maintenanceNote || 'No note' }}@if (noticesFor(u)) { · {{ noticesFor(u) }} notified }</span>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let u" class="actions-cell">
+            <span class="ld-actions">
+              @if (u.state === 'Active') {
+                <app-button class="ld-act ld-act--ok" variant="icon" size="sm" icon="event_available" matTooltip="Book a slot" [ariaLabel]="'Book ' + u.name" (clicked)="openBooking(u)"></app-button>
+              }
+              <app-button class="ld-act" variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + u.name" (clicked)="openUnit(u)"></app-button>
+              @if (u.state === 'Active') {
+                <app-button class="ld-act ld-act--warn" variant="icon" size="sm" icon="build" matTooltip="Mark maintenance" [ariaLabel]="'Maintenance ' + u.name" (clicked)="changeState(u, 'Maintenance')"></app-button>
+              } @else {
+                <app-button class="ld-act ld-act--ok" variant="icon" size="sm" icon="play_circle" [matTooltip]="u.state === 'Maintenance' ? 'Back in service' : 'Activate'" [ariaLabel]="'Activate ' + u.name" (clicked)="changeState(u, 'Active')"></app-button>
+              }
+              @if (u.state !== 'Inactive') {
+                <app-button class="ld-act ld-act--danger" variant="icon" size="sm" icon="block" matTooltip="Deactivate" [ariaLabel]="'Deactivate ' + u.name" (clicked)="changeState(u, 'Inactive')"></app-button>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="unitColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: unitColumns" class="table-row" [class.is-muted]="row.state === 'Inactive'"></tr>
+      </table>
+    </app-table-card>
+  }
+</div>

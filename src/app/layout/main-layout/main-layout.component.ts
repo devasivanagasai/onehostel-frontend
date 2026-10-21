@@ -67,6 +67,24 @@ export class MainLayoutComponent {
         this.pageSubtitle = 'Update this hostel and its owner details across all 7 steps.';
       } else if (url.includes('dashboard')) {
         this.pageTitle = 'Dashboard';
+      } else if (url.startsWith('/laundry')) {
+        this.pageTitle = 'Laundry & Washing Machines';
+        this.pageSubtitle = 'Configure services and machines, manage slots, bookings and charges';
+      } else if (url.startsWith('/visitors')) {
+        this.pageTitle = 'Visitor Management';
+        this.pageSubtitle = 'Register visitors, approve requests and record entry and exit';
+      } else if (url.startsWith('/mess')) {
+        this.pageTitle = 'Mess & Food Management';
+        this.pageSubtitle = 'Plan and publish menus, track meal attendance and dietary notes';
+      } else if (url.startsWith('/leave-outpass')) {
+        this.pageTitle = 'Leave & Outpass';
+        this.pageSubtitle = 'Review leave and outpass requests and record resident movement';
+      } else if (url.startsWith('/attendance')) {
+        this.pageTitle = 'Attendance & Check-in';
+        this.pageSubtitle = 'Daily attendance, check-ins, check-outs and corrections';
+      } else if (url.startsWith('/parcels')) {
+        this.pageTitle = 'Parcel Management';
+        this.pageSubtitle = 'Log parcels, notify residents and record pickups';
       } else if (url.startsWith('/announcements')) {
         this.pageTitle = 'Announcements & Communication';
         this.pageSubtitle = 'Compose, schedule and publish notices to your residents';

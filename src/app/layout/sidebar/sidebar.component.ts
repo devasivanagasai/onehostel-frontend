@@ -45,7 +45,7 @@ export class SidebarComponent {
       this.cachedSections = ALL_SECTIONS.map((section) => ({
         ...section,
         items: section.items.filter((item) => this.auth.canAccess(item.route)),
-      }));
+      })).filter((section) => section.items.length > 0); // drop sections the role sees nothing in
     }
     return this.cachedSections;
   }
@@ -62,6 +62,12 @@ const ALL_SECTIONS: NavSection[] = [
       { label: 'Residents', icon: 'groups', route: '/residents' },
       { label: 'Fees & Payments', icon: 'payments', route: '/fees' },
       { label: 'Complaints', icon: 'build_circle', route: '/complaints' },
+      { label: 'Laundry & Machines', icon: 'local_laundry_service', route: '/laundry' },
+      { label: 'Visitors', icon: 'badge', route: '/visitors' },
+      { label: 'Mess & Food', icon: 'restaurant_menu', route: '/mess' },
+      { label: 'Leave & Outpass', icon: 'exit_to_app', route: '/leave-outpass' },
+      { label: 'Attendance', icon: 'fact_check', route: '/attendance' },
+      { label: 'Parcels', icon: 'inventory_2', route: '/parcels' },
       { label: 'Announcements', icon: 'campaign', route: '/announcements' },
       { label: 'Reports', icon: 'bar_chart', route: '/hostel-reports' },
       { label: 'Hostel Settings', icon: 'settings', route: '/hostel-settings' },

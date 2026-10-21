@@ -1,0 +1,161 @@
+// Parcel details, notification log and history. Frame comes from <app-dialog>.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.pv__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}
+
+.pv__label { display: block; font-size: 12.5px; color: #64748b; }
+.pv__muted { color: #94a3b8 !important; font-weight: 500 !important; }
+
+.pv__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.pv__tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 14px; color: #0f172a; overflow-wrap: anywhere; }
+  small { font-size: 12.5px; color: #64748b; }
+
+  &--wide { grid-column: 1 / -1; }
+}
+
+.pv__reason { color: #334155 !important; font-style: italic; }
+
+.pv__icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: #0d9488;
+
+  mat-icon { @include icon(19px); }
+
+  &--blue { background: #e0ecff; color: #2563eb; }
+  &--orange { background: #fff1e6; color: #ea580c; }
+  &--green { background: #dcfce7; color: #16a34a; }
+  &--slate { background: #f1f5f9; color: #475569; }
+}
+
+.pv__card {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #ffffff;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.pv__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+
+  > strong { font-size: 14.5px; color: #0f172a; }
+  > small { margin-left: auto; font-size: 12.5px; color: #64748b; }
+}
+
+.pv__title { font-size: 14.5px; color: #0f172a; }
+
+.pv__notices {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child { border-bottom: none; }
+    > mat-icon { @include icon(18px); color: #64748b; }
+    > div { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+    strong { font-size: 13px; color: #1e293b; }
+    small { font-size: 12px; color: #64748b; }
+  }
+}
+
+.pv__empty { margin: 8px 0 0; font-size: 13px; color: #94a3b8; }
+
+.pv__timeline {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    padding-bottom: 14px;
+
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      top: 30px;
+      bottom: 0;
+      left: 14px;
+      width: 2px;
+      background: #e2e8f0;
+    }
+
+    &:last-child { padding-bottom: 0; }
+  }
+
+  strong { display: block; font-size: 13.5px; color: #0f172a; }
+  small { font-size: 12px; color: #64748b; }
+  p { margin: 4px 0 0; font-size: 13px; color: #334155; }
+}
+
+.pv__dot {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: #0d9488;
+
+  mat-icon { @include icon(16px); }
+}
