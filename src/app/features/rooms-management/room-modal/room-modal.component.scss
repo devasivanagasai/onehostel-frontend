@@ -1,127 +1,145 @@
-.room-modal-container {
-  min-width: 580px;
-  max-width: 700px;
-  padding: 16px 20px;
-}
+// Create / Edit Room. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
 
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+@include form-fields;
+
+$teal: #0d9488;
+
+/* ---- Numbered section panels ---- */
+.rm-section {
   margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--color-border, #e2e8f0);
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: #f8fafb;
 
-  .header-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    .header-icon {
-      color: #0057e7;
-      font-size: 26px;
-      width: 26px;
-      height: 26px;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #0f172a;
-    }
+  &:last-child {
+    margin-bottom: 0;
   }
 }
 
-.modal-content {
-  padding: 4px 0 12px;
-  max-height: 72vh;
-  overflow-y: auto;
-}
-
-.section-title {
+.rm-section__title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8125rem;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 13.5px;
   font-weight: 700;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #475569;
-  margin: 16px 0 10px;
-  padding-bottom: 4px;
-  border-bottom: 1px dashed #e2e8f0;
+  color: #0f766e;
+}
+
+.rm-section__icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: $teal;
 
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
-    color: #0057e7;
   }
 }
 
-.form-grid {
+.rm-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 16px;
 
-  mat-form-field {
-    width: 100%;
+  &--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    &,
+    &--2 {
+      grid-template-columns: 1fr;
+    }
   }
 }
 
-.full-field {
-  width: 100%;
-  margin-top: 6px;
+.rm-full {
+  grid-column: 1 / -1;
 }
 
-.facilities-grid {
+/* ---- Facilities checklist ---- */
+.rm-facilities {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 16px;
 
-  .facility-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: #334155;
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    .facility-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #94a3b8;
-    }
-
-    &:hover {
-      background: #f1f5f9;
-      border-color: #cbd5e1;
-    }
-
-    &.facility-chip--selected {
-      background: #eff6ff;
-      border-color: #93c5fd;
-      color: #1d4ed8;
-
-      .facility-icon {
-        color: #2563eb;
-      }
-    }
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.modal-actions {
-  padding-top: 14px;
-  margin-top: 8px;
-  border-top: 1px solid #e2e8f0;
+.rm-facility {
+  position: relative;
+  display: flex;
+  align-items: center;
   gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: #334155;
+  cursor: pointer;
+
+  // Native checkbox kept for keyboard / screen readers, drawn by .rm-facility__box
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+
+  &:focus-within .rm-facility__box {
+    box-shadow: 0 0 0 3px rgba($teal, 0.2);
+  }
+}
+
+.rm-facility__box {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #ffffff;
+    opacity: 0;
+  }
+
+  .is-selected & {
+    border-color: $teal;
+    background: $teal;
+
+    mat-icon {
+      opacity: 1;
+    }
+  }
+}
+
+.rm-facility__icon {
+  flex-shrink: 0;
+  font-size: 19px;
+  width: 19px;
+  height: 19px;
+  color: #475569;
 }

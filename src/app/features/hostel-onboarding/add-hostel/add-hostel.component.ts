@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { CustomValidators } from '../../../shared/validators/custom-validators';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { MOCK_HOSTEL_RECORDS } from './mock-hostel-records';
 import { StepHostelInfoComponent } from './steps/step-hostel-info/step-hostel-info.component';
 import { StepAddressComponent } from './steps/step-address/step-address.component';
@@ -17,7 +18,6 @@ import { StepSubscriptionComponent } from './steps/step-subscription/step-subscr
 import { StepConfirmationComponent } from './steps/step-confirmation/step-confirmation.component';
 import { AuditLogService } from '../../../core/services/audit-log.service';
 import { diffForAudit } from '../../../core/models/audit.models';
-import { LoginMethod } from '../../../core/models/auth.models';
 import { HostelAdminAccountService } from '../../../core/services/hostel-admin-account.service';
 import { SystemSettingsService } from '../../../core/services/system-settings.service';
 
@@ -59,6 +59,7 @@ const HOSTEL_AUDIT_FIELDS: Record<string, string> = {
     ReactiveFormsModule,
     MatStepperModule,
     MatIconModule,
+    AppButtonComponent,
     StepHostelInfoComponent,
     StepAddressComponent,
     StepCapacityComponent,
@@ -225,7 +226,6 @@ export class AddHostelComponent implements OnInit {
       mobileNumber: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
       email: ['', [Validators.required, Validators.email]],
       username: ['', Validators.required],
-      loginMethod: ['Password' as LoginMethod, Validators.required],
       tempPassword: [this.generatePassword(), Validators.required],
       sendEmail: [true],
       sendSms: [true],
@@ -283,7 +283,7 @@ export class AddHostelComponent implements OnInit {
       details: `${v.hostelInfo.hostelType} in ${v.address.city} · ${v.capacity.totalBeds} beds · ${v.subscription.plan} plan`,
     });
     this.auditLog.record('Create Admin', v.admin.username ?? '', {
-      details: `Hostel owner for ${hostelName}. Logs in with ${v.admin.loginMethod === 'OTP' ? 'OTP' : 'password'}. Credentials sent by ${[
+      details: `Hostel owner for ${hostelName}. Credentials sent by ${[
         v.admin.sendEmail ? 'email' : '',
         v.admin.sendSms ? 'SMS' : '',
       ]
@@ -355,19 +355,17 @@ export class AddHostelComponent implements OnInit {
     }, 900);
   }
 
-  /** Registers the admin's login so they can sign in with the chosen Login Method. */
+  /** Registers the admin's login so they can sign in with their temporary password. */
   private saveAdminAccount(): void {
     const { hostelInfo, admin } = this.form.getRawValue();
-    const loginMethod = admin.loginMethod ?? 'Password';
     this.hostelAdmins.save({
       hostelId: this.createdHostelId,
       hostelName: hostelInfo.hostelName ?? '',
       name: [admin.firstName, admin.lastName].filter(Boolean).join(' '),
-      loginMethod,
       email: admin.email ?? '',
       mobileNumber: admin.mobileNumber ?? '',
       username: admin.username ?? '',
-      password: loginMethod === 'Password' ? admin.tempPassword ?? '' : '',
+      password: admin.tempPassword ?? '',
     });
   }
 

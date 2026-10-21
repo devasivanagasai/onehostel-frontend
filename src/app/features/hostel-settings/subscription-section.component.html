@@ -1,0 +1,77 @@
+<!-- Plan summary -->
+<div class="sb-plan">
+  <div class="sb-plan__main">
+    <span class="sb-plan__icon"><mat-icon fontSet="material-icons-outlined">workspace_premium</mat-icon></span>
+    <div>
+      <div class="sb-plan__name">
+        {{ sub.planName }} Plan
+        <span class="sb-status" [class.sb-status--active]="sub.status === 'Active'">{{ sub.status }}</span>
+      </div>
+      <div class="sb-plan__meta">{{ sub.price }} · Billed {{ sub.billingCycle | lowercase }}</div>
+    </div>
+  </div>
+  <dl class="sb-dates">
+    <div><dt>Started</dt><dd>{{ fmt.date(sub.startDate) }}</dd></div>
+    <div>
+      <dt>Expires</dt>
+      <dd>
+        {{ fmt.date(sub.expiryDate) }}
+        <span class="sb-days" [class.sb-days--warn]="daysLeft < 30" [class.sb-days--danger]="daysLeft <= 0">
+          {{ daysLeft > 0 ? daysLeft + (daysLeft === 1 ? ' day' : ' days') + ' left' : 'Expired' }}
+        </span>
+      </dd>
+    </div>
+  </dl>
+</div>
+
+@if (daysLeft < 30) {
+  <div class="sb-notice sb-notice--warn" role="status">
+    <mat-icon fontSet="material-icons-outlined">event_busy</mat-icon>
+    <span>Your subscription {{ daysLeft > 0 ? 'expires in ' + daysLeft + ' days' : 'has expired' }}. Renewal is handled by OneHostel billing — contact them to avoid interruption.</span>
+  </div>
+}
+
+<!-- Limits & usage -->
+<h3 class="sb-subhead"><mat-icon fontSet="material-icons-outlined">data_usage</mat-icon>Limits &amp; Usage</h3>
+<div class="sb-limits">
+  @for (l of limits; track l.key) {
+    <div class="sb-limit">
+      <div class="sb-limit__head">
+        <mat-icon fontSet="material-icons-outlined">{{ l.icon }}</mat-icon>
+        <span class="sb-limit__label">{{ l.label }}</span>
+        <span class="sb-limit__value"><strong>{{ l.used | number }}</strong> / {{ l.max | number }}</span>
+      </div>
+      <div class="sb-bar" role="progressbar" [attr.aria-valuenow]="l.used" [attr.aria-valuemax]="l.max" [attr.aria-label]="l.label + ' usage'">
+        <span [class]="'sb-bar__fill sb-bar__fill--' + barTone(l.pct)" [style.width.%]="l.pct"></span>
+      </div>
+      <span class="sb-limit__pct">{{ l.pct }}% used</span>
+    </div>
+  }
+</div>
+
+<!-- Modules -->
+<h3 class="sb-subhead"><mat-icon fontSet="material-icons-outlined">widgets</mat-icon>Modules</h3>
+<ul class="sb-modules">
+  @for (m of modules; track m.id) {
+    <li [class.is-off]="!sub.modules[m.id]">
+      <mat-icon>{{ sub.modules[m.id] ? 'check_circle' : 'cancel' }}</mat-icon>
+      {{ m.name }}
+    </li>
+  }
+</ul>
+
+<!-- Upgrade -->
+<div class="sb-upgrade">
+  @if (upgradeRequest) {
+    <div class="sb-notice sb-notice--info" role="status">
+      <mat-icon fontSet="material-icons-outlined">pending_actions</mat-icon>
+      <span>
+        Upgrade to <strong>{{ upgradeRequest.desiredPlan }}</strong> requested on {{ fmt.date(upgradeRequest.requestedAt) }},
+        pending SuperAdmin / billing review.
+      </span>
+    </div>
+  } @else {
+    <p class="sb-muted">Need more capacity or modules? Pricing and plan changes go through OneHostel's approval and billing process.</p>
+    <app-button variant="outline" icon="upgrade" (clicked)="openUpgrade()">Request plan upgrade</app-button>
+  }
+</div>

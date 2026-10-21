@@ -18,8 +18,8 @@ import {
 import { SubscriptionDetailPanelComponent } from './subscription-detail-panel.component';
 import { InvoiceService } from './invoice.service';
 import { SubscriptionPaymentService } from './subscription-payment.service';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
@@ -45,8 +45,8 @@ const EXPIRING_WINDOW_DAYS = 30;
     MatTableModule,
     MatTooltipModule,
     SubscriptionDetailPanelComponent,
-    AppPaginationComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   template: `
     <div class="onboarding-page">
@@ -102,7 +102,20 @@ const EXPIRING_WINDOW_DAYS = 30;
         </div>
       </div>
 
-      <div class="saas-card">
+      <app-table-card
+        class="subscription-table-card"
+        [empty]="activeCount === 0"
+        [emptyMessage]="emptyMessage"
+        [emptyHint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
+        [clearable]="hasFilters"
+        (clear)="resetFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="setPage($event)"
+        (pageSizeChange)="pageSize = $event; setPage(0)"
+      >
+        <div tableToolbar>
         <!-- Tabs -->
         <div class="tabs" role="tablist">
           <button
@@ -192,15 +205,13 @@ const EXPIRING_WINDOW_DAYS = 30;
           </mat-form-field>
 
           @if (hasFilters) {
-            <button type="button" class="filter-reset" (click)="resetFilters()">
-              <mat-icon>restart_alt</mat-icon> Reset
-            </button>
+            <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetFilters()">Reset</app-button>
           }
         </div>
+        </div>
 
-        <!-- Subscriptions table -->
-        <ng-container *ngIf="activeTab === 'subscriptions'">
-          <div class="table-responsive" *ngIf="filteredSubscriptions.length > 0">
+        <!-- Subscriptions table (header stays visible when empty) -->
+        @if (activeTab === 'subscriptions') {
             <table mat-table [dataSource]="pagedSubscriptions" class="saas-table">
               <ng-container matColumnDef="subscriptionId">
                 <th mat-header-cell *matHeaderCellDef> Subscription ID </th>
@@ -224,16 +235,17 @@ const EXPIRING_WINDOW_DAYS = 30;
                 <td mat-cell *matCellDef="let el"><span class="plan-tag plan-tag--{{ el.planName.toLowerCase() }}">{{ el.planName }}</span></td>
               </ng-container>
 
-              <ng-container matColumnDef="startDate">
-                <th mat-header-cell *matHeaderCellDef> Start Date </th>
-                <td mat-cell *matCellDef="let el"> {{ el.startDate | appDate }} </td>
-              </ng-container>
-
-              <ng-container matColumnDef="expiryDate">
-                <th mat-header-cell *matHeaderCellDef> Expiry Date </th>
+              <!-- Start and expiry stacked in one column so every column fits beside the sidebar -->
+              <ng-container matColumnDef="period">
+                <th mat-header-cell *matHeaderCellDef> Period </th>
                 <td mat-cell *matCellDef="let el">
-                  <span [class.expiring-soon]="isExpiringSoon(el)" [matTooltip]="isExpiringSoon(el) ? 'Expires within ' + expiringWindowDays + ' days' : ''">
-                    {{ el.expiryDate | appDate }}
+                  <span class="list-entity__text">
+                    <span>{{ el.startDate | appDate }}</span>
+                    <span
+                      class="list-entity__sub"
+                      [class.expiring-soon]="isExpiringSoon(el)"
+                      [matTooltip]="isExpiringSoon(el) ? 'Expires within ' + expiringWindowDays + ' days' : ''"
+                    >to {{ el.expiryDate | appDate }}</span>
                   </span>
                 </td>
               </ng-container>
@@ -267,32 +279,19 @@ const EXPIRING_WINDOW_DAYS = 30;
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
                 <td mat-cell *matCellDef="let el" class="actions-cell">
-                  <button type="button" class="row-action" [attr.aria-label]="'View ' + el.subscriptionId" (click)="openSubscription(el)">
-                    <mat-icon>visibility</mat-icon>
+                  <app-button variant="outline" size="sm" icon="visibility" [ariaLabel]="'View ' + el.subscriptionId" (clicked)="openSubscription(el)">
                     View
-                  </button>
+                  </app-button>
                 </td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="subscriptionColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: subscriptionColumns;" class="table-row"></tr>
             </table>
-          </div>
+        }
 
-          @if (filteredSubscriptions.length === 0) {
-            <app-empty-state
-              [headers]="subscriptionHeaders"
-              [message]="emptyMessage"
-              [hint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
-              [clearable]="hasFilters"
-              (clear)="resetFilters()"
-            ></app-empty-state>
-          }
-        </ng-container>
-
-        <!-- Payments table -->
-        <ng-container *ngIf="activeTab === 'payments'">
-          <div class="table-responsive" *ngIf="filteredPayments.length > 0">
+        <!-- Payments table (header stays visible when empty) -->
+        @if (activeTab === 'payments') {
             <table mat-table [dataSource]="pagedPayments" class="saas-table">
               <ng-container matColumnDef="transactionId">
                 <th mat-header-cell *matHeaderCellDef> Transaction ID </th>
@@ -360,55 +359,32 @@ const EXPIRING_WINDOW_DAYS = 30;
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
                 <td mat-cell *matCellDef="let el" class="actions-cell">
-                  <button
-                    type="button"
-                    class="round-btn"
+                  <app-button
+                    variant="icon-outline"
+                    size="sm"
+                    icon="description"
                     [disabled]="!hasInvoice(el)"
                     [matTooltip]="hasInvoice(el) ? 'View Invoice' : 'No invoice for ' + el.paymentStatus.toLowerCase() + ' payments'"
-                    aria-label="View invoice"
-                    (click)="invoices.viewInvoice(el)"
-                  >
-                    <mat-icon>description</mat-icon>
-                  </button>
-                  <button
-                    type="button"
-                    class="round-btn"
+                    ariaLabel="View invoice"
+                    (clicked)="invoices.viewInvoice(el)"
+                  ></app-button>
+                  <app-button
+                    variant="icon-outline"
+                    size="sm"
+                    icon="download"
                     [disabled]="!hasInvoice(el)"
                     [matTooltip]="hasInvoice(el) ? 'Download Receipt' : ''"
-                    aria-label="Download receipt"
-                    (click)="invoices.downloadReceipt(el)"
-                  >
-                    <mat-icon>download</mat-icon>
-                  </button>
+                    ariaLabel="Download receipt"
+                    (clicked)="invoices.downloadReceipt(el)"
+                  ></app-button>
                 </td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: paymentColumns;" class="table-row"></tr>
             </table>
-          </div>
-
-          @if (filteredPayments.length === 0) {
-            <app-empty-state
-              [headers]="paymentHeaders"
-              [message]="emptyMessage"
-              [hint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
-              [clearable]="hasFilters"
-              (clear)="resetFilters()"
-            ></app-empty-state>
-          }
-        </ng-container>
-
-        @if (activeCount > 0) {
-          <app-pagination
-            [page]="safePage"
-            [totalPages]="totalPages"
-            [pageSize]="pageSize"
-            (pageChange)="setPage($event)"
-            (pageSizeChange)="pageSize = $event; setPage(0)"
-          ></app-pagination>
         }
-      </div>
+      </app-table-card>
     </div>
 
     <app-subscription-detail-panel
@@ -524,7 +500,7 @@ const EXPIRING_WINDOW_DAYS = 30;
     }
 
     /* Tabs sit above the filters, so the card needs less top padding. */
-    .onboarding-page .saas-card {
+    .subscription-table-card {
       padding-top: 14px;
     }
 
@@ -593,7 +569,7 @@ const EXPIRING_WINDOW_DAYS = 30;
       color: #64748b;
     }
 
-    /* Payments: method with icon, invoice number, round actions */
+    /* Payments: method with icon, invoice number */
     .method {
       display: inline-flex;
       align-items: center;
@@ -612,42 +588,6 @@ const EXPIRING_WINDOW_DAYS = 30;
     .invoice-no {
       color: #334155 !important;
       white-space: nowrap;
-    }
-
-    .round-btn {
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      border: none;
-      border-radius: 50%;
-      background: #eef4ff;
-      color: #2563eb;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      vertical-align: middle;
-      transition: background 0.15s ease;
-
-      mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #dbe7ff;
-      }
-
-      &:disabled {
-        background: #f1f5f9;
-        color: #cbd5e1;
-        cursor: not-allowed;
-      }
-
-      & + .round-btn {
-        margin-left: 8px;
-      }
     }
 
     /* Table cells */
@@ -742,25 +682,12 @@ export class SubscriptionPaymentsComponent {
     'subscriptionId',
     'hostel',
     'plan',
-    'startDate',
-    'expiryDate',
+    'period',
     'billingCycle',
     'amount',
     'paymentStatus',
     'status',
     'actions',
-  ];
-  subscriptionHeaders = [
-    'Subscription ID',
-    'Hostel',
-    'Plan',
-    'Start Date',
-    'Expiry Date',
-    'Billing Cycle',
-    'Amount',
-    'Payment Status',
-    'Subscription Status',
-    'Actions',
   ];
 
   paymentColumns = [
@@ -775,19 +702,6 @@ export class SubscriptionPaymentsComponent {
     'paymentStatus',
     'invoiceNumber',
     'actions',
-  ];
-  paymentHeaders = [
-    'Transaction ID',
-    'Subscription ID',
-    'Hostel',
-    'Plan',
-    'Total Amount',
-    'Payment Date',
-    'Payment Method',
-    'Payment Gateway',
-    'Payment Status',
-    'Invoice Number',
-    'Actions',
   ];
 
   isPanelOpen = false;

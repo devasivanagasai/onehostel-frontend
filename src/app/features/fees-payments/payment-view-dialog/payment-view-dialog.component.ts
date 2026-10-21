@@ -1,8 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,6 +11,8 @@ import { SystemSettingsService } from '../../../core/services/system-settings.se
 import { FeesService } from '../fees.service';
 import { Payment } from '../fees.models';
 import { downloadReceipt } from '../receipt';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 
 export interface PaymentViewDialogData {
   paymentId: string;
@@ -22,7 +23,7 @@ type PendingAction = 'Reversed' | 'Refunded' | null;
 @Component({
   selector: 'app-payment-view-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatButtonModule, MatIconModule, MatFormFieldModule, MatInputModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatFormFieldModule, MatInputModule, AppDialogComponent, AppButtonComponent],
   templateUrl: './payment-view-dialog.component.html',
   styleUrl: './payment-view-dialog.component.scss',
 })
@@ -31,7 +32,6 @@ export class PaymentViewDialogComponent {
   readonly fmt = inject(AppFormatService);
   private readonly settings = inject(SystemSettingsService);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly dialogRef = inject(MatDialogRef<PaymentViewDialogComponent>);
   readonly data = inject<PaymentViewDialogData>(MAT_DIALOG_DATA);
 
   readonly gateway = this.settings.settings.payment.paymentGateway || 'provider';
@@ -97,10 +97,6 @@ export class PaymentViewDialogComponent {
       balanceAfter: this.balanceAfter,
       charge: this.charge,
     });
-  }
-
-  close(): void {
-    this.dialogRef.close();
   }
 
   private run(fn: () => void): void {

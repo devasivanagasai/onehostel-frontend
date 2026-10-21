@@ -1,277 +1,267 @@
-<div class="bed-modal-container">
-  <div class="modal-header">
-    <div class="header-title">
-      <mat-icon class="header-icon">hotel</mat-icon>
-      <div>
-        <h2>Manage Bed {{ data.bed.bedNumber }}</h2>
-        <span class="sub-text">Room {{ data.room.roomNumber }} • {{ data.room.building }} ({{ data.room.floor }})</span>
+<app-dialog
+  [title]="dialogTitle"
+  [subtitle]="subtitle"
+  icon="bed"
+  [tone]="actionTab === 'checkout' ? 'red' : 'teal'"
+  (closed)="onCancel()"
+>
+  <!-- Tabs: Allocate (vacant) · Occupant / Transfer / Check-Out (occupied) · Status & Rent (always) -->
+  <nav class="bm-tabs" role="tablist">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        role="tab"
+        class="bm-tab"
+        [class.is-active]="actionTab === tab.id"
+        [class.is-danger]="tab.danger"
+        [attr.aria-selected]="actionTab === tab.id"
+        (click)="actionTab = tab.id"
+      >
+        <mat-icon fontSet="material-icons-outlined">{{ tab.icon }}</mat-icon>
+        <span>{{ tab.label }}</span>
+      </button>
+    }
+  </nav>
+
+  <!-- ALLOCATE -->
+  @if (actionTab === 'allocate') {
+    <form id="bedAllocateForm" class="bm-form" [formGroup]="allocateForm" (ngSubmit)="onSaveAllocate()" novalidate>
+      @if (hasRestriction) {
+        <div class="bm-banner bm-banner--info">
+          <mat-icon fontSet="material-icons-outlined">info</mat-icon>
+          <span>This room has a restriction: <strong>{{ restrictionText }}</strong>. Only eligible residents are listed.</span>
+        </div>
+      }
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-resident">Select Resident for Allocation<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="invalid(allocateForm, 'residentId')">
+          <mat-icon class="fk-lead">search</mat-icon>
+          <input
+            id="bm-resident"
+            [formControl]="residentSearch"
+            [matAutocomplete]="residentAuto"
+            placeholder="Search by name, phone number or email..."
+            autocomplete="off"
+          />
+        </span>
+        <mat-autocomplete #residentAuto="matAutocomplete" [displayWith]="displayResident" (optionSelected)="onResidentSelected($event)" class="bm-resident-panel">
+          @for (res of filteredResidents; track res.residentId) {
+            <mat-option [value]="res">
+              <span class="bm-opt">
+                <span class="bm-avatar bm-avatar--sm">{{ initials(res.name) }}</span>
+                <span class="bm-opt__text">
+                  <strong>{{ res.name }}</strong>
+                  <small>{{ res.gender }} • {{ res.contact }}{{ res.collegeOrCompany ? ' • ' + res.collegeOrCompany : '' }}</small>
+                </span>
+              </span>
+            </mat-option>
+          } @empty {
+            <mat-option disabled>No eligible residents found</mat-option>
+          }
+        </mat-autocomplete>
+        @if (invalid(allocateForm, 'residentId')) {
+          <span class="fk-error">Please select a resident to allocate</span>
+        } @else {
+          <span class="fk-hint">{{ eligibleResidents.length }} eligible resident(s) waiting for a bed</span>
+        }
+      </div>
+
+      <div class="bm-grid">
+        <div class="fk-field">
+          <label class="fk-label" for="bm-join">Joining / Check-in Date<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="invalid(allocateForm, 'joiningDate')">
+            <input id="bm-join" type="date" formControlName="joiningDate" />
+          </span>
+          @if (invalid(allocateForm, 'joiningDate')) { <span class="fk-error">Joining date is required</span> }
+        </div>
+        <div class="fk-field">
+          <label class="fk-label" for="bm-arent">Monthly Rent (₹)<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="invalid(allocateForm, 'monthlyRent')">
+            <span class="fk-lead">₹</span>
+            <input id="bm-arent" type="number" min="500" step="100" formControlName="monthlyRent" />
+          </span>
+          @if (invalid(allocateForm, 'monthlyRent')) { <span class="fk-error">Enter at least ₹500</span> }
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-notes">Allocation Notes / Remarks <span class="opt">(Optional)</span></label>
+        <span class="fk-control">
+          <textarea id="bm-notes" rows="3" maxlength="300" formControlName="notes" placeholder="e.g. Advance deposit received, student ID verified"></textarea>
+        </span>
+      </div>
+    </form>
+  }
+
+  <!-- OCCUPANT INFO -->
+  @if (actionTab === 'occupant') {
+    <form id="bedManageForm" class="bm-form" [formGroup]="manageForm" (ngSubmit)="onSaveManage()" novalidate>
+      <ng-container *ngTemplateOutlet="statusRentFields"></ng-container>
+
+      <div class="bm-card">
+        <h4 class="bm-card__title">Current Resident Details</h4>
+        <div class="bm-person">
+          <span class="bm-avatar">
+            {{ initials(data.bed.tenantName) }}
+            <i class="bm-avatar__dot" aria-hidden="true"></i>
+          </span>
+          <div class="bm-person__body">
+            <strong class="bm-person__name">{{ data.bed.tenantName }}</strong>
+            <div class="bm-person__meta">
+              <span><mat-icon fontSet="material-icons-outlined">call</mat-icon>{{ data.bed.tenantContact || 'Not recorded' }}</span>
+              <span><mat-icon fontSet="material-icons-outlined">event</mat-icon>Joined {{ data.bed.joinedDate ? (data.bed.joinedDate | date: 'dd MMM yyyy') : 'Recently' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (data.bed.allocationHistory?.length) {
+        <div class="bm-history">
+          <h4 class="bm-card__title">Allocation History</h4>
+          <ol class="bm-timeline">
+            @for (h of data.bed.allocationHistory; track h.id) {
+              <li class="bm-timeline__item" [class.is-closed]="h.checkOutDate">
+                <span class="bm-timeline__dot">
+                  <mat-icon fontSet="material-icons-outlined">{{ h.allocationType === 'Transfer' ? 'swap_horiz' : h.checkOutDate ? 'logout' : 'login' }}</mat-icon>
+                </span>
+                <div class="bm-timeline__body">
+                  <div class="bm-timeline__head">
+                    <strong>{{ h.residentName }}</strong>
+                    <span class="bm-chip">{{ h.allocationType }}</span>
+                  </div>
+                  <span class="bm-timeline__date">
+                    {{ h.allocatedDate | date: 'dd MMM yyyy' }} – {{ h.checkOutDate ? (h.checkOutDate | date: 'dd MMM yyyy') : 'Present' }}
+                  </span>
+                  @if (h.notes) { <span class="bm-timeline__note">{{ h.notes }}</span> }
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+      }
+    </form>
+  }
+
+  <!-- TRANSFER -->
+  @if (actionTab === 'transfer') {
+    <form id="bedTransferForm" class="bm-form" [formGroup]="transferForm" (ngSubmit)="onSaveTransfer()" novalidate>
+      <div class="bm-card bm-card--tinted">
+        <div class="bm-person">
+          <span class="bm-avatar">{{ initials(data.bed.tenantName) }}</span>
+          <div class="bm-person__body">
+            <strong class="bm-person__name">{{ data.bed.tenantName }}</strong>
+            <span class="bm-person__sub">Currently in Room {{ data.room.roomNumber }} - Bed {{ data.bed.bedNumber }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-target">Target Destination Room<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid(transferForm, 'targetBedId')">
+          <select
+            id="bm-target"
+            [class.is-placeholder]="!selectedTransferTarget"
+            [value]="selectedTransferTarget"
+            (change)="onTransferTargetChange($any($event.target).value)"
+          >
+            <option value="" disabled>Select a room and available bed</option>
+            @for (t of transferTargets; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+        @if (invalid(transferForm, 'targetBedId')) {
+          <span class="fk-error">Choose where the resident is moving to</span>
+        } @else if (!transferTargets.length) {
+          <span class="fk-hint">No available beds in other active rooms right now</span>
+        }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-eff">Transfer Effective Date<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid(transferForm, 'effectiveDate')">
+          <input id="bm-eff" type="date" formControlName="effectiveDate" />
+        </span>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-reason">Transfer Reason / Note <span class="opt">(Optional)</span></label>
+        <span class="fk-control">
+          <textarea id="bm-reason" rows="3" maxlength="300" formControlName="reason" placeholder="e.g. Room upgrade request, roommate change..."></textarea>
+        </span>
+      </div>
+    </form>
+  }
+
+  <!-- CHECK-OUT -->
+  @if (actionTab === 'checkout') {
+    <form id="bedCheckoutForm" class="bm-form" [formGroup]="checkoutForm" (ngSubmit)="onSaveCheckout()" novalidate>
+      <div class="bm-banner bm-banner--warn">
+        <mat-icon fontSet="material-icons-outlined">warning_amber</mat-icon>
+        <div>
+          <strong>Check-Out Resident {{ data.bed.tenantName }}</strong>
+          <p>This will close the active allocation and release Bed {{ data.bed.bedNumber }} back to Available inventory on the effective date.</p>
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-cod">Check-Out Effective Date<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid(checkoutForm, 'checkOutDate')">
+          <input id="bm-cod" type="date" formControlName="checkOutDate" />
+        </span>
+        @if (invalid(checkoutForm, 'checkOutDate')) { <span class="fk-error">Check-out date is required</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="bm-remarks">Remarks / Dues Settlement Notes <span class="opt">(Optional)</span></label>
+        <span class="fk-control">
+          <textarea id="bm-remarks" rows="3" maxlength="300" formControlName="remarks" placeholder="Security deposit refunded, room keys handed over..."></textarea>
+        </span>
+      </div>
+    </form>
+  }
+
+  <!-- STATUS & RENT -->
+  @if (actionTab === 'status') {
+    <form id="bedManageForm" class="bm-form" [formGroup]="manageForm" (ngSubmit)="onSaveManage()" novalidate>
+      <ng-container *ngTemplateOutlet="statusRentFields"></ng-container>
+    </form>
+  }
+
+  <!-- Bed status + monthly rent, shared by Occupant Info and Status & Rent (must sit inside manageForm) -->
+  <ng-template #statusRentFields>
+    <div class="bm-grid" [formGroup]="manageForm">
+      <div class="fk-field">
+        <label class="fk-label" for="bm-status">Bed Status<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead">
+          <mat-icon class="fk-lead bm-status-icon" [attr.data-status]="manageForm.value.status" fontSet="material-icons-outlined">{{ statusIcon(manageForm.value.status) }}</mat-icon>
+          <select id="bm-status" formControlName="status">
+            @for (st of statuses; track st.value) { <option [value]="st.value">{{ st.label }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+      </div>
+      <div class="fk-field">
+        <label class="fk-label" for="bm-rent">Monthly Rent (₹)<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="invalid(manageForm, 'monthlyRent')">
+          <span class="fk-lead">₹</span>
+          <input id="bm-rent" type="number" min="500" step="100" formControlName="monthlyRent" />
+        </span>
+        @if (invalid(manageForm, 'monthlyRent')) { <span class="fk-error">Enter at least ₹500</span> }
       </div>
     </div>
-    <button mat-icon-button (click)="onCancel()" aria-label="Close dialog">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+  </ng-template>
 
-  <!-- Action Tabs (Allocate, Transfer, Check-out, Edit Status) -->
-  <div class="action-tab-bar">
-    @if (data.bed.status === 'Available') {
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="actionTab === 'allocate'"
-        (click)="actionTab = 'allocate'"
-      >
-        <mat-icon>person_add</mat-icon>
-        <span>Allocate Bed</span>
-      </button>
-    }
-
-    @if (data.bed.status === 'Occupied') {
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="actionTab === 'manage'"
-        (click)="actionTab = 'manage'"
-      >
-        <mat-icon>badge</mat-icon>
-        <span>Occupant Info</span>
-      </button>
-
-      <button
-        type="button"
-        class="tab-btn"
-        [class.active]="actionTab === 'transfer'"
-        (click)="actionTab = 'transfer'"
-      >
-        <mat-icon>swap_horiz</mat-icon>
-        <span>Transfer Resident</span>
-      </button>
-
-      <button
-        type="button"
-        class="tab-btn danger-tab"
-        [class.active]="actionTab === 'checkout'"
-        (click)="actionTab = 'checkout'"
-      >
-        <mat-icon>logout</mat-icon>
-        <span>Check-Out</span>
-      </button>
-    }
-
-    <button
-      type="button"
-      class="tab-btn"
-      [class.active]="actionTab === 'manage' && data.bed.status !== 'Occupied'"
-      (click)="actionTab = 'manage'"
-    >
-      <mat-icon>tune</mat-icon>
-      <span>Status & Rent</span>
-    </button>
-  </div>
-
-  <mat-dialog-content class="modal-content">
-    <!-- 1. ALLOCATE TAB (Available -> Occupied) -->
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="onCancel()">Cancel</app-button>
     @if (actionTab === 'allocate') {
-      <form [formGroup]="allocateForm" (ngSubmit)="onSaveAllocate()">
-        <div class="restriction-banner" *ngIf="data.room.genderRestriction !== 'Any'">
-          <mat-icon>info</mat-icon>
-          <span>Room has restriction: <strong>{{ data.room.genderRestriction }}</strong> residents only.</span>
-        </div>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Select Resident for Allocation</mat-label>
-          <mat-select formControlName="residentId">
-            @for (res of eligibleResidents; track res.residentId) {
-              <mat-option [value]="res.residentId">
-                <div class="resident-option">
-                  <span class="res-name">{{ res.name }}</span>
-                  <span class="res-meta">({{ res.gender }} • {{ res.contact }})</span>
-                </div>
-              </mat-option>
-            }
-          </mat-select>
-          <mat-error *ngIf="allocateForm.get('residentId')?.hasError('required')">Please select a resident to allocate</mat-error>
-        </mat-form-field>
-
-        <div class="two-col">
-          <mat-form-field appearance="outline">
-            <mat-label>Joining / Check-in Date</mat-label>
-            <input matInput type="date" formControlName="joiningDate" />
-            <mat-error *ngIf="allocateForm.get('joiningDate')?.hasError('required')">Joining date is required</mat-error>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Monthly Rent (₹)</mat-label>
-            <input matInput type="number" formControlName="monthlyRent" placeholder="6500" />
-            <span matTextPrefix>₹&nbsp;</span>
-          </mat-form-field>
-        </div>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Allocation Notes / Remarks</mat-label>
-          <input matInput formControlName="notes" placeholder="e.g. Advance deposit received, student ID verified" />
-        </mat-form-field>
-
-        <mat-dialog-actions align="end" class="modal-actions">
-          <button mat-button type="button" (click)="onCancel()">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="allocateForm.invalid">
-            <mat-icon>check_circle</mat-icon>
-            Confirm Bed Allocation
-          </button>
-        </mat-dialog-actions>
-      </form>
+      <app-button type="submit" form="bedAllocateForm" variant="accent" icon="check_circle">Confirm Bed Allocation</app-button>
+    } @else if (actionTab === 'transfer') {
+      <app-button type="submit" form="bedTransferForm" variant="accent" icon="swap_horiz">Complete Transfer</app-button>
+    } @else if (actionTab === 'checkout') {
+      <app-button type="submit" form="bedCheckoutForm" variant="danger" icon="arrow_forward" iconPosition="right">Confirm Resident Check-Out</app-button>
+    } @else {
+      <app-button type="submit" form="bedManageForm" variant="accent" icon="save">Save Status</app-button>
     }
-
-    <!-- 2. TRANSFER TAB (Transfer resident to another available bed) -->
-    @if (actionTab === 'transfer') {
-      <form [formGroup]="transferForm" (ngSubmit)="onSaveTransfer()">
-        <div class="transfer-summary-box">
-          <div class="resident-line">
-            <mat-icon class="res-icon">person</mat-icon>
-            <div>
-              <strong>{{ data.bed.tenantName }}</strong>
-              <div class="sub-line">Currently in Room {{ data.room.roomNumber }} - Bed {{ data.bed.bedNumber }}</div>
-            </div>
-          </div>
-        </div>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Target Destination Room</mat-label>
-          <mat-select formControlName="targetRoomId">
-            @for (r of availableTransferRooms; track r.id) {
-              <mat-option [value]="r.id">
-                Room {{ r.roomNumber }} - {{ r.building }} ({{ r.floor }}) • {{ r.roomType }}
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width" *ngIf="transferForm.get('targetRoomId')?.value">
-          <mat-label>Select Available Bed</mat-label>
-          <mat-select formControlName="targetBedId">
-            @for (b of availableTransferBeds; track b.id) {
-              <mat-option [value]="b.id">
-                Bed {{ b.bedNumber }} (₹{{ b.monthlyRent }} / mo)
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <div class="two-col">
-          <mat-form-field appearance="outline">
-            <mat-label>Transfer Effective Date</mat-label>
-            <input matInput type="date" formControlName="effectiveDate" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Transfer Reason / Note</mat-label>
-            <input matInput formControlName="reason" placeholder="e.g. Room upgrade request" />
-          </mat-form-field>
-        </div>
-
-        <mat-dialog-actions align="end" class="modal-actions">
-          <button mat-button type="button" (click)="onCancel()">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="transferForm.invalid">
-            <mat-icon>swap_horiz</mat-icon>
-            Complete Transfer
-          </button>
-        </mat-dialog-actions>
-      </form>
-    }
-
-    <!-- 3. CHECK-OUT TAB -->
-    @if (actionTab === 'checkout') {
-      <form [formGroup]="checkoutForm" (ngSubmit)="onSaveCheckout()">
-        <div class="checkout-warning-box">
-          <mat-icon>warning</mat-icon>
-          <div>
-            <strong>Check-Out Resident {{ data.bed.tenantName }}</strong>
-            <p>This will close the active allocation and release Bed {{ data.bed.bedNumber }} back to Available inventory on the effective date.</p>
-          </div>
-        </div>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Check-Out Effective Date</mat-label>
-          <input matInput type="date" formControlName="checkOutDate" />
-          <mat-error *ngIf="checkoutForm.get('checkOutDate')?.hasError('required')">Check-out date is required</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Remarks / Dues Settlement Notes</mat-label>
-          <textarea matInput formControlName="remarks" rows="3" placeholder="Security deposit refunded, room keys handed over..."></textarea>
-        </mat-form-field>
-
-        <mat-dialog-actions align="end" class="modal-actions">
-          <button mat-button type="button" (click)="onCancel()">Cancel</button>
-          <button mat-flat-button color="warn" type="submit" [disabled]="checkoutForm.invalid">
-            <mat-icon>logout</mat-icon>
-            Confirm Resident Check-Out
-          </button>
-        </mat-dialog-actions>
-      </form>
-    }
-
-    <!-- 4. MANAGE / EDIT STATUS TAB -->
-    @if (actionTab === 'manage') {
-      <form [formGroup]="manageForm" (ngSubmit)="onSaveManage()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Bed Status</mat-label>
-          <mat-select formControlName="status">
-            @for (st of statuses; track st.value) {
-              <mat-option [value]="st.value">
-                <div class="status-option">
-                  <mat-icon class="option-icon">{{ st.icon }}</mat-icon>
-                  <span>{{ st.label }}</span>
-                </div>
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Monthly Rent (₹)</mat-label>
-          <input matInput type="number" formControlName="monthlyRent" placeholder="6500" />
-          <span matTextPrefix>₹&nbsp;</span>
-        </mat-form-field>
-
-        @if (data.bed.tenantName) {
-          <div class="tenant-details-card">
-            <h4>Current Resident Details</h4>
-            <div class="resident-meta-info">
-              <div><strong>Name:</strong> {{ data.bed.tenantName }}</div>
-              <div><strong>Contact:</strong> {{ data.bed.tenantContact || 'Not recorded' }}</div>
-              <div><strong>Joined:</strong> {{ data.bed.joinedDate || 'Recent' }}</div>
-            </div>
-          </div>
-        }
-
-        <!-- Allocation History Trail -->
-        @if (data.bed.allocationHistory?.length) {
-          <div class="history-section">
-            <span class="history-title">Allocation History</span>
-            <div class="history-list">
-              @for (h of data.bed.allocationHistory; track h.id) {
-                <div class="history-item">
-                  <mat-icon class="h-icon">{{ h.allocationType === 'Transfer' ? 'swap_horiz' : 'history' }}</mat-icon>
-                  <div class="h-content">
-                    <span class="h-name">{{ h.residentName }} ({{ h.allocationType }})</span>
-                    <span class="h-date">{{ h.allocatedDate }} @if(h.checkOutDate){ - {{ h.checkOutDate }} }</span>
-                    <span class="h-note" *ngIf="h.notes">{{ h.notes }}</span>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <mat-dialog-actions align="end" class="modal-actions">
-          <button mat-button type="button" (click)="onCancel()">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="manageForm.invalid">
-            <mat-icon>save</mat-icon>
-            Save Status
-          </button>
-        </mat-dialog-actions>
-      </form>
-    }
-  </mat-dialog-content>
-</div>
+  </ng-container>
+</app-dialog>

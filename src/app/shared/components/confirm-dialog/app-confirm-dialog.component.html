@@ -1,7 +1,5 @@
 <div class="confirm confirm--{{ tone }}">
-  <button type="button" class="confirm__close" aria-label="Close" (click)="onCancel()">
-    <mat-icon>close</mat-icon>
-  </button>
+  <app-button class="confirm__close" variant="icon" icon="close" ariaLabel="Close" (clicked)="onCancel()"></app-button>
 
   <div class="confirm__header">
     <div class="confirm__icon" aria-hidden="true">
@@ -36,11 +34,9 @@
   </mat-dialog-content>
 
   <div class="confirm__actions">
-    <button type="button" class="confirm__btn confirm__btn--cancel" (click)="onCancel()">
-      {{ data.cancelLabel ?? 'Cancel' }}
-    </button>
-    <button type="button" class="confirm__btn confirm__btn--confirm" (click)="onConfirm()">
+    <app-button variant="secondary" [block]="true" (clicked)="onCancel()">{{ data.cancelLabel ?? 'Cancel' }}</app-button>
+    <app-button class="confirm__confirm" [variant]="confirmVariant" [block]="true" (clicked)="onConfirm()">
       {{ data.confirmLabel ?? 'Confirm' }}
-    </button>
+    </app-button>
   </div>
 </div>

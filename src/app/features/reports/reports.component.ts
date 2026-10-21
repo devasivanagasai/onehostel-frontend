@@ -7,7 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -31,6 +30,8 @@ import { ReportBarListComponent, BarItem } from './report-bar-list.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 interface ReportFilters {
   dateFrom: Date | null;
@@ -93,9 +94,10 @@ const toIsoDate = (d: Date): string =>
     MatSelectModule,
     MatDatepickerModule,
     MatIconModule,
-    MatButtonModule,
     MatTooltipModule,
     ReportBarListComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './reports.component.html',

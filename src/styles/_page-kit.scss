@@ -7,8 +7,8 @@
 //     <label class="filter-search">…</label>
 //     <label class="filter-select"><span class="filter-select__control"><select>…</select><mat-icon>expand_more</mat-icon></span></label>
 //     <div class="filter-toggle">…</div>
-//     <button class="filter-card__reset">…</button>
-//     <button class="primary-green-btn filter-card__add">…</button>
+//     <app-button variant="text" size="sm" icon="restart_alt">Reset</app-button>
+//     <app-button class="filter-card__add" icon="add">…</app-button>
 //   </div>
 
 $text: #0f172a;
@@ -49,25 +49,7 @@ $line: #e8edf3;
   align-items: flex-start;
   gap: 14px;
   padding: 18px;
-  border: none;
-  font: inherit;
-  text-align: left;
   min-width: 0;
-
-  &--action {
-    cursor: pointer;
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(15, 34, 74, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.06);
-    }
-
-    &:focus-visible {
-      outline: 2px solid #0d9488;
-      outline-offset: 2px;
-    }
-  }
 
   &__icon {
     flex-shrink: 0;
@@ -268,37 +250,42 @@ $line: #e8edf3;
   white-space: nowrap;
 }
 
-.filter-card__reset {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 38px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: #dc2626;
-  cursor: pointer;
-
-  &:hover {
-    background: #fef2f2;
-  }
-
-  mat-icon {
-    @include icon-size(18px);
-  }
-}
-
-// KPI card used as a quick filter that is currently applied
-.kpi-card--action.is-active {
-  box-shadow: 0 0 0 2px #0d9488;
-}
-
 /* ---- Row / card action menus (rendered in the overlay, so global) ---- */
 .mat-mdc-menu-item.menu-item--danger,
 .mat-mdc-menu-item.menu-item--danger .mat-icon {
   color: #dc2626;
+}
+
+/* ---- Compact card action menu (e.g. a room card's ⋮): outline icons, 40px rows ---- */
+.mat-mdc-menu-panel.room-actions-menu {
+  min-width: 210px;
+  border-radius: 12px;
+
+  .mat-mdc-menu-content {
+    padding: 6px 0;
+  }
+
+  .mat-mdc-menu-item {
+    min-height: 40px;
+    padding: 0 18px;
+
+    .mat-mdc-menu-item-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .mat-icon {
+      margin-right: 14px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+
+    &.menu-item--danger .mat-mdc-menu-item-text,
+    &.menu-item--danger .mat-icon {
+      color: #dc2626;
+    }
+  }
 }

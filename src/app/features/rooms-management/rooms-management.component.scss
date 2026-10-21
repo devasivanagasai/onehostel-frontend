@@ -72,15 +72,7 @@ $line: #e8edf3;
 
 .room-card__menu {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  padding: 4px;
   margin: -4px -8px 0 0;
-  color: #94a3b8;
-
-  mat-icon {
-    @include icon-size(20px);
-  }
 }
 
 /* ---- Grid view ---- */
@@ -362,30 +354,4 @@ $bed-tones: (
   align-items: center;
   gap: 16px;
   padding: 48px 16px;
-
-  .rooms-empty__action {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: var(--btn-height);
-    padding: 0 var(--btn-padding-x);
-    border-radius: var(--btn-radius);
-    border: none;
-    background: #0057e7;
-    color: #ffffff;
-    font: inherit;
-    font-size: var(--btn-font-size);
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 87, 231, 0.25);
-    transition: background 0.15s ease;
-
-    mat-icon {
-      @include icon-size(18px);
-    }
-
-    &:hover {
-      background: #0045b5;
-    }
-  }
 }

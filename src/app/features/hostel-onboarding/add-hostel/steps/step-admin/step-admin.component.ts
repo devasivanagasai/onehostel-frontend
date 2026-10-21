@@ -4,9 +4,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
 import { AppFormErrorComponent } from '../../../../../shared/components/form-error/app-form-error.component';
-import { LOGIN_METHOD_OPTIONS } from '../../../../../core/models/auth.models';
 
 @Component({
   selector: 'app-step-admin',
@@ -17,7 +15,6 @@ import { LOGIN_METHOD_OPTIONS } from '../../../../../core/models/auth.models';
     MatInputModule,
     MatIconModule,
     MatButtonModule,
-    MatSelectModule,
     AppFormErrorComponent,
   ],
   template: `
@@ -62,36 +59,18 @@ import { LOGIN_METHOD_OPTIONS } from '../../../../../core/models/auth.models';
       </div>
 
       <div class="field-group">
-        <label class="field-label">Login Method<span class="required-mark">*</span></label>
+        <label class="field-label">Temporary Password</label>
         <mat-form-field appearance="outline">
-          <mat-select formControlName="loginMethod" placeholder="Select Login Method">
-            @for (option of loginMethodOptions; track option.value) {
-              <mat-option [value]="option.value">{{ option.label }}</mat-option>
-            }
-          </mat-select>
+          <input matInput formControlName="tempPassword" readonly />
+          <button mat-icon-button matSuffix type="button" aria-label="Regenerate password" (click)="regenerate.emit()">
+            <mat-icon>autorenew</mat-icon>
+          </button>
         </mat-form-field>
-        <app-form-error [control]="formGroup.get('loginMethod')" label="Login method"></app-form-error>
         <p class="field-hint">
-          @if (isOtp) {
-            The hostel owner logs in with a one-time code sent to their mobile number or email. Code length and expiry come from System Defaults → Security.
-          } @else {
-            The hostel owner logs in with their username, email or mobile number and a password.
-          }
+          The hostel owner logs in with their username, email or mobile number and this password.
+          Generated using the password format in System Defaults → Security. Regenerate any time before creating the hostel.
         </p>
       </div>
-
-      @if (!isOtp) {
-        <div class="field-group">
-          <label class="field-label">Temporary Password</label>
-          <mat-form-field appearance="outline">
-            <input matInput formControlName="tempPassword" readonly />
-            <button mat-icon-button matSuffix type="button" aria-label="Regenerate password" (click)="regenerate.emit()">
-              <mat-icon>autorenew</mat-icon>
-            </button>
-          </mat-form-field>
-          <p class="field-hint">System-generated using the password format in System Defaults → Security. Regenerate any time before creating the hostel.</p>
-        </div>
-      }
 
       <div class="field-group">
         <label class="field-label">Role</label>
@@ -133,10 +112,4 @@ import { LOGIN_METHOD_OPTIONS } from '../../../../../core/models/auth.models';
 export class StepAdminComponent {
   @Input({ required: true }) formGroup!: FormGroup;
   @Output() regenerate = new EventEmitter<void>();
-
-  readonly loginMethodOptions = LOGIN_METHOD_OPTIONS;
-
-  get isOtp(): boolean {
-    return this.formGroup.get('loginMethod')?.value === 'OTP';
-  }
 }

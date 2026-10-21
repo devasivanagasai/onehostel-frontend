@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -11,8 +10,8 @@ import { MatTableModule } from '@angular/material/table';
 import { AuthService } from '../../core/services/auth.service';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { ResidentAllocation, ResidentsService } from './residents.service';
 import { FeesService } from '../fees-payments/fees.service';
 import {
@@ -74,15 +73,14 @@ const DEFAULT_FILTERS: ResidentFilterState = {
   imports: [
     CommonModule,
     FormsModule,
-    MatButtonModule,
     MatIconModule,
     MatDialogModule,
     MatTooltipModule,
     MatSnackBarModule,
     MatSlideToggleModule,
     MatTableModule,
-    AppEmptyStateComponent,
-    AppPaginationComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   templateUrl: './residents.component.html',
   styleUrl: './residents.component.scss',
@@ -188,12 +186,6 @@ export class ResidentsComponent {
     this.currentPage = 0;
   }
 
-  /** KPI cards double as quick filters; clicking the active one again resets it. */
-  quickFilterStatus(status: string): void {
-    this.filters.status = this.filters.status === status ? 'All' : status;
-    this.currentPage = 0;
-  }
-
   onPageSizeChange(size: number): void {
     this.pageSize = size;
     this.currentPage = 0;
@@ -234,7 +226,7 @@ export class ResidentsComponent {
   openView(r: HostelResident): void {
     this.dialog
       .open<ResidentViewDialogComponent, ResidentViewDialogData, ResidentViewAction>(ResidentViewDialogComponent, {
-        width: '680px',
+        width: '1040px',
         maxWidth: '94vw',
         autoFocus: false,
         data: { residentId: r.residentId, canViewBalance: this.canViewBalance },
@@ -253,7 +245,7 @@ export class ResidentsComponent {
   openBedAction(r: HostelResident, mode: ResidentBedMode): void {
     this.dialog
       .open<ResidentBedDialogComponent, ResidentBedDialogData, ResidentBedDialogResult>(ResidentBedDialogComponent, {
-        width: '520px',
+        width: '620px',
         maxWidth: '94vw',
         autoFocus: false,
         data: { resident: r, mode },
@@ -350,7 +342,7 @@ export class ResidentsComponent {
   private openForm(data: ResidentFormDialogData) {
     return this.dialog
       .open<ResidentFormDialogComponent, ResidentFormDialogData, ResidentFormDialogResult>(ResidentFormDialogComponent, {
-        width: '720px',
+        width: '1180px',
         maxWidth: '94vw',
         autoFocus: false,
         disableClose: true,

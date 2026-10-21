@@ -43,7 +43,6 @@ function groupDigits(value: string | null | undefined): string {
           <dl class="confirm-list">
             <div><dt>Name</dt><dd>{{ adminName || '—' }}</dd></div>
             <div><dt>Username</dt><dd>{{ value.admin.username || '—' }}</dd></div>
-            <div><dt>Login Method</dt><dd>{{ value.admin.loginMethod || '—' }}</dd></div>
             <div><dt>Email</dt><dd>{{ value.admin.email || '—' }}</dd></div>
             <div><dt>Mobile</dt><dd>{{ adminMobile || '—' }}</dd></div>
             <div><dt>Role</dt><dd>Hostel Owner</dd></div>

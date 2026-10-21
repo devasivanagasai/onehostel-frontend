@@ -11,32 +11,32 @@
         </div>
       </div>
 
-      <button type="button" class="kpi-card kpi-card--action" [class.is-active]="filters.status === 'Active'" (click)="quickFilterStatus('Active')" matTooltip="Show active residents">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">how_to_reg</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Active</span>
           <span class="kpi-card__value">{{ s.active }}</span>
           <span class="kpi-card__sub">{{ s.onLeave }} on leave</span>
         </div>
-      </button>
+      </div>
 
-      <button type="button" class="kpi-card kpi-card--action" [class.is-active]="filters.status === 'Invited'" (click)="quickFilterStatus('Invited')" matTooltip="Show residents pending activation">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">mark_email_unread</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Pending Activation</span>
           <span class="kpi-card__value">{{ s.invited }}</span>
           <span class="kpi-card__sub">Invited, not yet active</span>
         </div>
-      </button>
+      </div>
 
-      <button type="button" class="kpi-card kpi-card--action" [class.is-active]="filters.status === 'Needs Bed'" (click)="quickFilterStatus('Needs Bed')" matTooltip="Show residents without a bed">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">bed</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Needs a Bed</span>
           <span class="kpi-card__value">{{ s.unallocated }}</span>
           <span class="kpi-card__sub">No active allocation</span>
         </div>
-      </button>
+      </div>
 
       @if (canViewBalance) {
         <div class="kpi-card">
@@ -102,140 +102,121 @@
     </div>
 
     @if (hasActiveFilters) {
-      <button type="button" class="filter-card__reset" (click)="clearFilters()">
-        <mat-icon>filter_alt_off</mat-icon>
-        Reset
-      </button>
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
     }
 
-    <button type="button" class="primary-green-btn filter-card__add" (click)="openAdd()">
-      <mat-icon>person_add</mat-icon>
-      <span>Add Resident</span>
-    </button>
+    <app-button class="filter-card__add" icon="person_add" (clicked)="openAdd()">Add Resident</app-button>
   </div>
 
   <!-- Table card (same pattern as Onboard Hostel: header always shown, empty state + pagination inside) -->
-  <div class="saas-card residents-table-card">
-    <div class="table-responsive">
-      <table mat-table [dataSource]="pagedRows" class="saas-table residents-table">
-        <ng-container matColumnDef="resident">
-          <th mat-header-cell *matHeaderCellDef> Resident </th>
-          <td mat-cell *matCellDef="let row">
-            <div class="list-entity">
-              @if (row.resident.photoUrl) {
-                <img class="list-entity__avatar resident-photo" [src]="row.resident.photoUrl" [alt]="row.name" />
-              } @else {
-                <span class="list-entity__avatar list-avatar--{{ tone(row.resident) }}">{{ initials(row.resident) }}</span>
-              }
+  <app-table-card
+    class="residents-table-card"
+    [empty]="filteredRows.length === 0"
+    [emptyIcon]="hasActiveFilters ? 'search_off' : 'group_off'"
+    [emptyMessage]="hasActiveFilters ? 'No residents match your filters' : 'No residents yet'"
+    [emptyHint]="hasActiveFilters ? 'Try a different search, status, type or joining date, or clear the filters.' : 'Add your first resident to start allocating beds.'"
+    [clearable]="hasActiveFilters"
+    (clear)="clearFilters()"
+    [page]="safePage"
+    [totalPages]="totalPages"
+    [pageSize]="pageSize"
+    (pageChange)="currentPage = $event"
+    (pageSizeChange)="onPageSizeChange($event)"
+  >
+    <table mat-table [dataSource]="pagedRows" class="saas-table residents-table">
+      <ng-container matColumnDef="resident">
+        <th mat-header-cell *matHeaderCellDef> Resident </th>
+        <td mat-cell *matCellDef="let row">
+          <div class="list-entity">
+            @if (row.resident.photoUrl) {
+              <img class="list-entity__avatar resident-photo" [src]="row.resident.photoUrl" [alt]="row.name" />
+            } @else {
+              <span class="list-entity__avatar list-avatar--{{ tone(row.resident) }}">{{ initials(row.resident) }}</span>
+            }
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ row.name }}</span>
+              <span class="list-entity__sub">{{ row.resident.residentId }}</span>
+            </span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="contact">
+        <th mat-header-cell *matHeaderCellDef> Mobile / Email </th>
+        <td mat-cell *matCellDef="let row">
+          <span class="list-entity__text">
+            <span class="list-entity__name">{{ formatMobile(row.resident.mobileCode, row.resident.mobile) }}</span>
+            <span class="list-entity__sub">{{ row.resident.email || '—' }}</span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="room">
+        <th mat-header-cell *matHeaderCellDef> Room / Bed </th>
+        <td mat-cell *matCellDef="let row">
+          @if (row.allocation) {
+            <span class="with-icon">
+              <mat-icon class="list-icon--blue" fontSet="material-icons-outlined">bed</mat-icon>
               <span class="list-entity__text">
-                <span class="list-entity__name">{{ row.name }}</span>
-                <span class="list-entity__sub">{{ row.resident.residentId }}</span>
+                <span class="list-entity__name">Room {{ row.allocation.room.roomNumber }} · Bed {{ row.allocation.bed.bedNumber }}</span>
+                <span class="list-entity__sub">{{ row.allocation.room.floor }}</span>
               </span>
-            </div>
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="contact">
-          <th mat-header-cell *matHeaderCellDef> Mobile / Email </th>
-          <td mat-cell *matCellDef="let row">
-            <span class="list-entity__text">
-              <span class="list-entity__name">{{ formatMobile(row.resident.mobileCode, row.resident.mobile) }}</span>
-              <span class="list-entity__sub">{{ row.resident.email || '—' }}</span>
             </span>
-          </td>
-        </ng-container>
+          } @else if (canHoldBed(row.resident)) {
+            <app-button variant="outline" size="sm" icon="add" (clicked)="openBedAction(row.resident, 'allocate')">Allocate</app-button>
+          } @else {
+            <span class="muted">—</span>
+          }
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="room">
-          <th mat-header-cell *matHeaderCellDef> Room / Bed </th>
-          <td mat-cell *matCellDef="let row">
-            @if (row.allocation) {
-              <span class="with-icon">
-                <mat-icon class="list-icon--blue" fontSet="material-icons-outlined">bed</mat-icon>
-                <span class="list-entity__text">
-                  <span class="list-entity__name">Room {{ row.allocation.room.roomNumber }} · Bed {{ row.allocation.bed.bedNumber }}</span>
-                  <span class="list-entity__sub">{{ row.allocation.room.floor }}</span>
-                </span>
-              </span>
-            } @else if (canHoldBed(row.resident)) {
-              <button type="button" class="row-action row-action--add" (click)="openBedAction(row.resident, 'allocate')">
-                <mat-icon>add</mat-icon>
-                Allocate
-              </button>
-            } @else {
-              <span class="muted">—</span>
-            }
-          </td>
-        </ng-container>
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef> Resident Type </th>
+        <td mat-cell *matCellDef="let row">
+          <span class="list-entity__text">
+            <span>{{ row.resident.residentType }}</span>
+            @if (row.resident.collegeOrCompany) { <span class="list-entity__sub">{{ row.resident.collegeOrCompany }}</span> }
+          </span>
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef> Resident Type </th>
-          <td mat-cell *matCellDef="let row">
-            <span class="list-entity__text">
-              <span>{{ row.resident.residentType }}</span>
-              @if (row.resident.collegeOrCompany) { <span class="list-entity__sub">{{ row.resident.collegeOrCompany }}</span> }
-            </span>
-          </td>
-        </ng-container>
+      <ng-container matColumnDef="joined">
+        <th mat-header-cell *matHeaderCellDef> Joining Date </th>
+        <td mat-cell *matCellDef="let row" class="date-cell">
+          <span class="list-entity__text">
+            <span>{{ fmt.date(row.resident.joiningDate) }}</span>
+            @if (row.resident.checkOutDate) { <span class="list-entity__sub">Out {{ fmt.date(row.resident.checkOutDate) }}</span> }
+          </span>
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="joined">
-          <th mat-header-cell *matHeaderCellDef> Joining Date </th>
-          <td mat-cell *matCellDef="let row" class="date-cell">
-            <span class="list-entity__text">
-              <span>{{ fmt.date(row.resident.joiningDate) }}</span>
-              @if (row.resident.checkOutDate) { <span class="list-entity__sub">Out {{ fmt.date(row.resident.checkOutDate) }}</span> }
-            </span>
-          </td>
-        </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Status </th>
+        <td mat-cell *matCellDef="let row">
+          @if (row.resident.deactivatedAt) {
+            <span class="status-badge status-badge--neutral">Deactivated</span>
+          } @else {
+            <span class="status-badge status-badge--{{ statusTone(row.resident.status) }}">{{ row.resident.status }}</span>
+          }
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef> Status </th>
-          <td mat-cell *matCellDef="let row">
-            @if (row.resident.deactivatedAt) {
-              <span class="status-badge status-badge--neutral">Deactivated</span>
-            } @else {
-              <span class="status-badge status-badge--{{ statusTone(row.resident.status) }}">{{ row.resident.status }}</span>
-            }
-          </td>
-        </ng-container>
+      <ng-container matColumnDef="balance">
+        <th mat-header-cell *matHeaderCellDef class="num"> Outstanding </th>
+        <td mat-cell *matCellDef="let row" class="num" [class.is-due]="row.resident.outstandingBalance > 0">
+          {{ row.resident.outstandingBalance > 0 ? '₹' + (row.resident.outstandingBalance | number) : '—' }}
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="balance">
-          <th mat-header-cell *matHeaderCellDef class="num"> Outstanding </th>
-          <td mat-cell *matCellDef="let row" class="num" [class.is-due]="row.resident.outstandingBalance > 0">
-            {{ row.resident.outstandingBalance > 0 ? '₹' + (row.resident.outstandingBalance | number) : '—' }}
-          </td>
-        </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let row" class="actions-cell">
+          <app-button variant="outline" size="sm" icon="visibility" [ariaLabel]="'View ' + row.name" (clicked)="openView(row.resident)">View</app-button>
+        </td>
+      </ng-container>
 
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-          <td mat-cell *matCellDef="let row" class="actions-cell">
-            <button type="button" class="row-action" [attr.aria-label]="'View ' + row.name" (click)="openView(row.resident)">
-              <mat-icon>visibility</mat-icon>
-              View
-            </button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row" [class.is-deactivated]="row.resident.deactivatedAt"></tr>
-      </table>
-    </div>
-
-    @if (filteredRows.length === 0) {
-      <app-empty-state
-        [icon]="hasActiveFilters ? 'search_off' : 'group_off'"
-        [message]="hasActiveFilters ? 'No residents match your filters' : 'No residents yet'"
-        [hint]="hasActiveFilters ? 'Try a different search, status, type or joining date, or clear the filters.' : 'Add your first resident to start allocating beds.'"
-        [clearable]="hasActiveFilters"
-        (clear)="clearFilters()"
-      ></app-empty-state>
-    } @else {
-      <app-pagination
-        [page]="safePage"
-        [totalPages]="totalPages"
-        [pageSize]="pageSize"
-        (pageChange)="currentPage = $event"
-        (pageSizeChange)="onPageSizeChange($event)"
-      ></app-pagination>
-    }
-  </div>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row" [class.is-deactivated]="row.resident.deactivatedAt"></tr>
+    </table>
+  </app-table-card>
 </div>

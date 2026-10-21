@@ -11,6 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AddPlanSidePanelComponent, FEATURE_CONFIG_ITEMS } from './add-plan-side-panel.component';
 import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
 import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { diffForAudit } from '../../core/models/audit.models';
 import { SubscriptionPaymentService } from '../subscription-payments/subscription-payment.service';
@@ -63,6 +64,7 @@ const VISIBLE_FEATURES = 4;
     AddPlanSidePanelComponent,
     AppPaginationComponent,
     AppEmptyStateComponent,
+    AppButtonComponent,
   ],
   template: `
     <div class="plans-page">
@@ -99,10 +101,7 @@ const VISIBLE_FEATURES = 4;
             }
           </div>
 
-          <button class="primary-green-btn" (click)="onAddPlan()">
-            <mat-icon>add</mat-icon>
-            <span>New</span>
-          </button>
+          <app-button icon="add" (clicked)="onAddPlan()">New</app-button>
         </div>
       </div>
 
@@ -174,15 +173,15 @@ const VISIBLE_FEATURES = 4;
                   <mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon>
                   Created {{ fmt.date(plan.createdDate) }}
                 </span>
-                <button
-                  type="button"
-                  class="plan-card__edit"
-                  [class.plan-card__edit--primary]="popular"
-                  [attr.aria-label]="'Edit plan ' + plan.planName"
-                  (click)="onEditPlan(plan)"
+                <!-- Popular plan: solid; inactive plan: neutral; others: blue outline -->
+                <app-button
+                  [variant]="popular ? 'primary' : plan.status === 'Inactive' ? 'secondary' : 'outline'"
+                  [block]="true"
+                  [ariaLabel]="'Edit plan ' + plan.planName"
+                  (clicked)="onEditPlan(plan)"
                 >
                   Edit
-                </button>
+                </app-button>
               </footer>
             </article>
           }
@@ -191,15 +190,11 @@ const VISIBLE_FEATURES = 4;
         <div class="plans-empty">
           <app-empty-state [message]="emptyMessage"></app-empty-state>
           @if (isFiltering) {
-            <button type="button" class="plans-empty__action" (click)="clearFilters()">
-              <mat-icon>filter_alt_off</mat-icon>
+            <app-button class="plans-empty__action" variant="secondary" icon="filter_alt_off" (clicked)="clearFilters()">
               Clear filters
-            </button>
+            </app-button>
           } @else {
-            <button type="button" class="plans-empty__action" (click)="onAddPlan()">
-              <mat-icon>add</mat-icon>
-              Create your first plan
-            </button>
+            <app-button class="plans-empty__action" icon="add" (clicked)="onAddPlan()">Create your first plan</app-button>
           }
         </div>
       }
@@ -496,43 +491,6 @@ const VISIBLE_FEATURES = 4;
       }
     }
 
-    .plan-card__edit {
-      padding: 0 var(--btn-padding-x);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: var(--btn-height);
-      border-radius: var(--btn-radius);
-      border: 1.5px solid #3b82f6;
-      background: #ffffff;
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      color: #0057e7;
-      cursor: pointer;
-      transition: background 0.15s ease, box-shadow 0.15s ease;
-
-      &:hover {
-        background: #eff6ff;
-      }
-
-      &:focus-visible {
-        outline: 2px solid #0057e7;
-        outline-offset: 2px;
-      }
-    }
-
-    .plan-card__edit--primary {
-      border-color: #0057e7;
-      background: #0057e7;
-      color: #ffffff;
-      box-shadow: 0 8px 18px rgba(0, 87, 231, 0.25);
-
-      &:hover {
-        background: #0045b5;
-      }
-    }
-
     /* Inactive plans: kept visible, but clearly switched off. */
     .plan-card--inactive {
       background: #fafbfc;
@@ -562,15 +520,6 @@ const VISIBLE_FEATURES = 4;
         background: #f1f5f9;
         color: #cbd5e1;
       }
-
-      .plan-card__edit {
-        border-color: #cbd5e1;
-        color: #64748b;
-
-        &:hover {
-          background: #f1f5f9;
-        }
-      }
     }
 
     /* ---- Empty state ---- */
@@ -585,30 +534,7 @@ const VISIBLE_FEATURES = 4;
     }
 
     .plans-empty__action {
-      height: var(--btn-height);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       margin-top: -4px;
-      padding: 0 var(--btn-padding-x);
-      border: 1px solid #bfdbfe;
-      border-radius: var(--btn-radius);
-      background: #eff6ff;
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      color: #0057e7;
-      cursor: pointer;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover {
-        background: #dbeafe;
-      }
     }
 
     @media (max-width: 720px) {

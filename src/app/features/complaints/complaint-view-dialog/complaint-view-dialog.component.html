@@ -1,0 +1,228 @@
+@let k = c;
+<app-dialog
+  eyebrow="Complaint ID"
+  [title]="k.id"
+  [icon]="categoryIcon(k.category)"
+  [tone]="tone"
+  (closed)="dismiss()"
+>
+  <ng-container dialogMeta>
+    <span class="status-badge status-badge--{{ statusTone(k.status) }}">{{ k.status }}</span>
+    @if (k.priority === 'Urgent') {
+      <span class="prio prio--urgent prio--icon"><mat-icon>warning</mat-icon>Urgent</span>
+    } @else {
+      <span class="prio prio--{{ k.priority.toLowerCase() }}">{{ k.priority }}</span>
+    }
+    @if (overdue) { <span class="cv__overdue"><mat-icon>schedule</mat-icon>Overdue</span> }
+  </ng-container>
+
+  <h2 class="cv__title">{{ k.title }}</h2>
+
+  <!-- Facts strip -->
+  <dl class="cv__facts">
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+      <div><dt>Resident</dt><dd>{{ k.residentName }}</dd><small>({{ k.residentId }})</small></div>
+    </div>
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">bed</mat-icon></span>
+      <div><dt>Room/Bed</dt><dd>{{ k.location || '—' }}</dd></div>
+    </div>
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">{{ categoryIcon(k.category) }}</mat-icon></span>
+      <div><dt>Category</dt><dd>{{ k.category }}</dd></div>
+    </div>
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon></span>
+      <div><dt>Created</dt><dd>{{ fmt.date(k.createdAt) }}</dd><small>{{ fmt.date(k.createdAt, 'time') }} · {{ k.source }}</small></div>
+    </div>
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">track_changes</mat-icon></span>
+      <div>
+        <dt>Target Resolution</dt>
+        <dd [class.cv__late]="overdue">{{ k.targetDate ? fmt.date(k.targetDate) : 'Not set' }}</dd>
+        @if (k.resolvedAt) { <small>(Resolved {{ fmt.date(k.resolvedAt) }})</small> }
+      </div>
+    </div>
+    <div class="cv__fact">
+      <span class="cv__fact-icon"><mat-icon fontSet="material-icons-outlined">support_agent</mat-icon></span>
+      <div><dt>Assigned To</dt><dd [class.cv__muted]="!k.assignedTo">{{ assigneeName }}</dd>@if (assigneeRole) { <small>({{ assigneeRole }})</small> }</div>
+    </div>
+  </dl>
+
+  <!-- Description -->
+  <div class="cv__description">
+    <span class="cv__description-icon"><mat-icon fontSet="material-icons-outlined">chat</mat-icon></span>
+    <div>
+      <strong>Description</strong>
+      <p>{{ k.description }}</p>
+      @if (k.attachments.length) {
+        <ul class="cv__gallery">
+          @for (a of k.attachments; track a.id) {
+            <li>
+              <button type="button" (click)="openAttachment(a)" [attr.aria-label]="'Open ' + a.name" [matTooltip]="a.name">
+                @if (isImage(a)) { <img [src]="a.url" [alt]="a.name" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+
+  @if (k.resolutionNote) {
+    <div class="cv__resolution">
+      <mat-icon>task_alt</mat-icon>
+      <div><strong>Resolution</strong><span>{{ k.resolutionNote }}</span></div>
+    </div>
+  }
+
+  <!-- Manage + note -->
+  @if (k.status !== 'Closed') {
+    <section class="cv__panel" aria-label="Manage complaint">
+      @if (active) {
+        <div class="cv__controls">
+          <label class="cv__control">
+            <span class="cv__label">Assigned to</span>
+            <span class="cv__select">
+              <mat-icon fontSet="material-icons-outlined" class="cv__select-icon">person</mat-icon>
+              <select [ngModel]="k.assignedTo ?? ''" (ngModelChange)="assign($event)" aria-label="Assigned to">
+                <option value="">Unassigned</option>
+                @for (s of staff; track s.id) { <option [value]="s.id">{{ s.name }} · {{ s.role }}</option> }
+              </select>
+              <mat-icon class="cv__select-caret">expand_more</mat-icon>
+            </span>
+          </label>
+          <label class="cv__control">
+            <span class="cv__label">Priority</span>
+            <span class="cv__select">
+              <mat-icon class="cv__select-icon prio-icon prio-icon--{{ k.priority.toLowerCase() }}">{{ k.priority === 'Urgent' ? 'warning' : 'flag' }}</mat-icon>
+              <select [ngModel]="k.priority" (ngModelChange)="setPriority($event)" aria-label="Priority">
+                @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+              </select>
+              <mat-icon class="cv__select-caret">expand_more</mat-icon>
+            </span>
+          </label>
+          <label class="cv__control">
+            <span class="cv__label">Target Resolution</span>
+            <span class="cv__select">
+              <mat-icon fontSet="material-icons-outlined" class="cv__select-icon">calendar_today</mat-icon>
+              <input type="date" [min]="today" [ngModel]="k.targetDate ?? ''" (change)="setTarget($any($event.target).value)" aria-label="Target resolution" />
+            </span>
+          </label>
+        </div>
+      }
+
+      <label class="cv__label" for="cv-note">Add a progress note</label>
+      <div class="cv__composer">
+        <textarea id="cv-note" [(ngModel)]="noteText" rows="3" maxlength="500" placeholder="Write an update..."></textarea>
+        <div class="cv__composer-bar">
+          @for (f of noteFiles; track f.id) {
+            <span class="cv__chip">
+              {{ f.name }}
+              <app-button variant="icon" size="sm" icon="close" [ariaLabel]="'Remove ' + f.name" (clicked)="removeNoteFile(f.id)"></app-button>
+            </span>
+          }
+          <span class="cv__spacer"></span>
+          <label class="cv__photo" [class.is-disabled]="noteFiles.length >= maxFiles">
+            <mat-icon>attach_file</mat-icon>Photo
+            <input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" hidden (change)="onNoteFiles($event)" [disabled]="noteFiles.length >= maxFiles" />
+          </label>
+          <app-button variant="accent" icon="chat" [iconOutlined]="true" [disabled]="!noteText.trim() && !noteFiles.length" (clicked)="addNote()">Add note</app-button>
+        </div>
+      </div>
+      @if (noteError) { <p class="cv__error cv__error--small">{{ noteError }}</p> }
+    </section>
+  }
+
+  <!-- Resolve / reopen: needs text first -->
+  @if (step) {
+    <div class="cv__step" [class.cv__step--reopen]="step === 'reopen'">
+      <h3>{{ step === 'resolve' ? 'Resolve complaint' : 'Reopen complaint' }}</h3>
+      <p>
+        {{ step === 'resolve'
+          ? 'Describe what was done. The resident is notified and can reopen within ' + reopenDays + ' days if the issue returns.'
+          : 'Explain why the issue is back. The resident is notified.' }}
+      </p>
+      <mat-form-field appearance="outline" class="cv__full">
+        <mat-label>{{ step === 'resolve' ? 'Resolution note' : 'Reason for reopening' }}</mat-label>
+        <textarea matInput [(ngModel)]="stepText" rows="2" maxlength="500" required></textarea>
+      </mat-form-field>
+      <div class="cv__step-actions">
+        <app-button variant="secondary" (clicked)="step = null">Cancel</app-button>
+        <app-button [disabled]="stepText.trim().length < 5" (clicked)="submitStep()">
+          {{ step === 'resolve' ? 'Mark resolved' : 'Reopen' }}
+        </app-button>
+      </div>
+    </div>
+  }
+
+  @if (error) {
+    <p class="cv__error"><mat-icon>error_outline</mat-icon>{{ error }}</p>
+  }
+
+  <!-- Activity Timeline -->
+  <h3 class="cv__timeline-title"><mat-icon>format_list_bulleted</mat-icon>Activity Timeline</h3>
+  <ol class="cv__timeline">
+    @for (e of k.history; track $index) {
+      @let parts = eventParts(e.text);
+      <li class="cv__event cv__event--{{ e.type }}">
+        <span class="cv__dot"><mat-icon fontSet="material-icons-outlined">{{ eventIcon(e.type) }}</mat-icon></span>
+        <div class="cv__event-body">
+          <p class="cv__event-text">
+            @switch (parts.kind) {
+              @case ('status') {
+                Status changed <span class="muted">{{ parts.from }}</span> → <span class="hl hl--status">{{ parts.to }}</span>
+              }
+              @case ('assigned') {
+                Assigned to <span class="muted-strong">{{ parts.name }}</span> ({{ parts.role }})
+              }
+              @default {
+                {{ parts.text }}
+              }
+            }
+          </p>
+          @if (e.attachments?.length) {
+            <ul class="cv__gallery cv__gallery--small">
+              @for (a of e.attachments!; track a.id) {
+                <li>
+                  <button type="button" (click)="openAttachment(a)" [attr.aria-label]="'Open ' + a.name">
+                    @if (isImage(a)) { <img [src]="a.url" [alt]="a.name" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+          @if (e.by !== 'Resident App') {
+            <span class="cv__by">by <span class="cv__actor">{{ e.by }}</span>@if (actorRole(e.by)) { • {{ actorRole(e.by) }} }</span>
+          }
+        </div>
+        <time class="cv__time">{{ fmt.date(e.at, 'datetime') }}</time>
+      </li>
+    }
+  </ol>
+
+  <ng-container dialogFooter>
+    @if (complaints.canReopen(k) && !step) {
+      <app-button variant="secondary" icon="replay" (clicked)="openStep('reopen')">Reopen</app-button>
+    }
+    <span class="app-dialog__spacer"></span>
+    @if (complaints.canStart(k)) {
+      <app-button variant="secondary" icon="play_arrow" (clicked)="startWork()">Start work</app-button>
+    }
+    @if (k.status === 'Resolved' && complaints.canResolve) {
+      <app-button icon="lock" (clicked)="close()">Close complaint</app-button>
+    }
+    @if (active && complaints.canResolve && !step) {
+      <app-button icon="task_alt" (clicked)="openStep('resolve')">Resolve</app-button>
+    }
+  </ng-container>
+</app-dialog>
+
+<!-- Photo preview -->
+@if (preview) {
+  <div class="cv__lightbox" role="dialog" aria-label="Photo preview" (click)="preview = null">
+    <img [src]="preview.url" [alt]="preview.name" />
+    <button mat-icon-button type="button" aria-label="Close preview"><mat-icon>close</mat-icon></button>
+  </div>
+}

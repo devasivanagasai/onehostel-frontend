@@ -56,9 +56,7 @@
     </mat-form-field>
 
     @if (hasFilters) {
-      <button type="button" class="filter-reset" (click)="resetFilters()">
-        <mat-icon>restart_alt</mat-icon> Reset
-      </button>
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetFilters()">Reset</app-button>
     }
   </div>
 
@@ -234,7 +232,7 @@
             }
           </div>
           @if (unreadNotifications) {
-            <button type="button" class="link-btn" (click)="markAllNotificationsRead()">Mark all read</button>
+            <app-button class="mark-read" variant="text" size="sm" (clicked)="markAllNotificationsRead()">Mark all read</app-button>
           }
         </div>
 

@@ -1,150 +1,171 @@
-<div class="room-modal-container">
-  <div class="modal-header">
-    <div class="header-title">
-      <mat-icon class="header-icon">{{ isEdit ? 'edit_note' : 'add_business' }}</mat-icon>
-      <h2>{{ isEdit ? 'Edit Room ' + data.room?.roomNumber : 'Create New Room' }}</h2>
-    </div>
-    <button mat-icon-button (click)="onCancel()" aria-label="Close dialog">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+<form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <app-dialog
+    [title]="isEdit ? 'Edit Room ' + data.room?.roomNumber : 'Create New Room'"
+    [subtitle]="isEdit ? 'Update this room\'s details, facilities and policies' : 'Add a new room to your property inventory'"
+    icon="apartment"
+    tone="teal"
+    (closed)="onCancel()"
+  >
+    <!-- Building & location -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">location_on</mat-icon></span>
+        Building &amp; Location Scope
+      </h3>
+      <div class="rm-grid">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-building">Building / Block Name<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-building" formControlName="building" required>
+              @for (b of buildings; track b) { <option [value]="b">{{ b }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    <mat-dialog-content class="modal-content">
-      <!-- Location Scope Section -->
-      <div class="section-title">
-        <mat-icon>apartment</mat-icon>
-        <span>Building & Location Scope</span>
+        <div class="fk-field">
+          <label class="fk-label" for="rm-floor">Floor<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-floor" formControlName="floor" required>
+              @for (floor of floors; track floor) { <option [value]="floor">{{ floor }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-number">Room Number / Code<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="invalid('roomNumber')">
+            <input id="rm-number" formControlName="roomNumber" placeholder="e.g., 101, A-201" maxlength="12" required />
+          </span>
+          @if (invalid('roomNumber')) {
+            <span class="fk-error">{{ form.get('roomNumber')?.hasError('required') ? 'Room number is required' : 'Use letters, numbers and dashes only' }}</span>
+          } @else {
+            <span class="fk-hint">Unique within building and floor</span>
+          }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-type">Room Type<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-type" formControlName="roomType" required>
+              @for (type of roomTypes; track type) { <option [value]="type">{{ type }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
       </div>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Building / Block Name</mat-label>
-          <mat-select formControlName="building">
-            @for (b of buildings; track b) {
-              <mat-option [value]="b">{{ b }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+    </section>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Floor</mat-label>
-          <mat-select formControlName="floor">
-            @for (floor of floors; track floor) {
-              <mat-option [value]="floor">{{ floor }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+    <!-- Capacity, rent & status -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">group</mat-icon></span>
+        Capacity, Rent &amp; Status
+      </h3>
+      <div class="rm-grid">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-capacity">Capacity (Total Beds)<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-capacity" formControlName="capacity" required>
+              @for (n of capacityOptions; track n) { <option [ngValue]="n">{{ n }} {{ n === 1 ? 'Bed' : 'Beds' }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          <span class="fk-hint">Cannot be lower than active allocations</span>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Room Number / Code</mat-label>
-          <input matInput formControlName="roomNumber" placeholder="e.g. 101, A-204" />
-          <mat-error *ngIf="form.get('roomNumber')?.hasError('required')">Room number is required</mat-error>
-          <mat-hint>Unique within building and floor</mat-hint>
-        </mat-form-field>
+        <div class="fk-field">
+          <label class="fk-label" for="rm-rent">Base Rent per Bed (₹)<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="invalid('baseRent')">
+            <span class="fk-lead">₹</span>
+            <input id="rm-rent" type="number" min="500" step="100" formControlName="baseRent" placeholder="6500" required />
+          </span>
+          @if (invalid('baseRent')) { <span class="fk-error">Enter at least ₹500</span> }
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Room Type</mat-label>
-          <mat-select formControlName="roomType">
-            @for (type of roomTypes; track type) {
-              <mat-option [value]="type">{{ type }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-      </div>
+        <div class="fk-field">
+          <label class="fk-label" for="rm-status">Room Status<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-status" formControlName="status" required>
+              @for (st of roomStatuses; track st) { <option [value]="st">{{ st }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
 
-      <!-- Inventory Capacity & Rent -->
-      <div class="section-title">
-        <mat-icon>inventory_2</mat-icon>
-        <span>Capacity, Rent & Status</span>
-      </div>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>Capacity (Total Beds)</mat-label>
-          <input matInput type="number" formControlName="capacity" placeholder="2" />
-          <mat-icon matSuffix>bed</mat-icon>
-          <mat-error *ngIf="form.get('capacity')?.hasError('required')">Capacity is required</mat-error>
-          <mat-hint>Cannot be lower than active allocations</mat-hint>
-        </mat-form-field>
+        <div class="fk-field">
+          <label class="fk-label" for="rm-gender">Gender Restriction<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-gender" formControlName="genderRestriction" required>
+              @for (g of genderOptions; track g) { <option [value]="g">{{ g }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Base Rent / Bed (₹ / Month)</mat-label>
-          <input matInput type="number" formControlName="baseRent" placeholder="6500" />
-          <span matTextPrefix>₹&nbsp;</span>
-          <mat-error *ngIf="form.get('baseRent')?.hasError('required')">Rent is required</mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Room Status</mat-label>
-          <mat-select formControlName="status">
-            @for (st of roomStatuses; track st) {
-              <mat-option [value]="st">{{ st }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Gender Restriction</mat-label>
-          <mat-select formControlName="genderRestriction">
-            @for (g of genderOptions; track g) {
-              <mat-option [value]="g">{{ g }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-      </div>
-
-      <!-- Maintenance Note if under Maintenance -->
-      @if (form.get('status')?.value === 'Maintenance') {
-        <mat-form-field appearance="outline" class="full-field">
-          <mat-label>Maintenance Note (Required)</mat-label>
-          <input matInput formControlName="maintenanceNote" placeholder="e.g. AC servicing and wall repainting in progress" />
-          <mat-error *ngIf="form.get('maintenanceNote')?.hasError('required')">Maintenance note is required when marking Maintenance</mat-error>
-        </mat-form-field>
-      }
-
-      <!-- Facilities & Amenities Selection -->
-      <div class="section-title">
-        <mat-icon>local_offer</mat-icon>
-        <span>Facilities & Room Amenities</span>
-      </div>
-      <div class="facilities-grid">
-        @for (facility of availableFacilities; track facility) {
-          <div
-            class="facility-chip"
-            [class.facility-chip--selected]="isFacilitySelected(facility)"
-            (click)="toggleFacility(facility)"
-          >
-            <mat-icon class="facility-icon">
-              {{ isFacilitySelected(facility) ? 'check_box' : 'check_box_outline_blank' }}
-            </mat-icon>
-            <span>{{ facility }}</span>
+        <!-- Required only while the room is under maintenance -->
+        @if (form.get('status')?.value === 'Maintenance') {
+          <div class="fk-field rm-full">
+            <label class="fk-label" for="rm-maint">Maintenance Note<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="invalid('maintenanceNote')">
+              <input id="rm-maint" formControlName="maintenanceNote" placeholder="e.g. AC servicing and wall repainting in progress" />
+            </span>
+            @if (invalid('maintenanceNote')) { <span class="fk-error">A note is required when marking Maintenance</span> }
           </div>
         }
       </div>
+    </section>
 
-      <!-- College / Additional Restrictions -->
-      <div class="section-title">
-        <mat-icon>notes</mat-icon>
-        <span>Additional Guidelines & Policies</span>
+    <!-- Facilities -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">weekend</mat-icon></span>
+        Facilities &amp; Room Amenities
+      </h3>
+      <div class="rm-facilities" role="group" aria-label="Facilities and room amenities">
+        @for (facility of availableFacilities; track facility) {
+          <label class="rm-facility" [class.is-selected]="isFacilitySelected(facility)">
+            <input type="checkbox" [checked]="isFacilitySelected(facility)" (change)="toggleFacility(facility)" />
+            <span class="rm-facility__box" aria-hidden="true"><mat-icon>check</mat-icon></span>
+            <mat-icon class="rm-facility__icon" fontSet="material-icons-outlined">{{ facilityIcon(facility) }}</mat-icon>
+            <span>{{ facility }}</span>
+          </label>
+        }
       </div>
-      <div class="form-grid">
-        <mat-form-field appearance="outline">
-          <mat-label>College / Company Specific Restriction</mat-label>
-          <input matInput formControlName="collegeRestriction" placeholder="e.g. Any, IIT Students, IT Professionals" />
-        </mat-form-field>
+    </section>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Internal Notes / Remarks</mat-label>
-          <input matInput formControlName="notes" placeholder="e.g. Corner room with large window" />
-        </mat-form-field>
+    <!-- 4. Policies -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">description</mat-icon></span>
+        Additional Guidelines &amp; Policies
+      </h3>
+      <div class="rm-grid rm-grid--2">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-college">College / Company Specific Restriction</label>
+          <span class="fk-control">
+            <select id="rm-college" formControlName="collegeRestriction">
+              @for (c of collegeOptions; track c) { <option [value]="c">{{ c === 'Any' ? 'Any (no restriction)' : c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-notes">Internal Notes / Remarks <span class="opt">(Optional)</span></label>
+          <span class="fk-control">
+            <textarea id="rm-notes" formControlName="notes" rows="2" maxlength="300" placeholder="Add any notes or remarks about this room..."></textarea>
+          </span>
+        </div>
       </div>
-    </mat-dialog-content>
+    </section>
 
-    <mat-dialog-actions align="end" class="modal-actions">
-      <button mat-button type="button" (click)="onCancel()">Cancel</button>
-      <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid">
-        <mat-icon>{{ isEdit ? 'save' : 'check' }}</mat-icon>
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="onCancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="check_circle" [iconOutlined]="true">
         {{ isEdit ? 'Save Changes' : 'Create Room' }}
-      </button>
-    </mat-dialog-actions>
-  </form>
-</div>
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

@@ -1,0 +1,159 @@
+<app-dialog [eyebrow]="'Announcement ID · ' + a.id" [title]="a.title" icon="campaign" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="av__status av__status--{{ statusTone }}">
+      <mat-icon fontSet="material-icons-outlined">{{ statusIcon }}</mat-icon>{{ status }}
+    </span>
+  </ng-container>
+
+  <!-- Key facts, one tile each -->
+  <div class="av__facts">
+    <div class="av__tile">
+      <span class="av__tile-icon"><mat-icon fontSet="material-icons-outlined">groups</mat-icon></span>
+      <div>
+        <span class="av__label">Audience</span>
+        <strong>{{ service.audienceLabel(a.audience) }}</strong>
+        <small>{{ recipients.length }} recipient{{ recipients.length === 1 ? '' : 's' }}</small>
+      </div>
+    </div>
+
+    <div class="av__tile av__tile--stack">
+      <span class="av__label">Channels</span>
+      <div class="av__channels">
+        @for (c of a.channels; track c) {
+          <span class="av__chan-chip">
+            <span class="av__chan-icon av__chan-icon--{{ channelTones[c] }}"><mat-icon fontSet="material-icons-outlined">{{ channelIcons[c] }}</mat-icon></span>
+            {{ c }}
+          </span>
+        } @empty { <span class="av__muted">—</span> }
+      </div>
+    </div>
+
+    <div class="av__tile">
+      <span class="av__tile-icon av__tile-icon--blue"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon></span>
+      <div>
+        <span class="av__label">{{ status === 'Scheduled' ? 'Scheduled For' : status === 'Draft' ? 'Planned For' : 'Published' }}</span>
+        @if (a.publishAt) {
+          <strong>{{ fmt.date(a.publishAt, 'datetime') }}</strong>
+        } @else {
+          <strong class="av__muted">Not published</strong>
+        }
+      </div>
+    </div>
+
+    <div class="av__tile">
+      <span class="av__tile-icon av__tile-icon--purple"><mat-icon fontSet="material-icons-outlined">event_busy</mat-icon></span>
+      <div>
+        <span class="av__label">Expiry Date</span>
+        <strong [class.av__muted]="!a.expiryDate">{{ a.expiryDate ? fmt.date(a.expiryDate) : 'No expiry' }}</strong>
+      </div>
+    </div>
+
+    <div class="av__tile av__tile--wide">
+      <span class="av__tile-icon"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+      <div>
+        <span class="av__label">Created By</span>
+        <strong>{{ a.createdBy }}</strong>
+        <small>{{ fmt.date(a.createdAt, 'datetime') }}</small>
+      </div>
+      <span class="av__divider" aria-hidden="true"></span>
+      @if (a.cancelledAt) {
+        <div>
+          <span class="av__label">Cancelled By</span>
+          <strong>{{ a.cancelledBy }}</strong>
+          <small>{{ fmt.date(a.cancelledAt, 'datetime') }}</small>
+        </div>
+      } @else {
+        <div>
+          <span class="av__label">Last Updated By</span>
+          <strong>{{ a.updatedBy || a.createdBy }}</strong>
+          <small>{{ fmt.date(a.updatedAt, 'datetime') }}</small>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Message -->
+  <section class="av__card">
+    <span class="av__label">Announcement Message</span>
+    <p class="av__message">{{ a.message || 'No message yet.' }}</p>
+  </section>
+
+  @if (a.attachment) {
+    <section class="av__card">
+      <span class="av__label">Attached File</span>
+      <div class="av__file">
+        <span class="av__thumb" [class.is-pdf]="a.attachment.type === 'application/pdf'">
+          <mat-icon fontSet="material-icons-outlined">{{ a.attachment.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+        </span>
+        <span class="av__file-text">
+          <strong>{{ a.attachment.name }}</strong>
+          <small>{{ formatBytes(a.attachment.size) }}</small>
+        </span>
+      </div>
+    </section>
+  }
+
+  <!-- Delivery & reads -->
+  <section class="av__card av__card--delivery">
+    <div class="av__delivery-head">
+      <span class="av__tile-icon av__tile-icon--purple"><mat-icon fontSet="material-icons-outlined">bar_chart</mat-icon></span>
+      <strong>Delivery &amp; Reads</strong>
+      @if (!sent) {
+        <p class="av__pending"><mat-icon fontSet="material-icons-outlined">info</mat-icon>{{ pendingText }}</p>
+      }
+    </div>
+
+    @if (sent) {
+      <div class="av__delivery">
+        @for (d of delivery; track d.channel) {
+          <div class="av__chan">
+            <span class="av__chan-name">
+              <span class="av__chan-icon av__chan-icon--{{ channelTones[d.channel] }}"><mat-icon fontSet="material-icons-outlined">{{ channelIcons[d.channel] }}</mat-icon></span>
+              {{ d.channel }}
+            </span>
+            <div class="av__nums">
+              <span><strong>{{ d.delivered }}</strong>/{{ d.targeted }} delivered</span>
+              <span>
+                @if (d.read === null) { <em>Reads not tracked</em> }
+                @else { <strong>{{ d.read }}</strong> {{ d.channel === 'Email' ? 'opened' : 'read' }} ({{ pct(d.read, d.delivered) }}%) }
+              </span>
+            </div>
+            <span class="av__bar" aria-hidden="true">
+              <span class="av__bar-del" [style.width.%]="pct(d.delivered, d.targeted)"></span>
+              <span class="av__bar-read" [style.width.%]="pct(d.read, d.targeted)"></span>
+            </span>
+            @if (d.note) { <small class="av__chan-note">{{ d.note }}</small> }
+          </div>
+        }
+      </div>
+
+      @if (hasInApp && recipientRows.length) {
+        <ul class="av__recipients" aria-label="In-app read status">
+          @for (r of recipientRows; track r.id) {
+            <li>
+              <span class="av__r-name">{{ r.name }}</span>
+              <small>{{ r.location }}</small>
+              <span class="av__pill" [class.is-read]="r.read">{{ r.read ? 'Read' : 'Unread' }}</span>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </section>
+
+  <ng-container dialogFooter>
+    @if (status === 'Draft') {
+      <app-button variant="danger-outline" icon="delete" [iconOutlined]="true" (clicked)="close('delete')">Delete</app-button>
+    }
+    @if (status === 'Scheduled') {
+      <app-button variant="danger-outline" icon="event_busy" [iconOutlined]="true" (clicked)="close('cancel')">Cancel Schedule</app-button>
+    }
+    <span class="app-dialog__spacer"></span>
+    <app-button variant="outline" icon="content_copy" [iconOutlined]="true" (clicked)="close('duplicate')">Duplicate</app-button>
+    @if (status === 'Draft') {
+      <app-button variant="accent" icon="edit" [iconOutlined]="true" (clicked)="close('edit')">Edit Draft</app-button>
+    } @else {
+      <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    }
+  </ng-container>
+</app-dialog>

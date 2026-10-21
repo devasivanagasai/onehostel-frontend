@@ -528,10 +528,6 @@
 .pw-status--soon { color: #d97706; }
 .pw-status--expired { color: #dc2626; }
 
-.security__action {
-  width: 100%;
-}
-
 .security-tip {
   display: flex;
   align-items: center;
@@ -554,75 +550,5 @@
   strong {
     color: #2563eb;
     font-weight: 600;
-  }
-}
-
-// ---- Buttons -------------------------------------------------------------------------
-.btn-primary,
-.btn-danger-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  border-radius: var(--btn-radius);
-  font-size: var(--btn-font-size);
-  font-weight: 600;
-  font-family: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  mat-icon {
-    font-size: 19px;
-    width: 19px;
-    height: 19px;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-}
-
-.btn-block {
-  width: 100%;
-}
-
-.btn-primary {
-  background: #2563eb;
-  border: 1px solid #2563eb;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-
-  &:hover:not(:disabled) {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-  }
-
-  &:disabled {
-    background: #94a3b8;
-    border-color: #94a3b8;
-    box-shadow: none;
-  }
-
-  ::ng-deep .mat-mdc-progress-spinner {
-    --mdc-circular-progress-active-indicator-color: #ffffff;
-  }
-}
-
-.btn-danger-outline {
-  background: #ffffff;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-
-  &:hover {
-    background: #fef2f2;
-    border-color: #f87171;
   }
 }

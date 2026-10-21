@@ -1,10 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { AppButtonComponent } from '../button/app-button.component';
 
 /**
  * Standard "no rows" block for list screens: an icon, a message, an optional hint
  * and an optional "Clear filters" button.
- * Styling comes from src/styles/_table.scss (`.empty-results*`, `.saas-table`, `.row-action`).
+ * Styling comes from src/styles/_table.scss (`.empty-results*`, `.saas-table`).
  *
  *   <app-empty-state
  *     [message]="isFiltering ? 'No hostels match your search' : 'No hostels yet'"
@@ -19,7 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, AppButtonComponent],
   template: `
     <div class="empty-state-wrapper">
       @if (headers.length) {
@@ -45,10 +46,7 @@ import { MatIconModule } from '@angular/material/icon';
           <p class="empty-results__hint">{{ hint }}</p>
         }
         @if (clearable) {
-          <button type="button" class="row-action" (click)="clear.emit()">
-            <mat-icon>filter_alt_off</mat-icon>
-            Clear filters
-          </button>
+          <app-button variant="outline" size="sm" icon="filter_alt_off" (clicked)="clear.emit()">Clear filters</app-button>
         }
       </div>
     </div>

@@ -1,103 +1,90 @@
-<div class="rp">
-  <header class="rp__header">
-    <div class="rp__title">
-      <span><mat-icon>point_of_sale</mat-icon></span>
-      <div>
-        <h2>Record Payment</h2>
-        <p>Collect against an open charge. A receipt is issued when the payment is successful.</p>
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog title="Record Payment" subtitle="Collect against an open charge. A receipt is issued when the payment is successful." icon="point_of_sale" tone="teal">
+    @if (residents.length === 0) {
+      <p class="rp__info"><mat-icon>task_alt</mat-icon><span>Nothing to collect — every charge is settled.</span></p>
+    } @else {
+      <div class="rp__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Resident</mat-label>
+          <mat-select formControlName="residentId" (selectionChange)="onResidentPicked()" required>
+            @for (r of residents; track r.id) { <mat-option [value]="r.id">{{ r.name }} · {{ r.id }}</mat-option> }
+          </mat-select>
+          @if (hasError('residentId', 'required')) { <mat-error>Select a resident</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Charge / invoice</mat-label>
+          <mat-select formControlName="chargeId" (selectionChange)="onChargePicked()" required
+            [placeholder]="form.value.residentId ? 'Select a charge' : 'Pick a resident first'">
+            @for (c of charges; track c.id) {
+              <mat-option [value]="c.id">{{ c.id }} · {{ c.description }} · ₹{{ fees.balance(c) | number: '1.0-2' }} {{ status(c) === 'Overdue' ? '(overdue)' : '' }}</mat-option>
+            }
+          </mat-select>
+          @if (hasError('chargeId', 'required')) { <mat-error>Select a charge</mat-error> }
+        </mat-form-field>
       </div>
-    </div>
-    <button mat-icon-button type="button" (click)="cancel()" aria-label="Close dialog"><mat-icon>close</mat-icon></button>
-  </header>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <mat-dialog-content class="rp__content">
-      @if (residents.length === 0) {
-        <p class="rp__info"><mat-icon>task_alt</mat-icon><span>Nothing to collect — every charge is settled.</span></p>
-      } @else {
-        <div class="rp__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Resident</mat-label>
-            <mat-select formControlName="residentId" (selectionChange)="onResidentPicked()" required>
-              @for (r of residents; track r.id) { <mat-option [value]="r.id">{{ r.name }} · {{ r.id }}</mat-option> }
-            </mat-select>
-            @if (hasError('residentId', 'required')) { <mat-error>Select a resident</mat-error> }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Charge / invoice</mat-label>
-            <mat-select formControlName="chargeId" (selectionChange)="onChargePicked()" required
-              [placeholder]="form.value.residentId ? 'Select a charge' : 'Pick a resident first'">
-              @for (c of charges; track c.id) {
-                <mat-option [value]="c.id">{{ c.id }} · {{ c.description }} · ₹{{ fees.balance(c) | number: '1.0-2' }} {{ status(c) === 'Overdue' ? '(overdue)' : '' }}</mat-option>
-              }
-            </mat-select>
-            @if (hasError('chargeId', 'required')) { <mat-error>Select a charge</mat-error> }
-          </mat-form-field>
-        </div>
-
-        @if (charge) {
-          <div class="rp__summary">
-            <div><span>Charge total</span><strong>₹{{ charge.total | number: '1.0-2' }}</strong></div>
-            <div><span>Already paid</span><strong>₹{{ fees.paidFor(charge.id) | number: '1.0-2' }}</strong></div>
-            <div><span>Balance due</span><strong class="due">₹{{ due | number: '1.0-2' }}</strong></div>
-            <div><span>Due date</span><strong>{{ fmt.date(charge.dueDate) }}</strong></div>
-          </div>
-        }
-
-        <div class="rp__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Amount</mat-label>
-            <span matTextPrefix>₹&nbsp;</span>
-            <input matInput type="number" min="0.01" step="0.01" formControlName="amount" required />
-            @if (hasError('amount', 'positive')) { <mat-error>Amount must be greater than zero</mat-error> }
-            @else if (hasError('amount', 'overpay')) { <mat-error>Can't exceed the balance (₹{{ due | number: '1.0-2' }}) — advance payments aren't enabled</mat-error> }
-            @else { <mat-hint>Partial payments are allowed</mat-hint> }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Payment date &amp; time</mat-label>
-            <input matInput type="datetime-local" formControlName="paidAt" [max]="maxDateTime" required />
-          </mat-form-field>
-        </div>
-
-        <div class="rp__methods" role="radiogroup" aria-label="Payment method">
-          @for (m of methods; track m.value) {
-            <button type="button" role="radio" class="rp__method" [class.is-selected]="form.value.method === m.value"
-              [attr.aria-checked]="form.value.method === m.value" (click)="form.patchValue({ method: m.value })">
-              <mat-icon fontSet="material-icons-outlined">{{ m.icon }}</mat-icon>{{ m.label }}
-            </button>
-          }
-        </div>
-
-        @if (isOnline) {
-          <p class="rp__warn">
-            <mat-icon>hourglass_top</mat-icon>
-            <span>Recorded as <strong>Pending</strong>. It won't count as collected — and no receipt is issued — until the {{ gateway }} result is confirmed.</span>
-          </p>
-        }
-
-        <div class="rp__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Transaction reference{{ needsRef ? '' : ' (optional)' }}</mat-label>
-            <input matInput formControlName="transactionRef" [placeholder]="isOnline ? 'pay_XXXXXXXX' : 'UTR / txn ID'" maxlength="40" />
-            @if (hasError('transactionRef', 'required')) { <mat-error>Required for {{ form.value.method }}</mat-error> }
-            @else if (form.controls.transactionRef.hasError('duplicate')) { <mat-error>Already used by another payment — duplicates are blocked</mat-error> }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Notes</mat-label>
-            <input matInput formControlName="notes" maxlength="250" />
-          </mat-form-field>
+      @if (charge) {
+        <div class="rp__summary">
+          <div><span>Charge total</span><strong>₹{{ charge.total | number: '1.0-2' }}</strong></div>
+          <div><span>Already paid</span><strong>₹{{ fees.paidFor(charge.id) | number: '1.0-2' }}</strong></div>
+          <div><span>Balance due</span><strong class="due">₹{{ due | number: '1.0-2' }}</strong></div>
+          <div><span>Due date</span><strong>{{ fmt.date(charge.dueDate) }}</strong></div>
         </div>
       }
-    </mat-dialog-content>
 
-    <footer class="rp__footer">
-      <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
-      <button mat-flat-button color="primary" type="submit" [disabled]="submitting || residents.length === 0">
+      <div class="rp__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Amount</mat-label>
+          <span matTextPrefix>₹&nbsp;</span>
+          <input matInput type="number" min="0.01" step="0.01" formControlName="amount" required />
+          @if (hasError('amount', 'positive')) { <mat-error>Amount must be greater than zero</mat-error> }
+          @else if (hasError('amount', 'overpay')) { <mat-error>Can't exceed the balance (₹{{ due | number: '1.0-2' }}) — advance payments aren't enabled</mat-error> }
+          @else { <mat-hint>Partial payments are allowed</mat-hint> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Payment date &amp; time</mat-label>
+          <input matInput type="datetime-local" formControlName="paidAt" [max]="maxDateTime" required />
+        </mat-form-field>
+      </div>
+
+      <div class="rp__methods" role="radiogroup" aria-label="Payment method">
+        @for (m of methods; track m.value) {
+          <button type="button" role="radio" class="rp__method" [class.is-selected]="form.value.method === m.value"
+            [attr.aria-checked]="form.value.method === m.value" (click)="form.patchValue({ method: m.value })">
+            <mat-icon fontSet="material-icons-outlined">{{ m.icon }}</mat-icon>{{ m.label }}
+          </button>
+        }
+      </div>
+
+      @if (isOnline) {
+        <p class="rp__warn">
+          <mat-icon>hourglass_top</mat-icon>
+          <span>Recorded as <strong>Pending</strong>. It won't count as collected — and no receipt is issued — until the {{ gateway }} result is confirmed.</span>
+        </p>
+      }
+
+      <div class="rp__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Transaction reference{{ needsRef ? '' : ' (optional)' }}</mat-label>
+          <input matInput formControlName="transactionRef" [placeholder]="isOnline ? 'pay_XXXXXXXX' : 'UTR / txn ID'" maxlength="40" />
+          @if (hasError('transactionRef', 'required')) { <mat-error>Required for {{ form.value.method }}</mat-error> }
+          @else if (form.controls.transactionRef.hasError('duplicate')) { <mat-error>Already used by another payment — duplicates are blocked</mat-error> }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Notes</mat-label>
+          <input matInput formControlName="notes" maxlength="250" />
+        </mat-form-field>
+      </div>
+    }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" [disabled]="submitting || residents.length === 0">
         {{ isOnline ? 'Record as pending' : 'Record payment' }}
-      </button>
-    </footer>
-  </form>
-</div>
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

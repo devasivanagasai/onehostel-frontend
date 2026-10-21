@@ -14,7 +14,7 @@ export interface GeneralSettings {
   dateFormat: string;
 }
 
-/** Policy for both login methods; each hostel admin's method is chosen at onboarding. */
+/** Password, lockout and session policy for every user (sign-in is password-only). */
 export interface SecuritySettings {
   minPasswordLength: number;
   /** Password format rules, enforced on Change Password. */
@@ -26,13 +26,7 @@ export interface SecuritySettings {
   passwordExpiryDays: number;
   maxLoginAttempts: number;
   sessionTimeoutMinutes: number;
-  otpExpiryMinutes: number;
-  /** Digits in a one-time code. */
-  otpLength: OtpLength;
 }
-
-export type OtpLength = 4 | 6;
-export const OTP_LENGTH_OPTIONS: OtpLength[] = [4, 6];
 
 export interface CommunicationSettings {
   emailProvider: string;
@@ -114,8 +108,6 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     passwordExpiryDays: 90,
     maxLoginAttempts: 5,
     sessionTimeoutMinutes: 30,
-    otpExpiryMinutes: 5,
-    otpLength: 6,
   },
   communication: {
     emailProvider: 'SendGrid',
@@ -185,8 +177,6 @@ export const SETTING_LABELS: Record<SettingsSection, Record<string, string>> = {
     passwordExpiryDays: 'Password Expiry (days)',
     maxLoginAttempts: 'Maximum Login Attempts',
     sessionTimeoutMinutes: 'Session Timeout (min)',
-    otpExpiryMinutes: 'OTP Expiry (min)',
-    otpLength: 'OTP Length (digits)',
   },
   communication: {
     emailProvider: 'Email Provider',

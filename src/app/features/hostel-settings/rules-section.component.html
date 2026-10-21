@@ -1,0 +1,105 @@
+<div [formGroup]="group">
+  <!-- Timings -->
+  <h3 class="rs-subhead"><mat-icon fontSet="material-icons-outlined">schedule</mat-icon>Timings</h3>
+  <div class="rs-grid">
+    <div class="fk-field">
+      <label class="fk-label" for="hs-checkin">Check-in Time<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="show('checkInTime') || groupError('checkOutOrder', 'checkInTime', 'checkOutTime')">
+        <input id="hs-checkin" type="time" formControlName="checkInTime" />
+      </span>
+      @if (show('checkInTime')) { <span class="fk-error">Check-in time is required</span> }
+      @else { <span class="fk-hint">Earliest time a new tenant can move in.</span> }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-checkout">Check-out Time<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="show('checkOutTime') || groupError('checkOutOrder', 'checkInTime', 'checkOutTime')">
+        <input id="hs-checkout" type="time" formControlName="checkOutTime" />
+      </span>
+      @if (show('checkOutTime')) {
+        <span class="fk-error">Check-out time is required</span>
+      } @else if (groupError('checkOutOrder', 'checkInTime', 'checkOutTime')) {
+        <span class="fk-error">Check-out must be earlier than check-in, so the bed can be readied in between</span>
+      } @else {
+        <span class="fk-hint">Leaving tenants vacate by this time.</span>
+      }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-gate">Gate Closing Time<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="show('gateClosingTime')">
+        <input id="hs-gate" type="time" formControlName="gateClosingTime" />
+      </span>
+      @if (show('gateClosingTime')) { <span class="fk-error">Gate closing time is required</span> }
+      @else { <span class="fk-hint">Main gate is locked after this time.</span> }
+    </div>
+  </div>
+
+  <!-- Visitor policy -->
+  <h3 class="rs-subhead"><mat-icon fontSet="material-icons-outlined">groups_2</mat-icon>Visitor Policy</h3>
+  <div class="rs-toggles">
+    <mat-slide-toggle formControlName="visitorsAllowed">Allow visitors</mat-slide-toggle>
+    <mat-slide-toggle formControlName="visitorIdRequired">Visitors must show a photo ID</mat-slide-toggle>
+  </div>
+
+  @if (visitorsAllowed) {
+    <div class="rs-grid">
+      <div class="fk-field">
+        <label class="fk-label" for="hs-vfrom">Visiting Hours From<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="show('visitingFrom') || groupError('visitingRange', 'visitingFrom', 'visitingTo')">
+          <input id="hs-vfrom" type="time" formControlName="visitingFrom" />
+        </span>
+        @if (show('visitingFrom')) { <span class="fk-error">Start time is required</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="hs-vto">Visiting Hours To<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="show('visitingTo') || groupError('visitingRange', 'visitingFrom', 'visitingTo')">
+          <input id="hs-vto" type="time" formControlName="visitingTo" />
+        </span>
+        @if (show('visitingTo')) {
+          <span class="fk-error">End time is required</span>
+        } @else if (groupError('visitingRange', 'visitingFrom', 'visitingTo')) {
+          <span class="fk-error">Must be later than the start time</span>
+        }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="hs-vmax">Max Visitors per Tenant<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="show('maxVisitors')">
+          <input id="hs-vmax" type="number" formControlName="maxVisitors" min="1" max="10" />
+        </span>
+        @if (show('maxVisitors')) { <span class="fk-error">Enter a number from 1 to 10</span> }
+        @else { <span class="fk-hint">At one time.</span> }
+      </div>
+    </div>
+  } @else {
+    <p class="rs-muted">Visitors are not allowed inside the hostel.</p>
+  }
+
+  <!-- House rules -->
+  <h3 class="rs-subhead">
+    <mat-icon fontSet="material-icons-outlined">rule</mat-icon>House Rules
+    <span class="rs-count">{{ rules.length }} / {{ maxRules }}</span>
+  </h3>
+  <ol class="rs-rules">
+    @for (c of rules.controls; track c; let i = $index, first = $first, last = $last) {
+      <li class="rs-rule">
+        <span class="rs-rule__num">{{ i + 1 }}</span>
+        <div class="fk-field rs-rule__field">
+          <span class="fk-control" [class.is-invalid]="ruleInvalid(c)">
+            <input [id]="'hs-rule-' + i" [formControl]="c" [maxlength]="maxLength" placeholder="Describe the rule" [attr.aria-label]="'House rule ' + (i + 1)" />
+          </span>
+          @if (ruleInvalid(c)) { <span class="fk-error">Enter the rule, or remove this line</span> }
+        </div>
+        <app-button variant="icon" size="sm" icon="arrow_upward" [disabled]="first" ariaLabel="Move up" (clicked)="moveRule(i, -1)"></app-button>
+        <app-button variant="icon" size="sm" icon="arrow_downward" [disabled]="last" ariaLabel="Move down" (clicked)="moveRule(i, 1)"></app-button>
+        <app-button variant="icon" size="sm" icon="close" ariaLabel="Remove rule" (clicked)="removeRule(i)"></app-button>
+      </li>
+    } @empty {
+      <li class="rs-muted">No house rules yet.</li>
+    }
+  </ol>
+  <app-button variant="secondary" size="sm" icon="add" [disabled]="rules.length >= maxRules" (clicked)="addRule()">Add rule</app-button>
+  <span class="fk-hint rs-add-hint">Up to {{ maxRules }} rules, {{ maxLength }} characters each. Shown to tenants in the app.</span>
+</div>

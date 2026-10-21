@@ -14,9 +14,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import {
   COMMUNICATION_CHANNELS,
   CommunicationChannel,
@@ -38,9 +38,9 @@ const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
     MatInputModule,
     MatSelectModule,
     MatIconModule,
-    MatButtonModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    AppButtonComponent,
   ],
   template: `
     <!-- Overlay Backdrop -->
@@ -52,9 +52,7 @@ const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
       <!-- Panel Header -->
       <div class="panel-header">
         <h2 class="panel-title">{{ panelTitle }}</h2>
-        <button mat-icon-button type="button" class="close-btn" (click)="onCancel()" aria-label="Close panel">
-          <mat-icon>close</mat-icon>
-        </button>
+        <app-button variant="icon" icon="close" ariaLabel="Close panel" (clicked)="onCancel()"></app-button>
       </div>
 
       <!-- Panel Body -->
@@ -246,22 +244,11 @@ const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
       <!-- Panel Footer -->
       <div class="panel-footer">
-        <button type="button" class="btn-secondary" (click)="onCancel()">
-          {{ isView ? 'Close' : 'Cancel' }}
-        </button>
-        <button *ngIf="isView" type="button" class="btn-primary" (click)="switchToEdit.emit()">
-          <mat-icon>edit</mat-icon>
-          <span>Edit</span>
-        </button>
-        <button
-          *ngIf="!isView"
-          type="submit"
-          form="sideTemplateForm"
-          class="btn-primary"
-          [disabled]="templateForm.invalid"
-        >
-          <span>{{ mode === 'edit' ? 'Update' : 'Submit' }}</span>
-        </button>
+        <app-button variant="secondary" (clicked)="onCancel()">{{ isView ? 'Close' : 'Cancel' }}</app-button>
+        <app-button *ngIf="isView" icon="edit" (clicked)="switchToEdit.emit()">Edit</app-button>
+        <app-button *ngIf="!isView" type="submit" form="sideTemplateForm" [disabled]="templateForm.invalid">
+          {{ mode === 'edit' ? 'Update' : 'Submit' }}
+        </app-button>
       </div>
 
     </div>
@@ -319,14 +306,6 @@ const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
       font-weight: 700;
       color: #0f172a;
       line-height: 1.2;
-    }
-
-    .close-btn {
-      color: #64748b;
-      &:hover {
-        color: #0f172a;
-        background: #f1f5f9;
-      }
     }
 
     .panel-body {
@@ -678,61 +657,6 @@ const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
       justify-content: flex-end;
       gap: 12px;
       flex-shrink: 0;
-    }
-
-    .btn-secondary {
-      height: var(--btn-height);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-
-      &:hover {
-        background: #f1f5f9;
-        color: #0f172a;
-      }
-    }
-
-    .btn-primary {
-      height: var(--btn-height);
-      background: #0057e7;
-      color: #ffffff;
-      border: none;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(0, 87, 231, 0.25);
-      transition: all 0.15s;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #0045b5;
-        box-shadow: 0 6px 16px rgba(0, 87, 231, 0.35);
-      }
-
-      &:disabled {
-        background: #94a3b8;
-        cursor: not-allowed;
-        box-shadow: none;
-      }
     }
   `],
 })

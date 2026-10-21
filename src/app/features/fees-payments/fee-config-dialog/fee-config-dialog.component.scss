@@ -1,25 +1,5 @@
 @use '../../../../styles/dialog-kit' as *;
 
-.fd {
-  @include dialog-shell(700px);
-}
-
-.fd__header {
-  @include dialog-header;
-}
-
-.fd__title {
-  @include dialog-title;
-}
-
-.fd__content {
-  @include dialog-content;
-}
-
-.fd__footer {
-  @include dialog-footer;
-}
-
 .fd__section {
   margin-top: 18px;
 

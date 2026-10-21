@@ -6,7 +6,6 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { HostelAdmin, LogoutType, adminFullName, formatDuration, sessionMinutes } from './admin.models';
 import { COUNTRY_OPTIONS } from '../../core/models/system-settings.models';
@@ -15,6 +14,7 @@ import { AuditLogService } from '../../core/services/audit-log.service';
 import { auditAction, auditEventLabel } from '../../core/models/audit.models';
 import { REPORT_HOSTELS } from '../reports/report.models';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent, AppButtonVariant } from '../../shared/components/button/app-button.component';
 
 export type AdminPanelTab = 'details' | 'activity' | 'edit';
 
@@ -58,8 +58,8 @@ interface ActivityDay {
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    MatButtonModule,
     MatTooltipModule,
+    AppButtonComponent,
   ],
   template: `
     <div class="panel-backdrop" *ngIf="isOpen" (click)="closePanel.emit()"></div>
@@ -85,25 +85,19 @@ interface ActivityDay {
               <div class="panel-subtitle">{{ a.adminId }} <span class="sep">·</span> {{ a.role }}</div>
             </div>
           </div>
-          <button mat-icon-button type="button" class="close-btn" (click)="closePanel.emit()" aria-label="Close panel">
-            <mat-icon>close</mat-icon>
-          </button>
+          <app-button variant="icon" icon="close" class="close-btn" ariaLabel="Close panel" (clicked)="closePanel.emit()"></app-button>
         </div>
 
         <!-- Account actions (above the tabs) -->
         @if (tab !== 'edit') {
           <div class="action-bar">
             @if (showEdit) {
-              <button type="button" class="btn-action btn-action--primary" (click)="startEdit()">
-                <mat-icon>edit_square</mat-icon>
-                <span>Edit</span>
-              </button>
+              <app-button icon="edit_square" (clicked)="startEdit()">Edit</app-button>
             }
             @for (action of actions(a.status); track action) {
-              <button type="button" class="btn-action btn-action--{{ actionStyle(action) }}" (click)="run(a, action)">
-                <mat-icon>{{ meta[action].icon }}</mat-icon>
-                <span>{{ action === 'unlock' ? 'Unlock Account' : meta[action].label }}</span>
-              </button>
+              <app-button [variant]="actionStyle(action)" [icon]="meta[action].icon" (clicked)="run(a, action)">
+                {{ action === 'unlock' ? 'Unlock Account' : meta[action].label }}
+              </app-button>
             }
           </div>
 
@@ -339,10 +333,8 @@ interface ActivityDay {
         <!-- Footer (edit mode only; view-mode actions sit at the top) -->
         @if (tab === 'edit') {
           <div class="panel-footer">
-            <button type="button" class="btn-secondary" (click)="cancelEdit()">Cancel</button>
-            <button type="submit" form="adminEditForm" class="btn-primary" [disabled]="form.invalid || form.pristine">
-              <span>Update</span>
-            </button>
+            <app-button variant="secondary" (clicked)="cancelEdit()">Cancel</app-button>
+            <app-button type="submit" form="adminEditForm" [disabled]="form.invalid || form.pristine">Update</app-button>
           </div>
         }
       }
@@ -446,7 +438,6 @@ interface ActivityDay {
     }
 
     .close-btn {
-      color: #475569;
       flex-shrink: 0;
       align-self: flex-start;
     }
@@ -492,71 +483,6 @@ interface ActivityDay {
       flex-wrap: wrap;
       padding: 0 24px 18px;
       flex-shrink: 0;
-    }
-
-    .btn-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      height: var(--btn-height);
-      min-width: 96px;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: #334155;
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover {
-        background: #f8fafc;
-      }
-
-      &:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 2px;
-      }
-    }
-
-    .btn-action--primary {
-      background: #2563eb;
-      border-color: #2563eb;
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-
-      &:hover {
-        background: #1d4ed8;
-      }
-    }
-
-    .btn-action--success {
-      background: #22c55e;
-      border-color: #22c55e;
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-
-      &:hover {
-        background: #16a34a;
-      }
-    }
-
-    .btn-action--danger {
-      color: #dc2626;
-      border-color: #f87171;
-
-      &:hover {
-        background: #fef2f2;
-      }
     }
 
     /* Tabs */
@@ -1195,58 +1121,6 @@ interface ActivityDay {
       flex-shrink: 0;
     }
 
-    .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      height: var(--btn-height);
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #f1f5f9;
-      }
-    }
-
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      height: var(--btn-height);
-      padding: 0 var(--btn-padding-x);
-      background: #0057e7;
-      color: #ffffff;
-      border: none;
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 87, 231, 0.25);
-      flex-shrink: 0;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #0045b5;
-      }
-
-      &:disabled {
-        background: #94a3b8;
-        box-shadow: none;
-        cursor: not-allowed;
-      }
-    }
-
     @media (max-width: 520px) {
       .detail-grid {
         grid-template-columns: 1fr;
@@ -1397,9 +1271,9 @@ export class AdminDetailPanelComponent implements OnChanges {
   }
 
   /** Button colour: green for Unlock/Activate, red outline for Lock/Deactivate, plain outline otherwise. */
-  actionStyle(action: AdminAction): 'success' | 'danger' | 'outline' {
+  actionStyle(action: AdminAction): AppButtonVariant {
     if (action === 'unlock' || action === 'activate') return 'success';
-    return this.meta[action].danger ? 'danger' : 'outline';
+    return this.meta[action].danger ? 'danger-outline' : 'secondary';
   }
 
   run(a: HostelAdmin, action: AdminAction): void {

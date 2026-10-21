@@ -24,9 +24,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
   ],
   template: `
     <div class="forgot-dialog">
-      <button type="button" class="forgot-dialog__close" mat-dialog-close aria-label="Close">
-        <mat-icon>close</mat-icon>
-      </button>
+      <app-button class="forgot-dialog__close" variant="icon" icon="close" ariaLabel="Close" (clicked)="close()"></app-button>
 
       <ng-container *ngIf="!submitted">
         <div class="forgot-dialog__header">
@@ -58,11 +56,11 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
           </div>
 
           <div class="forgot-dialog__actions">
-            <button type="button" mat-dialog-close class="forgot-dialog__cancel-btn">Cancel</button>
+            <app-button variant="secondary" [block]="true" (clicked)="close()">Cancel</app-button>
             <app-button
               variant="primary"
               type="submit"
-              class="forgot-dialog__submit"
+              [block]="true"
               [disabled]="form.invalid"
               [loading]="loading"
             >
@@ -80,9 +78,7 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
         <p>
           If an account exists for <strong>{{ sentEmail }}</strong>, you will receive password reset instructions shortly.
         </p>
-        <button type="button" mat-dialog-close class="forgot-dialog__done-btn">
-          Back to Login
-        </button>
+        <app-button [block]="true" (clicked)="close()">Back to Login</app-button>
       </div>
     </div>
   `,
@@ -102,6 +98,10 @@ export class ForgotPasswordDialogComponent {
     private dialogRef: MatDialogRef<ForgotPasswordDialogComponent>,
     private auditLog: AuditLogService,
   ) {}
+
+  close(): void {
+    this.dialogRef.close();
+  }
 
   onSubmit(): void {
     if (this.form.invalid) {

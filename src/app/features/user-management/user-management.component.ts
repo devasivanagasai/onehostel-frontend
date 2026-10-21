@@ -14,8 +14,9 @@ import { Resident, residentFullName } from './resident.models';
 import { ResidentService } from './resident.service';
 import { isOnboardedHostel } from '../hostel-onboarding/onboarded-hostels';
 import { RESIDENT_STATUS_TONE, ResidentDetailPanelComponent } from './resident-detail-panel.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const ALL = 'All';
 
@@ -70,7 +71,8 @@ const ADMIN_STATUS_TONE: Record<AdminStatus, 'success' | 'neutral' | 'danger'> =
     MatTooltipModule,
     AdminDetailPanelComponent,
     ResidentDetailPanelComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss',

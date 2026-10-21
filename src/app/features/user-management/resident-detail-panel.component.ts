@@ -2,7 +2,6 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Ou
 import { AppFormatService } from '../../core/services/app-format.service';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { auditAction, auditEventLabel } from '../../core/models/audit.models';
@@ -10,6 +9,7 @@ import { LogoutType, formatDuration, sessionMinutes } from '../admin-management/
 import { Resident, residentAuditEntity, residentFullName } from './resident.models';
 import { RESIDENT_ACTION_META, ResidentAction, ResidentService, residentActions } from './resident.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent, AppButtonVariant } from '../../shared/components/button/app-button.component';
 
 /** Status → shared badge tone (same palette as the list tables). */
 export const RESIDENT_STATUS_TONE: Record<Resident['status'], 'success' | 'neutral' | 'danger'> = {
@@ -60,7 +60,7 @@ const ACCOUNT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-resident-detail-panel',
   standalone: true,
-  imports: [AppDatePipe, CommonModule, MatIconModule, MatButtonModule],
+  imports: [AppDatePipe, CommonModule, MatIconModule, AppButtonComponent],
   templateUrl: './resident-detail-panel.component.html',
   styleUrl: './resident-detail-panel.component.scss',
 })
@@ -119,9 +119,9 @@ export class ResidentDetailPanelComponent implements OnChanges {
   }
 
   /** Button colour (same as the admin panel): green for Unblock/Activate, red outline for Block/Deactivate. */
-  actionStyle(action: ResidentAction): 'success' | 'danger' | 'outline' {
+  actionStyle(action: ResidentAction): AppButtonVariant {
     if (action === 'unblock' || action === 'activate') return 'success';
-    return this.meta[action].danger ? 'danger' : 'outline';
+    return this.meta[action].danger ? 'danger-outline' : 'secondary';
   }
 
   run(r: Resident, action: ResidentAction): void {

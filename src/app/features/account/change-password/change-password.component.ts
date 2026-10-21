@@ -1,12 +1,12 @@
 import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AccountService } from '../../../core/services/account.service';
 import {
   PasswordPolicy,
@@ -26,7 +26,7 @@ type PasswordField = 'currentPassword' | 'newPassword' | 'confirmPassword';
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [AppDatePipe, CommonModule, ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [AppDatePipe, AppButtonComponent, CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatIconModule],
   templateUrl: './change-password.component.html',
   styleUrl: './change-password.component.scss',
 })
@@ -189,6 +189,10 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
 
   onCancel(): void {
     this.router.navigate(['/profile']);
+  }
+
+  goTo(url: string): void {
+    this.router.navigateByUrl(url);
   }
 
   changeAgain(): void {

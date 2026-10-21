@@ -1,0 +1,228 @@
+<form [formGroup]="form" (ngSubmit)="publish()" novalidate>
+  <app-dialog
+    [title]="isEdit ? 'Edit Draft' : 'New Announcement'"
+    subtitle="Compose a message, check the preview, then publish, schedule or save it as a draft."
+    icon="campaign"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <div class="ac__cols">
+      <!-- ============ Compose ============ -->
+      <div class="ac__form">
+        <!-- Title (counter sits inside the box) -->
+        <div class="fk-field">
+          <label class="fk-label" for="ac-title">Title<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="titleError">
+            <input id="ac-title" formControlName="title" [maxlength]="titleMax" placeholder="Enter announcement title" />
+            <span class="ac__count ac__count--inline">{{ form.controls.title.value.length }}/{{ titleMax }}</span>
+          </span>
+          @if (titleError) { <span class="fk-error">{{ titleError }}</span> }
+        </div>
+
+        <!-- Message -->
+        <div class="fk-field">
+          <label class="fk-label" for="ac-message">Message<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="messageError">
+            <textarea id="ac-message" rows="4" formControlName="message" [maxlength]="messageMax" placeholder="Write the announcement for residents"></textarea>
+          </span>
+          <span class="ac__meta">
+            @if (messageError) { <span class="fk-error">{{ messageError }}</span> }
+            <span class="ac__count" [class.is-near]="form.controls.message.value.length > messageMax * 0.9">{{ form.controls.message.value.length }}/{{ messageMax }}</span>
+          </span>
+        </div>
+
+        <!-- Attachment -->
+        <div class="fk-field">
+          <span class="fk-label">Attachment <span class="opt">(Optional)</span></span>
+          @if (attachment) {
+            <div class="ac__drop ac__drop--file">
+              <mat-icon class="ac__drop-icon" fontSet="material-icons-outlined">{{ attachment.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+              <span class="ac__drop-text">
+                <strong>{{ attachment.name }}</strong>
+                <small>{{ formatBytes(attachment.size) }}</small>
+              </span>
+              <app-button variant="icon" size="sm" icon="close" ariaLabel="Remove attachment" (clicked)="removeAttachment()"></app-button>
+            </div>
+          } @else {
+            <label class="ac__drop">
+              <mat-icon class="ac__drop-icon" fontSet="material-icons-outlined">upload_file</mat-icon>
+              <span class="ac__drop-text">
+                <strong>Attach a file</strong>
+                <small>PDF, JPG, or PNG up to 5 MB</small>
+              </span>
+              <mat-icon class="ac__drop-clip">attach_file</mat-icon>
+              <input type="file" [accept]="attachmentAccept" (change)="onFile($event)" hidden />
+            </label>
+          }
+          @if (attachmentError) { <span class="fk-error">{{ attachmentError }}</span> }
+        </div>
+
+        <!-- Audience -->
+        <div class="fk-field">
+          <span class="fk-label">Audience<span class="req">*</span></span>
+          <div class="ac__chips" role="radiogroup" aria-label="Audience">
+            @for (o of audienceOptions; track o.value) {
+              <button type="button" role="radio" class="ac__opt" [class.is-on]="audienceType === o.value" [attr.aria-checked]="audienceType === o.value" (click)="setAudience(o.value)">
+                <mat-icon fontSet="material-icons-outlined">{{ o.icon }}</mat-icon>
+                <span>{{ o.label }}</span>
+                @if (audienceType === o.value) { <mat-icon class="ac__opt-check">check_circle</mat-icon> }
+              </button>
+            }
+          </div>
+
+          @switch (audienceType) {
+            @case ('Rooms') {
+              <div class="ac__chips ac__sub">
+                @for (r of rooms; track r.id) {
+                  <button type="button" class="ac__chip" [class.is-on]="roomIds.includes(r.id)" (click)="roomIds = toggle(roomIds, r.id)">
+                    @if (roomIds.includes(r.id)) { <mat-icon>check</mat-icon> }
+                    Room {{ r.roomNumber }} <small>{{ r.roomType }} · {{ roomOccupants(r.id) }}</small>
+                  </button>
+                }
+              </div>
+            }
+            @case ('RoomTypes') {
+              <div class="ac__chips ac__sub">
+                @for (t of roomTypes; track t) {
+                  <button type="button" class="ac__chip" [class.is-on]="selectedRoomTypes.includes(t)" (click)="selectedRoomTypes = toggle(selectedRoomTypes, t)">
+                    @if (selectedRoomTypes.includes(t)) { <mat-icon>check</mat-icon> }
+                    {{ t }}
+                  </button>
+                }
+              </div>
+            }
+            @case ('Residents') {
+              <div class="ac__picker ac__sub">
+                <div class="ac__picker-bar">
+                  <span class="fk-control fk-control--lead">
+                    <mat-icon class="fk-lead">search</mat-icon>
+                    <input type="text" placeholder="Search name, ID or room" aria-label="Search residents"
+                      [value]="residentSearch" (input)="residentSearch = $any($event.target).value" />
+                  </span>
+                  <app-button variant="text" size="sm" (clicked)="selectShownResidents()">Select shown</app-button>
+                  @if (residentIds.length) { <app-button variant="text" size="sm" (clicked)="residentIds = []">Clear</app-button> }
+                </div>
+                <ul class="ac__list">
+                  @for (r of filteredResidents; track r.id) {
+                    <li>
+                      <label>
+                        <input type="checkbox" [checked]="residentIds.includes(r.id)" (change)="residentIds = toggle(residentIds, r.id)" />
+                        <span class="ac__list-name">{{ r.name }}</span>
+                        <small>{{ r.id }} · {{ r.location }}</small>
+                      </label>
+                    </li>
+                  } @empty {
+                    <li class="ac__list-empty">No residents match "{{ residentSearch }}"</li>
+                  }
+                </ul>
+              </div>
+            }
+          }
+          @if (audienceError) {
+            <span class="fk-error">{{ audienceError }}</span>
+          } @else {
+            <span class="ac__reach"><mat-icon fontSet="material-icons-outlined">group</mat-icon>{{ recipientCount }} current resident{{ recipientCount === 1 ? '' : 's' }} will receive this</span>
+          }
+        </div>
+
+        <!-- Channels -->
+        <div class="fk-field">
+          <span class="fk-label">Channels<span class="req">*</span></span>
+          <div class="ac__chips">
+            @for (c of channels; track c) {
+              <button type="button" class="ac__opt" [class.is-on]="selectedChannels.includes(c)" [disabled]="!service.channelAvailable(c)"
+                [matTooltip]="service.channelAvailable(c) ? '' : c + ' provider is not configured in Settings'" (click)="toggleChannel(c)">
+                <mat-icon fontSet="material-icons-outlined">{{ channelIcons[c] }}</mat-icon>
+                <span>{{ c }}</span>
+                @if (selectedChannels.includes(c)) { <mat-icon class="ac__opt-check">check_circle</mat-icon> }
+              </button>
+            }
+          </div>
+          @if (channelError) { <span class="fk-error">{{ channelError }}</span> }
+          @else if (!service.channelAvailable('Email') || !service.channelAvailable('SMS')) {
+            <span class="fk-hint">Email and SMS are available only when their provider is configured.</span>
+          } @else if (selectedChannels.includes('Push')) {
+            <span class="fk-hint">Push reaches residents whose devices allow notifications.</span>
+          }
+        </div>
+
+        <!-- Publishing -->
+        <h3 class="ac__heading">Publishing</h3>
+        <div class="ac__grid">
+          <div class="fk-field">
+            <span class="fk-label">Publish At<span class="req">*</span></span>
+            <div class="ac__chips" role="radiogroup" aria-label="Publish at">
+              <button type="button" role="radio" class="ac__opt ac__opt--fill" [class.is-on]="!scheduled" [attr.aria-checked]="!scheduled" (click)="form.controls.publishMode.setValue('now')">
+                <mat-icon fontSet="material-icons-outlined">bolt</mat-icon><span>Now</span>
+              </button>
+              <button type="button" role="radio" class="ac__opt ac__opt--fill" [class.is-on]="scheduled" [attr.aria-checked]="scheduled" (click)="form.controls.publishMode.setValue('schedule')">
+                <mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon><span>Schedule</span>
+              </button>
+            </div>
+            @if (scheduled) {
+              <span class="fk-control ac__gap" [class.is-invalid]="publishAtError">
+                <input type="datetime-local" formControlName="publishAt" [min]="minPublishAt" aria-label="Publish date and time" />
+              </span>
+              @if (publishAtError) { <span class="fk-error">{{ publishAtError }}</span> }
+            }
+          </div>
+
+          <div class="fk-field">
+            <label class="fk-label" for="ac-expiry">Expiry Date <span class="opt">(Optional)</span></label>
+            <span class="fk-control" [class.is-invalid]="expiryError">
+              <input id="ac-expiry" type="date" formControlName="expiryDate" [min]="minExpiry" />
+            </span>
+            @if (expiryError) { <span class="fk-error">{{ expiryError }}</span> }
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Live preview ============ -->
+      <aside class="ac__preview" aria-label="Preview">
+        <span class="ac__preview-label">Preview</span>
+
+        <div class="ac__card">
+          <div class="ac__card-head">
+            <span class="ac__logo"><mat-icon fontSet="material-icons-outlined">account_balance</mat-icon></span>
+            <span class="ac__card-from"><strong>{{ hostelName }}</strong><small>{{ previewTime }}</small></span>
+            <mat-icon class="ac__card-more">more_vert</mat-icon>
+          </div>
+          <h4 [class.is-empty]="!form.controls.title.value.trim()">{{ form.controls.title.value.trim() || 'Announcement title' }}</h4>
+          <p [class.is-empty]="!form.controls.message.value.trim()">{{ form.controls.message.value.trim() || 'Your message will appear here.' }}</p>
+          @if (attachment) {
+            <span class="ac__card-file"><mat-icon fontSet="material-icons-outlined">attach_file</mat-icon>{{ attachment.name }}</span>
+          }
+          @if (form.controls.expiryDate.value) { <small class="ac__card-exp">Until {{ fmt.date(form.controls.expiryDate.value) }}</small> }
+          <div class="ac__card-foot" aria-hidden="true">
+            <span><mat-icon fontSet="material-icons-outlined">favorite_border</mat-icon>Like</span>
+            <span><mat-icon fontSet="material-icons-outlined">chat_bubble_outline</mat-icon>Comment</span>
+          </div>
+        </div>
+
+        <dl class="ac__summary">
+          <div>
+            <dt><mat-icon fontSet="material-icons-outlined">badge</mat-icon>Audience</dt>
+            <dd>{{ service.audienceLabel(audience) }} ({{ recipientCount }})</dd>
+          </div>
+          <div>
+            <dt><mat-icon fontSet="material-icons-outlined">send</mat-icon>Channels</dt>
+            <dd>{{ selectedChannels.length ? selectedChannels.join(', ') : '—' }}</dd>
+          </div>
+          <div>
+            <dt><mat-icon fontSet="material-icons-outlined">schedule</mat-icon>Publish time</dt>
+            <dd [class.is-now]="!scheduled">{{ scheduled ? (form.controls.publishAt.value ? fmt.date(form.controls.publishAt.value, 'datetime') : 'Pick a time') : 'Now' }}</dd>
+          </div>
+        </dl>
+        <p class="ac__note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Drafts are not sent to residents.</p>
+      </aside>
+    </div>
+
+    @if (saveError) { <p class="ac__banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button variant="secondary" icon="save" [iconOutlined]="true" [disabled]="saving" (clicked)="saveDraft()">Save Draft</app-button>
+      <app-button type="submit" variant="accent" [icon]="scheduled ? 'schedule_send' : 'send'" [loading]="saving">{{ scheduled ? 'Schedule' : 'Publish Now' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

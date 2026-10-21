@@ -1,15 +1,26 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { ALL_FACILITIES } from '../rooms.service';
 import { GenderRestriction, Room, RoomStatus, RoomType } from '../rooms.models';
+import { ResidentsService } from '../../residents/residents.service';
+
+/** Icon per facility for the amenities checklist. */
+const FACILITY_ICONS: Record<string, string> = {
+  'Wi-Fi': 'wifi',
+  'Air Conditioned (AC)': 'ac_unit',
+  'Attached Bathroom': 'shower',
+  Balcony: 'balcony',
+  'Study Desk & Chair': 'desk',
+  'Geyser / Hot Water': 'water_drop',
+  'Cupboard / Wardrobe': 'door_sliding',
+  'Power Backup': 'power',
+  'Daily Housekeeping': 'cleaning_services',
+};
 
 export interface RoomModalData {
   room?: Room;
@@ -22,12 +33,9 @@ export interface RoomModalData {
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatCheckboxModule,
-    MatButtonModule,
     MatIconModule,
+    AppDialogComponent,
+    AppButtonComponent,
   ],
   templateUrl: './room-modal.component.html',
   styleUrl: './room-modal.component.scss',
@@ -42,6 +50,10 @@ export class RoomModalComponent {
   readonly roomStatuses: RoomStatus[] = ['Available', 'Full', 'Maintenance', 'Inactive'];
   readonly genderOptions: GenderRestriction[] = ['Any', 'Male', 'Female'];
   readonly availableFacilities = ALL_FACILITIES;
+  /** 1–12 beds, plus the room's current capacity if it is larger. */
+  readonly capacityOptions: number[];
+  /** "Any" plus the colleges / companies residents belong to (and the room's current value). */
+  readonly collegeOptions: string[];
 
   selectedFacilities: string[] = [];
 
@@ -53,6 +65,16 @@ export class RoomModalComponent {
     this.isEdit = !!data?.room;
     const r = data?.room;
     this.selectedFacilities = r?.facilities ? [...r.facilities] : ['Wi-Fi', 'Attached Bathroom', 'Air Conditioned (AC)'];
+
+    const maxCap = Math.max(12, r?.capacity ?? 0);
+    this.capacityOptions = Array.from({ length: maxCap }, (_, i) => i + 1);
+    const colleges = new Set(
+      inject(ResidentsService)
+        .residents.map((x) => x.collegeOrCompany?.trim())
+        .filter((x): x is string => !!x),
+    );
+    if (r?.collegeRestriction && r.collegeRestriction !== 'Any') colleges.add(r.collegeRestriction);
+    this.collegeOptions = ['Any', ...[...colleges].sort()];
 
     this.form = this.fb.group({
       building: [r?.building || 'Block A', Validators.required],
@@ -86,6 +108,16 @@ export class RoomModalComponent {
       }
       noteCtrl?.updateValueAndValidity();
     });
+  }
+
+  facilityIcon(f: string): string {
+    return FACILITY_ICONS[f] ?? 'check_circle';
+  }
+
+  /** Field shows its error once touched (or after a submit attempt). */
+  invalid(name: string): boolean {
+    const c = this.form.get(name);
+    return !!c && c.invalid && (c.touched || c.dirty);
   }
 
   isFacilitySelected(f: string): boolean {

@@ -1,0 +1,4 @@
+@use '../../../styles/dialog-kit' as *;
+@include form-fields;
+.ur-body { display: flex; flex-direction: column; gap: 14px; min-width: min(440px, 80vw); }
+.ur-current { margin: 0; font-size: 13px; color: #475569; }

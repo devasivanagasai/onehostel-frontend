@@ -1,0 +1,192 @@
+<div class="onboarding-page complaints-page">
+  <!-- KPI Summary: coloured value + 14-day trend -->
+  @if (kpis$ | async; as kpis) {
+    <section class="cmp-kpis" aria-label="Complaints summary">
+      @for (k of kpis; track k.key) {
+        <div class="cmp-kpi cmp-kpi--{{ k.tone }}">
+          <span class="cmp-kpi__icon"><mat-icon fontSet="material-icons-outlined">{{ k.icon }}</mat-icon></span>
+          <span class="cmp-kpi__body">
+            <span class="cmp-kpi__label">{{ k.label }}</span>
+            <span class="cmp-kpi__value">{{ k.value }}</span>
+            @if (k.sub) { <span class="cmp-kpi__sub">{{ k.sub }}</span> }
+          </span>
+          <svg class="cmp-kpi__spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true">
+            <path class="area" [attr.d]="k.trend.area" />
+            <path class="line" [attr.d]="k.trend.line" />
+          </svg>
+        </div>
+      }
+    </section>
+  }
+
+  <!-- One card: filters on top, table, footer -->
+  <app-table-card
+    class="cmp-card"
+    [empty]="filtered.length === 0"
+    [emptyIcon]="hasFilters ? 'search_off' : 'task_alt'"
+    [emptyMessage]="hasFilters ? 'No complaints match your filters' : 'No complaints yet'"
+    [emptyHint]="hasFilters ? 'Try a different search, status, category, priority or assignee.' : 'Complaints raised in the Resident App appear here.'"
+    [clearable]="hasFilters"
+    (clear)="clearFilters()"
+    [page]="safePage"
+    [totalPages]="totalPages"
+    [pageSize]="pageSize"
+    (pageChange)="currentPage = $event"
+    (pageSizeChange)="onPageSizeChange($event)"
+  >
+    <div class="cmp-toolbar" tableToolbar>
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search ID, title, resident or room" aria-label="Search complaints"
+          [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+        @if (filters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+            @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Category" [(ngModel)]="filters.category" (ngModelChange)="currentPage = 0">
+            <option value="All">All Categories</option>
+            @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Priority" [(ngModel)]="filters.priority" (ngModelChange)="currentPage = 0">
+            <option value="All">All Priorities</option>
+            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Assigned to" [(ngModel)]="filters.assignee" (ngModelChange)="currentPage = 0">
+            <option value="All">Anyone</option>
+            <option value="Unassigned">Unassigned</option>
+            @for (s of staff; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      @if (hasFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+      }
+      <app-button class="cmp-toolbar__add" icon="add" (clicked)="openNew()">New Complaint</app-button>
+    </div>
+
+    <table mat-table [dataSource]="paged" class="saas-table cmp-table">
+      <ng-container matColumnDef="complaint">
+        <th mat-header-cell *matHeaderCellDef [attr.aria-sort]="ariaSort('created')">
+          <button type="button" class="sort-btn" (click)="sortBy('created')">Complaint<mat-icon>{{ sortIcon('created') }}</mat-icon></button>
+        </th>
+        <td mat-cell *matCellDef="let c">
+          <span class="list-entity__text">
+            <span class="list-entity__name mono">#{{ c.id }}</span>
+            <span class="list-entity__sub">{{ fmt.date(c.createdAt) }} • {{ fmt.date(c.createdAt, 'time') }}</span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="resident">
+        <th mat-header-cell *matHeaderCellDef> Resident </th>
+        <td mat-cell *matCellDef="let c">
+          <div class="list-entity">
+            <span class="list-entity__avatar list-avatar--{{ tone(c.residentId) }}">{{ initials(c.residentName) }}</span>
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ c.residentName }}</span>
+              <span class="list-entity__sub">{{ c.location || c.residentId }}</span>
+            </span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="issue">
+        <th mat-header-cell *matHeaderCellDef> Issue </th>
+        <td mat-cell *matCellDef="let c" class="issue-cell">
+          <span class="issue-title" [title]="c.title">{{ c.title }}</span>
+          <span class="issue-meta">
+            <span class="cat-chip cat-chip--{{ categoryKey(c.category) }}">{{ c.category }}</span>
+            @if (c.attachments.length) {
+              <span class="issue-flag" [matTooltip]="c.attachments.length + ' attachment(s)'"><mat-icon>attach_file</mat-icon>{{ c.attachments.length }}</span>
+            }
+            @if (c.reopenCount) {
+              <span class="issue-flag" [matTooltip]="'Reopened ' + c.reopenCount + ' time(s)'"><mat-icon>replay</mat-icon>{{ c.reopenCount }}</span>
+            }
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="priority">
+        <th mat-header-cell *matHeaderCellDef> Priority </th>
+        <td mat-cell *matCellDef="let c"><span class="prio prio--{{ c.priority.toLowerCase() }}">{{ c.priority }}</span></td>
+      </ng-container>
+
+      <ng-container matColumnDef="assignee">
+        <th mat-header-cell *matHeaderCellDef> Assigned To </th>
+        <td mat-cell *matCellDef="let c">
+          @if (c.assignedTo) {
+            <div class="list-entity">
+              <span class="staff-avatar">{{ initials(assigneeName(c)) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ assigneeName(c) }}</span>
+                <span class="list-entity__sub">{{ assigneeRole(c) }}</span>
+              </span>
+            </div>
+          } @else {
+            <div class="list-entity">
+              <span class="staff-avatar staff-avatar--empty"><mat-icon>person_outline</mat-icon></span>
+              <span class="unassigned">Unassigned</span>
+            </div>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="target">
+        <th mat-header-cell *matHeaderCellDef [attr.aria-sort]="ariaSort('target')">
+          <button type="button" class="sort-btn" (click)="sortBy('target')">Target Date<mat-icon>{{ sortIcon('target') }}</mat-icon></button>
+        </th>
+        <td mat-cell *matCellDef="let c" class="date-cell" [class.is-late]="complaints.isOverdue(c)">
+          @if (c.targetDate) {
+            <span class="list-entity__text">
+              <span class="target-date">{{ fmt.date(c.targetDate) }}</span>
+              <span class="list-entity__sub" [class.late]="complaints.isOverdue(c)">
+                {{ c.resolvedAt ? 'Resolved ' + fmt.date(c.resolvedAt) : targetHint(c) }}
+              </span>
+            </span>
+          } @else {
+            <span class="list-entity__text">
+              <span class="unassigned">Not set</span>
+              @if (c.resolvedAt) { <span class="list-entity__sub">Resolved {{ fmt.date(c.resolvedAt) }}</span> }
+            </span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Status </th>
+        <td mat-cell *matCellDef="let c"><span class="status-badge status-badge--{{ statusTone(c) }}">{{ c.status }}</span></td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let c" class="actions-cell">
+          <app-button variant="outline" size="sm" [ariaLabel]="'View ' + c.id" (clicked)="openView(c)">View</app-button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-urgent]="isUrgent(row)" [class.is-done]="row.status === 'Closed'"></tr>
+    </table>
+  </app-table-card>
+</div>

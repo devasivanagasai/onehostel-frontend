@@ -1,0 +1,210 @@
+<div class="onboarding-page announcements-page">
+  <!-- KPI Summary -->
+  @if (stats$ | async; as s) {
+    <section class="kpi-row" aria-label="Announcements summary">
+      <div class="kpi-card ann-kpi--teal">
+        <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">campaign</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Live</span>
+          <span class="kpi-card__value">{{ s.published }}</span>
+          <span class="kpi-card__sub">Published, not expired</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ann-kpi--blue">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">schedule_send</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Scheduled</span>
+          <span class="kpi-card__value">{{ s.scheduled }}</span>
+          <span class="kpi-card__sub">Waiting to go out</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ann-kpi--indigo">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">edit_note</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Drafts</span>
+          <span class="kpi-card__value">{{ s.drafts }}</span>
+          <span class="kpi-card__sub">Not sent to residents</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ann-kpi--green">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">mark_chat_read</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">In-app Read Rate</span>
+          <span class="kpi-card__value">{{ s.readRate === null ? '—' : s.readRate + '%' }}</span>
+          <span class="kpi-card__sub">Last 30 days</span>
+          <span class="kpi-card__bar"><span [style.width.%]="s.readRate ?? 0"></span></span>
+        </div>
+      </div>
+
+      <div class="kpi-card ann-kpi--orange">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">history</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Expired / Cancelled</span>
+          <span class="kpi-card__value">{{ s.closed }}</span>
+          <span class="kpi-card__sub">No longer visible</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Filter card: search + filters, New Announcement at the right -->
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Search ID, title or message" aria-label="Search announcements"
+        [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+          <option value="All">All Status</option>
+          @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Channel" [(ngModel)]="filters.channel" (ngModelChange)="currentPage = 0">
+          <option value="All">All Channels</option>
+          @for (c of channels; track c) { <option [value]="c">{{ c }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Audience" [(ngModel)]="filters.audience" (ngModelChange)="currentPage = 0">
+          <option value="All">All Audiences</option>
+          @for (o of audienceOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    <app-button class="filter-card__add" icon="add" (clicked)="openCompose()">New Announcement</app-button>
+  </div>
+
+  <app-table-card
+    class="announcements-table-card"
+    [empty]="filtered.length === 0"
+    [emptyIcon]="hasFilters ? 'search_off' : 'campaign'"
+    [emptyMessage]="hasFilters ? 'No announcements match your filters' : 'No announcements yet'"
+    [emptyHint]="hasFilters ? 'Try a different search, status, channel or audience.' : 'Create an announcement to reach your residents.'"
+    [clearable]="hasFilters"
+    (clear)="clearFilters()"
+    [page]="safePage"
+    [totalPages]="totalPages"
+    [pageSize]="pageSize"
+    (pageChange)="currentPage = $event"
+    (pageSizeChange)="onPageSizeChange($event)"
+  >
+    <table mat-table [dataSource]="paged" class="saas-table announcements-table">
+      <ng-container matColumnDef="announcement">
+        <th mat-header-cell *matHeaderCellDef> Announcement </th>
+        <td mat-cell *matCellDef="let a" class="title-cell">
+          <span class="list-entity__text">
+            <span class="list-entity__name ann-title" [title]="a.title">{{ a.title }}</span>
+            <span class="list-entity__sub">
+              {{ a.id }}
+              @if (a.attachment) { <mat-icon class="ann-clip" [matTooltip]="a.attachment.name">attach_file</mat-icon> }
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="audience">
+        <th mat-header-cell *matHeaderCellDef> Audience </th>
+        <td mat-cell *matCellDef="let a">
+          <span class="with-icon">
+            <span class="ann-dot ann-dot--{{ audienceTone(a) }}"><mat-icon fontSet="material-icons-outlined">{{ audienceIcon(a) }}</mat-icon></span>
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ service.audienceLabel(a.audience) }}</span>
+              <span class="list-entity__sub">{{ recipientCount(a) }} recipient{{ recipientCount(a) === 1 ? '' : 's' }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="channels">
+        <th mat-header-cell *matHeaderCellDef> Channels </th>
+        <td mat-cell *matCellDef="let a">
+          <span class="ann-channels">
+            @for (c of a.channels; track c) {
+              <span class="ann-channel ann-channel--{{ channelTone(c) }}" [matTooltip]="c" [attr.aria-label]="c"><mat-icon fontSet="material-icons-outlined">{{ channelIcon(c) }}</mat-icon></span>
+            } @empty { <span class="muted">—</span> }
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="publish">
+        <th mat-header-cell *matHeaderCellDef> Publish At </th>
+        <td mat-cell *matCellDef="let a" class="date-cell">
+          @if (a.publishAt) {
+            <span class="with-icon">
+              <mat-icon class="ann-cal" fontSet="material-icons-outlined">calendar_month</mat-icon>
+              <span class="list-entity__text">
+                <span>{{ fmt.date(a.publishAt) }}</span>
+                <span class="list-entity__sub">{{ fmt.date(a.publishAt, 'time') }} · {{ status(a) === 'Draft' ? 'Planned' : publishHint(a) }}</span>
+              </span>
+            </span>
+          } @else {
+            <span class="muted">Not set</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Status </th>
+        <td mat-cell *matCellDef="let a"><span class="status-badge status-badge--{{ statusTone(a) }}">{{ status(a) }}</span></td>
+      </ng-container>
+
+      <ng-container matColumnDef="createdBy">
+        <th mat-header-cell *matHeaderCellDef> Created by </th>
+        <td mat-cell *matCellDef="let a" class="date-cell">
+          <span class="with-icon">
+            <span class="ann-avatar">{{ initials(a.createdBy) }}</span>
+            <span class="list-entity__text">
+              <span>{{ a.createdBy }}</span>
+              <span class="list-entity__sub">{{ fmt.date(a.createdAt) }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let a" class="actions-cell">
+          <span class="ann-actions">
+            <app-button class="ann-act" variant="icon" size="sm" icon="visibility" matTooltip="View" [ariaLabel]="'View ' + a.id" (clicked)="openView(a)"></app-button>
+            @if (status(a) === 'Draft') {
+              <app-button class="ann-act" variant="icon" size="sm" icon="edit" matTooltip="Edit draft" [ariaLabel]="'Edit ' + a.id" (clicked)="openCompose(a)"></app-button>
+              <app-button class="ann-act ann-act--danger" variant="icon" size="sm" icon="delete" matTooltip="Delete draft" [ariaLabel]="'Delete ' + a.id" (clicked)="deleteDraft(a)"></app-button>
+            } @else {
+              @if (status(a) === 'Scheduled') {
+                <app-button class="ann-act ann-act--danger" variant="icon" size="sm" icon="event_busy" matTooltip="Cancel schedule" [ariaLabel]="'Cancel ' + a.id" (clicked)="cancelScheduled(a)"></app-button>
+              }
+              <app-button class="ann-act" variant="icon" size="sm" icon="content_copy" matTooltip="Duplicate as draft" [ariaLabel]="'Duplicate ' + a.id" (clicked)="duplicate(a)"></app-button>
+            }
+          </span>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="status(row) === 'Expired' || status(row) === 'Cancelled'"></tr>
+    </table>
+  </app-table-card>
+</div>

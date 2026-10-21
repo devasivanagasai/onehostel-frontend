@@ -91,25 +91,15 @@
 
     <div class="filter-actions">
       <div class="filter-actions__left">
-        <button type="button" class="btn-primary" (click)="onSearch()">
-          <mat-icon>search</mat-icon>
-          <span>Search</span>
+        <app-button class="search-btn" icon="search" (clicked)="onSearch()">
+          Search
           <span class="pending-dot" *ngIf="hasPendingChanges" aria-label="Unapplied changes"></span>
-        </button>
-        <button type="button" class="btn-secondary" (click)="onReset()">
-          <mat-icon>restart_alt</mat-icon>
-          <span>Reset</span>
-        </button>
+        </app-button>
+        <app-button variant="secondary" icon="restart_alt" (clicked)="onReset()">Reset</app-button>
       </div>
       <div class="filter-actions__right">
-        <button type="button" class="btn-export btn-export--excel" [disabled]="activeRowCount === 0" (click)="onExport('excel')">
-          <mat-icon>table_view</mat-icon>
-          <span>Export Excel</span>
-        </button>
-        <button type="button" class="btn-export btn-export--pdf" [disabled]="activeRowCount === 0" (click)="onExport('pdf')">
-          <mat-icon>picture_as_pdf</mat-icon>
-          <span>Export PDF</span>
-        </button>
+        <app-button variant="secondary" icon="table_view" [disabled]="activeRowCount === 0" (clicked)="onExport('excel')">Export Excel</app-button>
+        <app-button variant="secondary" icon="picture_as_pdf" [disabled]="activeRowCount === 0" (clicked)="onExport('pdf')">Export PDF</app-button>
       </div>
     </div>
 
@@ -152,9 +142,13 @@
         <app-report-bar-list [items]="cityBreakdown" unit="hostels" caption="City-wise hostels"></app-report-bar-list>
       </div>
 
-      <div class="saas-card table-card">
-        <h3 class="card-title">Hostel List</h3>
-        <div class="table-responsive">
+      <app-table-card
+        class="table-card"
+        [paginate]="false"
+        [empty]="hostelRows.length === 0"
+        emptyMessage="No hostels match the selected filters"
+      >
+        <h3 tableToolbar class="card-title">Hostel List</h3>
           <table class="saas-table">
             <thead>
               <tr>
@@ -178,13 +172,10 @@
                   <td>{{ h.onboardedDate | appDate }}</td>
                   <td><span class="status-badge status-badge--{{ tone(h.status) }}">{{ h.status }}</span></td>
                 </tr>
-              } @empty {
-                <tr><td colspan="7" class="empty-cell">No hostels match the selected filters</td></tr>
               }
             </tbody>
           </table>
-        </div>
-      </div>
+      </app-table-card>
     </div>
   }
 
@@ -212,9 +203,13 @@
         <app-report-bar-list [items]="hostelResidentBars" unit="tenants" caption="Active tenants by hostel"></app-report-bar-list>
       </div>
 
-      <div class="saas-card table-card">
-        <h3 class="card-title">Hostel-wise Tenants</h3>
-        <div class="table-responsive">
+      <app-table-card
+        class="table-card"
+        [paginate]="false"
+        [empty]="residentRows.length === 0"
+        emptyMessage="No hostels match the selected filters"
+      >
+        <h3 tableToolbar class="card-title">Hostel-wise Tenants</h3>
           <table class="saas-table">
             <thead>
               <tr>
@@ -234,8 +229,6 @@
                   <td class="num">{{ h.checkedOutResidents | number }}</td>
                   <td class="num font-medium">{{ h.activeResidents + h.checkedOutResidents | number }}</td>
                 </tr>
-              } @empty {
-                <tr><td colspan="5" class="empty-cell">No hostels match the selected filters</td></tr>
               }
             </tbody>
             @if (residentRows.length > 0) {
@@ -249,8 +242,7 @@
               </tfoot>
             }
           </table>
-        </div>
-      </div>
+      </app-table-card>
     </div>
   }
 
@@ -275,9 +267,13 @@
       </div>
     </div>
 
-    <div class="saas-card table-card">
-      <h3 class="card-title">Occupancy by Hostel</h3>
-      <div class="table-responsive">
+    <app-table-card
+      class="table-card"
+      [paginate]="false"
+      [empty]="occupancyRows.length === 0"
+      emptyMessage="No hostels match the selected filters"
+    >
+      <h3 tableToolbar class="card-title">Occupancy by Hostel</h3>
         <table class="saas-table">
           <thead>
             <tr>
@@ -307,8 +303,6 @@
                   </div>
                 </td>
               </tr>
-            } @empty {
-              <tr><td colspan="5" class="empty-cell">No hostels match the selected filters</td></tr>
             }
           </tbody>
           @if (occupancyRows.length > 0) {
@@ -323,15 +317,18 @@
             </tfoot>
           }
         </table>
-      </div>
-    </div>
+    </app-table-card>
   }
 
   <!-- ======================= SUBSCRIPTION REPORT ======================= -->
   @if (activeReport === 'subscriptions') {
-    <div class="saas-card table-card">
-      <h3 class="card-title">Subscriptions</h3>
-      <div class="table-responsive">
+    <app-table-card
+      class="table-card"
+      [paginate]="false"
+      [empty]="subscriptionRows.length === 0"
+      emptyMessage="No subscriptions match the selected filters"
+    >
+      <h3 tableToolbar class="card-title">Subscriptions</h3>
         <table class="saas-table">
           <thead>
             <tr>
@@ -356,8 +353,6 @@
                 <td class="num">{{ s.amount > 0 ? (s.amount | appCurrency: '1.0-2') : 'Free' }}</td>
                 <td><span class="status-badge status-badge--{{ tone(s.status) }}">{{ s.status }}</span></td>
               </tr>
-            } @empty {
-              <tr><td colspan="6" class="empty-cell">No subscriptions match the selected filters</td></tr>
             }
           </tbody>
           @if (subscriptionRows.length > 0) {
@@ -370,8 +365,7 @@
             </tfoot>
           }
         </table>
-      </div>
-    </div>
+    </app-table-card>
   }
 
   <!-- ========================= REVENUE REPORT ========================= -->
@@ -399,9 +393,13 @@
       </div>
     </div>
 
-    <div class="saas-card table-card">
-      <h3 class="card-title">Transactions</h3>
-      <div class="table-responsive">
+    <app-table-card
+      class="table-card"
+      [paginate]="false"
+      [empty]="revenueRows.length === 0"
+      emptyMessage="No transactions match the selected filters"
+    >
+      <h3 tableToolbar class="card-title">Transactions</h3>
         <table class="saas-table">
           <thead>
             <tr>
@@ -427,8 +425,6 @@
                 <td class="num font-medium">{{ p.totalAmount | appCurrency: '1.2-2' }}</td>
                 <td><span class="status-badge status-badge--{{ tone(p.paymentStatus) }}">{{ p.paymentStatus }}</span></td>
               </tr>
-            } @empty {
-              <tr><td colspan="8" class="empty-cell">No transactions match the selected filters</td></tr>
             }
           </tbody>
           @if (revenueRows.length > 0) {
@@ -444,7 +440,6 @@
             </tfoot>
           }
         </table>
-      </div>
-    </div>
+    </app-table-card>
   }
 </div>

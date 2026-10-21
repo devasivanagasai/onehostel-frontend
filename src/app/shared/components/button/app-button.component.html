@@ -1,48 +1,23 @@
-@switch (variant) {
-  @case ('primary') {
-    <button mat-raised-button [color]="color" [type]="type" [disabled]="disabled || loading"
-            [attr.aria-label]="ariaLabel" (click)="onClick($event)">
-      <ng-container *ngTemplateOutlet="content"></ng-container>
-    </button>
-  }
-  @case ('secondary') {
-    <button mat-flat-button [color]="color" [type]="type" [disabled]="disabled || loading"
-            [attr.aria-label]="ariaLabel" (click)="onClick($event)">
-      <ng-container *ngTemplateOutlet="content"></ng-container>
-    </button>
-  }
-  @case ('stroked') {
-    <button mat-stroked-button [color]="color" [type]="type" [disabled]="disabled || loading"
-            [attr.aria-label]="ariaLabel" (click)="onClick($event)">
-      <ng-container *ngTemplateOutlet="content"></ng-container>
-    </button>
-  }
-  @case ('text') {
-    <button mat-button [color]="color" [type]="type" [disabled]="disabled || loading"
-            [attr.aria-label]="ariaLabel" (click)="onClick($event)">
-      <ng-container *ngTemplateOutlet="content"></ng-container>
-    </button>
-  }
-  @case ('icon') {
-    <button mat-icon-button [color]="color" [type]="type" [disabled]="disabled || loading"
-            [attr.aria-label]="ariaLabel" (click)="onClick($event)">
-      @if (loading) {
-        <mat-spinner diameter="18"></mat-spinner>
-      } @else if (icon) {
-        <mat-icon>{{ icon }}</mat-icon>
-      }
-    </button>
-  }
-}
-
-<ng-template #content>
+<button
+  class="app-btn app-btn--{{ resolvedVariant }} app-btn--{{ size }}"
+  [class.app-btn--icon-only]="iconOnly"
+  [class.app-btn--loading]="loading"
+  [type]="type"
+  [attr.form]="form || null"
+  [disabled]="disabled || loading"
+  [attr.aria-label]="ariaLabel"
+  [attr.aria-busy]="loading || null"
+  (click)="onClick($event)"
+>
   @if (loading) {
-    <mat-spinner diameter="18" class="app-button__spinner app-button__spinner--left"></mat-spinner>
-  } @else if (icon && iconPosition === 'left') {
-    <mat-icon class="app-button__icon app-button__icon--left">{{ icon }}</mat-icon>
+    <mat-spinner class="app-btn__spinner" [diameter]="size === 'sm' ? 14 : 18"></mat-spinner>
+  } @else if (icon && (iconOnly || iconPosition === 'left')) {
+    <mat-icon class="app-btn__icon" [fontSet]="iconOutlined ? 'material-icons-outlined' : ''">{{ icon }}</mat-icon>
   }
-  <ng-content></ng-content>
-  @if (!loading && icon && iconPosition === 'right') {
-    <mat-icon class="app-button__icon app-button__icon--right">{{ icon }}</mat-icon>
+  @if (!iconOnly) {
+    <span class="app-btn__label"><ng-content></ng-content></span>
   }
-</ng-template>
+  @if (!loading && icon && !iconOnly && iconPosition === 'right') {
+    <mat-icon class="app-btn__icon" [fontSet]="iconOutlined ? 'material-icons-outlined' : ''">{{ icon }}</mat-icon>
+  }
+</button>

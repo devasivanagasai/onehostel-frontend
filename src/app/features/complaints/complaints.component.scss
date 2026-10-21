@@ -1,0 +1,287 @@
+// Table base comes from styles/_table.scss, search/select controls from styles/_page-kit.scss.
+@use './complaint-pills' as *;
+
+@include priority-pills;
+@include category-chips;
+
+$tones: (
+  "teal": (#e6f7f5, #0d9488),
+  "blue": (#eaf1ff, #2563eb),
+  "red": (#fee2e2, #dc2626),
+  "amber": (#fff1e6, #ea580c),
+  "green": (#e9f9ef, #16a34a),
+);
+
+.complaints-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+/* ---- KPI cards ---- */
+.cmp-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cmp-kpi {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 18px 18px 40px;
+  overflow: hidden;
+  border: none;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+
+  &__icon {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--tone-bg);
+    color: var(--tone);
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+
+  &__value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--tone);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  &__spark {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 34px;
+
+    .line {
+      fill: none;
+      stroke: var(--tone);
+      stroke-width: 1.6;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .area {
+      fill: var(--tone);
+      opacity: 0.08;
+    }
+  }
+}
+
+@each $key, $t in $tones {
+  .cmp-kpi--#{$key} {
+    --tone-bg: #{nth($t, 1)};
+    --tone: #{nth($t, 2)};
+  }
+}
+
+/* ---- Card: toolbar + table + footer ---- */
+.cmp-card {
+  padding: 16px 20px 16px !important;
+}
+
+.cmp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  .filter-search {
+    flex: 1 1 260px;
+    max-width: 340px;
+  }
+
+  &__add {
+    margin-left: auto;
+  }
+}
+
+// Header row keeps the shared mint-green look from styles/_table.scss
+.cmp-table {
+  // Slightly tighter cells so all eight columns fit beside the sidebar
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+    }
+
+    &:hover mat-icon {
+      color: #334155;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #0d9488;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  th[aria-sort='ascending'] .sort-btn mat-icon,
+  th[aria-sort='descending'] .sort-btn mat-icon {
+    color: #0d9488;
+  }
+
+  .mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  .issue-cell {
+    max-width: 210px;
+  }
+
+  .issue-title {
+    display: block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #0f172a;
+    font-weight: 500;
+  }
+
+  .issue-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .issue-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 12px;
+    color: #64748b;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .staff-avatar {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e293b;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+
+    &--empty {
+      background: #ffffff;
+      border: 1.5px dashed #cbd5e1;
+      color: #94a3b8;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .date-cell {
+    white-space: nowrap;
+  }
+
+  .target-date {
+    color: #1e293b;
+  }
+
+  td.is-late .target-date,
+  .late {
+    color: #dc2626 !important;
+    font-weight: 600;
+  }
+
+  .unassigned {
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  // Urgent, still-active complaints stand out
+  .is-urgent td {
+    background: #fff5f5;
+  }
+
+  .is-urgent td:first-child {
+    box-shadow: inset 4px 0 0 #dc2626;
+  }
+
+  .is-done td {
+    color: #94a3b8;
+  }
+}

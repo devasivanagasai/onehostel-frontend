@@ -67,6 +67,18 @@ export class MainLayoutComponent {
         this.pageSubtitle = 'Update this hostel and its owner details across all 7 steps.';
       } else if (url.includes('dashboard')) {
         this.pageTitle = 'Dashboard';
+      } else if (url.startsWith('/announcements')) {
+        this.pageTitle = 'Announcements & Communication';
+        this.pageSubtitle = 'Compose, schedule and publish notices to your residents';
+      } else if (url.startsWith('/hostel-reports')) {
+        this.pageTitle = 'Reports';
+        this.pageSubtitle = 'Residents, occupancy, collections, dues and complaints for your hostel';
+      } else if (url.startsWith('/hostel-settings')) {
+        this.pageTitle = 'Hostel Profile & Settings';
+        this.pageSubtitle = 'Hostel details, rules, facilities, notifications and subscription';
+      } else if (url.startsWith('/complaints')) {
+        this.pageTitle = 'Complaints & Maintenance';
+        this.pageSubtitle = 'Review resident complaints, assign staff, track progress and resolve issues';
       } else if (url.startsWith('/fees')) {
         this.pageTitle = 'Fees & Payments';
         this.pageSubtitle = 'Configure resident fees, generate charges, record payments and send reminders';

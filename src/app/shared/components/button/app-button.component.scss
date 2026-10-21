@@ -1,28 +1,258 @@
+// Shared button. Sizes come from the --btn-* tokens in styles.scss.
+
 :host {
-  display: inline-block;
-}
-
-// Shared button size (tokens in styles.scss); screens may still override, e.g. the login CTA.
-:host ::ng-deep .mdc-button {
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  border-radius: var(--btn-radius);
-}
-
-.app-button__icon--left {
-  margin-right: 6px;
-}
-
-.app-button__icon--right {
-  margin-left: 6px;
-}
-
-.app-button__spinner {
-  display: inline-block;
+  display: inline-flex;
   vertical-align: middle;
 }
 
-.app-button__spinner--left {
-  margin-right: 8px;
+:host(.app-button--block) {
+  display: flex;
+  width: 100%;
+
+  .app-btn {
+    width: 100%;
+  }
+}
+
+.app-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--btn-height);
+  padding: 0 var(--btn-padding-x);
+  border: 1px solid transparent;
+  border-radius: var(--btn-radius);
+  font: inherit;
+  font-size: var(--btn-font-size);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+    transform: none;
+  }
+
+  &--loading:disabled {
+    opacity: 0.8;
+    cursor: progress;
+  }
+}
+
+.app-btn__icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.app-btn__label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-btn__spinner {
+  flex-shrink: 0;
+}
+
+/* ---- Sizes ---- */
+.app-btn--sm {
+  height: var(--btn-height-sm);
+  padding: 0 var(--btn-padding-x-sm);
+  font-size: var(--btn-font-size-sm);
+
+  .app-btn__icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.app-btn--lg {
+  height: var(--btn-height-lg);
+  padding: 0 calc(var(--btn-padding-x) + 6px);
+}
+
+/* ---- Variants ---- */
+.app-btn--primary {
+  background: #0057e7;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 87, 231, 0.22);
+
+  &:hover:not(:disabled) {
+    background: #0045b5;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(0, 87, 231, 0.32);
+  }
+}
+
+.app-btn--secondary {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+
+  &:hover:not(:disabled) {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
+}
+
+.app-btn--outline {
+  border-color: #dbe3ef;
+  background: #ffffff;
+  color: #2563eb;
+
+  &:hover:not(:disabled) {
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+}
+
+.app-btn--success {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.2);
+
+  &:hover:not(:disabled) {
+    background: #15803d;
+  }
+
+  &:focus-visible {
+    outline-color: #16a34a;
+  }
+}
+
+.app-btn--accent {
+  background: #0d9488;
+  color: #ffffff;
+
+  &:hover:not(:disabled) {
+    background: #0f766e;
+  }
+
+  &:focus-visible {
+    outline-color: #0d9488;
+  }
+}
+
+.app-btn--danger {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.2);
+
+  &:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
+  }
+}
+
+.app-btn--warning {
+  background: #d97706;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.2);
+
+  &:hover:not(:disabled) {
+    background: #b45309;
+  }
+
+  &:focus-visible {
+    outline-color: #d97706;
+  }
+}
+
+.app-btn--danger-outline {
+  border-color: #fecaca;
+  background: #ffffff;
+  color: #dc2626;
+
+  &:hover:not(:disabled) {
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
+  }
+}
+
+.app-btn--text {
+  padding: 0 10px;
+  background: transparent;
+  color: #2563eb;
+
+  &:hover:not(:disabled) {
+    background: #eff6ff;
+  }
+}
+
+/* ---- Icon-only ---- */
+.app-btn--icon-only {
+  width: var(--btn-height);
+  padding: 0;
+
+  &.app-btn--sm {
+    width: var(--btn-height-sm);
+  }
+
+  .app-btn__icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  &.app-btn--sm .app-btn__icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.app-btn--icon {
+  border-radius: 50%;
+  background: transparent;
+  color: #64748b;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+}
+
+.app-btn--icon-outline {
+  border-color: #dbe3ef;
+  background: #ffffff;
+  color: #2563eb;
+
+  &:hover:not(:disabled) {
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+}
+
+.app-btn--icon-danger {
+  border-color: #fecaca;
+  background: #ffffff;
+  color: #dc2626;
+
+  &:hover:not(:disabled) {
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
+  &:focus-visible {
+    outline-color: #dc2626;
+  }
 }

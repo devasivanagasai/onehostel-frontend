@@ -30,7 +30,12 @@ export class SidebarComponent {
 
   private readonly auth = inject(AuthService);
 
-  /** Menu for the signed-in user: the Admin modules are shown to Admins only. */
+  /**
+   * Menu for the signed-in user, filtered by role through AuthService.canAccess():
+   * Hostel Owner modules (Rooms & Beds, Residents, Fees & Payments, Complaints, Announcements, Reports,
+   * Hostel Settings) for Hostel Owners only,
+   * Admin modules for Admins only.
+   */
   get navSections(): NavSection[] {
     // Built once per role combination and reused: a fresh array on every check would re-create the menu links,
     // and each new routerLinkActive schedules another check — an endless render loop (white screen).
@@ -56,6 +61,10 @@ const ALL_SECTIONS: NavSection[] = [
       { label: 'Rooms & Beds', icon: 'meeting_room', route: '/rooms' },
       { label: 'Residents', icon: 'groups', route: '/residents' },
       { label: 'Fees & Payments', icon: 'payments', route: '/fees' },
+      { label: 'Complaints', icon: 'build_circle', route: '/complaints' },
+      { label: 'Announcements', icon: 'campaign', route: '/announcements' },
+      { label: 'Reports', icon: 'bar_chart', route: '/hostel-reports' },
+      { label: 'Hostel Settings', icon: 'settings', route: '/hostel-settings' },
       { label: 'Onboard Hostel', icon: 'apartment', route: '/hostel-onboarding' },
       { label: 'Subscription Plans', icon: 'credit_card', route: '/subscription-plans' },
       { label: 'Communication Templates', icon: 'campaign', route: '/communication-templates' },

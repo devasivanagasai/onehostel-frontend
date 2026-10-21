@@ -4,23 +4,22 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDividerModule } from '@angular/material/divider';
 import { Observable } from 'rxjs';
 import { RoomsService } from './rooms.service';
 import { ResidentsService } from '../residents/residents.service';
 import { Bed, Room, RoomFilterState, RoomStats, RoomStatus } from './rooms.models';
 import { RoomModalComponent } from './room-modal/room-modal.component';
 import { BedModalComponent } from './bed-modal/bed-modal.component';
-import { AppConfirmDialogComponent } from '../../shared/components/confirm-dialog/app-confirm-dialog.component';
+import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
 import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../core/services/app-format.service';
 
 @Component({
@@ -32,16 +31,15 @@ import { AppFormatService } from '../../core/services/app-format.service';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatButtonModule,
     MatIconModule,
     MatDialogModule,
     MatTooltipModule,
     MatSnackBarModule,
     MatSlideToggleModule,
     MatMenuModule,
-    MatDividerModule,
     AppEmptyStateComponent,
     AppPaginationComponent,
+    AppButtonComponent,
   ],
   templateUrl: './rooms-management.component.html',
   styleUrl: './rooms-management.component.scss',
@@ -50,6 +48,7 @@ export class RoomsManagementComponent implements OnInit {
   private readonly roomsService = inject(RoomsService);
   private readonly residentsService = inject(ResidentsService);
   private readonly dialog = inject(MatDialog);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   private readonly snackBar = inject(MatSnackBar);
   readonly fmt = inject(AppFormatService);
 
@@ -202,7 +201,8 @@ export class RoomsManagementComponent implements OnInit {
 
   openAddRoomModal(): void {
     const ref = this.dialog.open(RoomModalComponent, {
-      width: '640px',
+      width: '1100px',
+      maxWidth: '95vw',
       data: {},
     });
 
@@ -220,7 +220,8 @@ export class RoomsManagementComponent implements OnInit {
 
   openEditRoomModal(room: Room): void {
     const ref = this.dialog.open(RoomModalComponent, {
-      width: '640px',
+      width: '1100px',
+      maxWidth: '95vw',
       data: { room },
     });
 
@@ -238,71 +239,65 @@ export class RoomsManagementComponent implements OnInit {
 
   // Quick Action: Add Beds
   onAddBeds(room: Room): void {
-    const ref = this.dialog.open(AppConfirmDialogComponent, {
-      data: {
+    this.confirmDialog
+      .confirm({
         title: `Add 1 Bed to Room ${room.roomNumber}?`,
         message: `Current capacity is ${room.capacity} beds. Adding 1 bed will increase capacity to ${room.capacity + 1} beds.`,
-        confirmText: 'Add Bed',
+        confirmLabel: 'Add Bed',
         tone: 'primary',
-      },
-    });
-
-    ref.afterClosed().subscribe((confirmed) => {
-      if (confirmed) {
-        try {
-          this.roomsService.addBeds(room.id, 1);
-          this.snackBar.open(`Bed added to Room ${room.roomNumber}.`, 'Close', { duration: 3000 });
-        } catch (err: any) {
-          this.snackBar.open(err?.message || 'Failed to add bed.', 'Close', { duration: 4000 });
+      })
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          try {
+            this.roomsService.addBeds(room.id, 1);
+            this.snackBar.open(`Bed added to Room ${room.roomNumber}.`, 'Close', { duration: 3000 });
+          } catch (err: any) {
+            this.snackBar.open(err?.message || 'Failed to add bed.', 'Close', { duration: 4000 });
+          }
         }
-      }
-    });
+      });
   }
 
   // Quick Action: Mark Maintenance
   onToggleMaintenance(room: Room): void {
     const isMaint = room.status === 'Maintenance';
     const newStatus = isMaint ? 'Available' : 'Maintenance';
-    const ref = this.dialog.open(AppConfirmDialogComponent, {
-      data: {
+    this.confirmDialog
+      .confirm({
         title: isMaint ? `Re-activate Room ${room.roomNumber}?` : `Mark Room ${room.roomNumber} under Maintenance?`,
         message: isMaint
           ? `This will restore available beds in Room ${room.roomNumber} so they can be allocated.`
           : `Beds in Maintenance rooms cannot be allocated until maintenance is complete.`,
-        confirmText: isMaint ? 'Re-activate' : 'Mark Maintenance',
+        confirmLabel: isMaint ? 'Re-activate' : 'Mark Maintenance',
         tone: isMaint ? 'primary' : 'warning',
-      },
-    });
-
-    ref.afterClosed().subscribe((confirmed) => {
-      if (confirmed) {
-        this.roomsService.setRoomStatus(room.id, newStatus, isMaint ? undefined : 'Routine inspection & repair');
-        this.snackBar.open(`Room ${room.roomNumber} marked as ${newStatus}.`, 'Close', { duration: 3000 });
-      }
-    });
+      })
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.roomsService.setRoomStatus(room.id, newStatus, isMaint ? undefined : 'Routine inspection & repair');
+          this.snackBar.open(`Room ${room.roomNumber} marked as ${newStatus}.`, 'Close', { duration: 3000 });
+        }
+      });
   }
 
   // Quick Action: Deactivate / Activate Room
   onToggleDeactivate(room: Room): void {
     const isInactive = room.status === 'Inactive';
     const newStatus = isInactive ? 'Available' : 'Inactive';
-    const ref = this.dialog.open(AppConfirmDialogComponent, {
-      data: {
+    this.confirmDialog
+      .confirm({
         title: isInactive ? `Activate Room ${room.roomNumber}?` : `Deactivate Room ${room.roomNumber}?`,
         message: isInactive
           ? `Room ${room.roomNumber} will be reopened for bed allocations.`
           : `Deactivating will take Room ${room.roomNumber} out of service. Active allocations remain intact.`,
-        confirmText: isInactive ? 'Activate' : 'Deactivate',
+        confirmLabel: isInactive ? 'Activate' : 'Deactivate',
         tone: isInactive ? 'primary' : 'danger',
-      },
-    });
-
-    ref.afterClosed().subscribe((confirmed) => {
-      if (confirmed) {
-        this.roomsService.setRoomStatus(room.id, newStatus);
-        this.snackBar.open(`Room ${room.roomNumber} is now ${newStatus}.`, 'Close', { duration: 3000 });
-      }
-    });
+      })
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          this.roomsService.setRoomStatus(room.id, newStatus);
+          this.snackBar.open(`Room ${room.roomNumber} is now ${newStatus}.`, 'Close', { duration: 3000 });
+        }
+      });
   }
 
   deleteRoom(room: Room): void {
@@ -314,30 +309,28 @@ export class RoomsManagementComponent implements OnInit {
       return;
     }
 
-    const ref = this.dialog.open(AppConfirmDialogComponent, {
-      data: {
+    this.confirmDialog
+      .confirm({
         title: `Delete Room ${room.roomNumber}?`,
         message: `Are you sure you want to delete Room ${room.roomNumber} (${room.building}, ${room.floor})? This will remove all associated beds.`,
-        confirmText: 'Delete Room',
+        confirmLabel: 'Delete Room',
         tone: 'danger',
-      },
-    });
-
-    ref.afterClosed().subscribe((confirmed) => {
-      if (confirmed) {
-        try {
-          this.roomsService.deleteRoom(room.id);
-          this.snackBar.open(`Room ${room.roomNumber} deleted.`, 'Close', { duration: 3000 });
-        } catch (err: any) {
-          this.snackBar.open(err?.message || 'Error deleting room.', 'Close', { duration: 4000 });
+      })
+      .subscribe((confirmed) => {
+        if (confirmed) {
+          try {
+            this.roomsService.deleteRoom(room.id);
+            this.snackBar.open(`Room ${room.roomNumber} deleted.`, 'Close', { duration: 3000 });
+          } catch (err: any) {
+            this.snackBar.open(err?.message || 'Error deleting room.', 'Close', { duration: 4000 });
+          }
         }
-      }
-    });
+      });
   }
 
   openBedModal(room: Room, bed: Bed, mode?: 'manage' | 'allocate' | 'transfer' | 'checkout'): void {
     const ref = this.dialog.open(BedModalComponent, {
-      width: '560px',
+      width: '680px',
       data: {
         room,
         bed,
@@ -392,12 +385,6 @@ export class RoomsManagementComponent implements OnInit {
   /** Distinct floors across all rooms, used in the "Total Rooms" KPI subtitle. */
   get floorsInUse(): number {
     return new Set(this.roomsService.rooms.map((r) => `${r.building}|${r.floor}`)).size;
-  }
-
-  /** KPI cards double as quick filters. Clicking the active one again resets it. */
-  quickFilterStatus(status: RoomStatus): void {
-    this.filters.status = this.filters.status === status ? 'All' : status;
-    this.currentPage = 0;
   }
 
   /** Beds in Maintenance/Inactive rooms cannot be allocated. */

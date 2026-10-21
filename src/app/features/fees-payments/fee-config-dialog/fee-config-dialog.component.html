@@ -1,197 +1,184 @@
-<div class="fd">
-  <header class="fd__header">
-    <div class="fd__title">
-      <span><mat-icon>{{ isEdit ? 'edit_note' : 'request_quote' }}</mat-icon></span>
-      <div>
-        <h2>{{ isEdit ? 'Edit Fee' : 'New Fee' }}</h2>
-        <p>{{ isEdit ? data.fee!.id + ' · charges already generated are not changed' : 'Configure a resident charge. Save as Draft until it is ready.' }}</p>
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog [title]="isEdit ? 'Edit Fee' : 'New Fee'" [subtitle]="subtitle" [icon]="isEdit ? 'edit_note' : 'request_quote'" tone="teal">
+    <section class="fd__section">
+      <h3><mat-icon fontSet="material-icons-outlined">sell</mat-icon>Fee</h3>
+      <div class="fd__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Fee name</mat-label>
+          <mat-select formControlName="name" (selectionChange)="onNameChange()" required>
+            @for (n of names; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ form.value.name === 'Other' ? 'Label (required for Other)' : 'Display label (optional)' }}</mat-label>
+          <input matInput formControlName="label" [required]="form.value.name === 'Other'" maxlength="40" placeholder="e.g. Security Deposit" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fee category</mat-label>
+          <mat-select formControlName="category" required>
+            @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select formControlName="status" required>
+            @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
+          </mat-select>
+          <mat-hint>Only Active fees can generate charges</mat-hint>
+        </mat-form-field>
       </div>
-    </div>
-    <button mat-icon-button type="button" (click)="cancel()" aria-label="Close dialog"><mat-icon>close</mat-icon></button>
-  </header>
+    </section>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <mat-dialog-content class="fd__content">
-      <section class="fd__section">
-        <h3><mat-icon fontSet="material-icons-outlined">sell</mat-icon>Fee</h3>
-        <div class="fd__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Fee name</mat-label>
-            <mat-select formControlName="name" (selectionChange)="onNameChange()" required>
-              @for (n of names; track n) { <mat-option [value]="n">{{ n }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>{{ form.value.name === 'Other' ? 'Label (required for Other)' : 'Display label (optional)' }}</mat-label>
-            <input matInput formControlName="label" [required]="form.value.name === 'Other'" maxlength="40" placeholder="e.g. Security Deposit" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Fee category</mat-label>
-            <mat-select formControlName="category" required>
-              @for (c of categories; track c) { <mat-option [value]="c">{{ c }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Status</mat-label>
-            <mat-select formControlName="status" required>
-              @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
-            </mat-select>
-            <mat-hint>Only Active fees can generate charges</mat-hint>
-          </mat-form-field>
-        </div>
-      </section>
-
-      <section class="fd__section">
-        <h3><mat-icon fontSet="material-icons-outlined">payments</mat-icon>Amount &amp; billing</h3>
-        @if (form.value.name === 'Hostel Fee/Rent') {
-          <mat-button-toggle-group formControlName="amountSource" class="fd__toggle" aria-label="Amount source">
-            <mat-button-toggle value="Bed rent">Use each bed's rent</mat-button-toggle>
-            <mat-button-toggle value="Fixed">Fixed amount</mat-button-toggle>
-          </mat-button-toggle-group>
-        }
-        <div class="fd__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ form.value.amountSource === 'Bed rent' && form.value.name === 'Hostel Fee/Rent' ? 'Fallback amount (no bed)' : 'Amount' }}</mat-label>
-            <span matTextPrefix>₹&nbsp;</span>
-            <input matInput type="number" min="0" step="0.01" formControlName="amount" required />
-            @if (hasError('amount', 'min') || hasError('amount', 'required')) { <mat-error>Enter zero or a positive amount</mat-error> }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Tax</mat-label>
-            <mat-select formControlName="taxRate">
-              @for (t of taxOptions; track t.rate) { <mat-option [value]="t.rate">{{ t.label }}</mat-option> }
-            </mat-select>
-            <mat-hint>Added on top of the amount</mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Billing frequency</mat-label>
-            <mat-select formControlName="frequency" required>
-              @for (f of frequencies; track f) { <mat-option [value]="f">{{ f }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-
-          @if (form.value.frequency === 'Custom') {
-            <mat-form-field appearance="outline">
-              <mat-label>Every (months)</mat-label>
-              <input matInput type="number" min="1" max="24" formControlName="customMonths" />
-              @if (hasError('customMonths', 'min') || hasError('customMonths', 'max')) { <mat-error>1 to 24 months</mat-error> }
-            </mat-form-field>
-          }
-
-          <mat-form-field appearance="outline">
-            <mat-label>Effective from</mat-label>
-            <input matInput type="date" formControlName="effectiveFrom" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Effective to</mat-label>
-            <input matInput type="date" formControlName="effectiveTo" [min]="form.value.effectiveFrom" />
-            @if (form.hasError('range')) { <mat-hint class="fd__error">Must be on or after "Effective from"</mat-hint> }
-            @else { <mat-hint>Leave empty for no end date</mat-hint> }
-          </mat-form-field>
-        </div>
-      </section>
-
-      <section class="fd__section">
-        <h3><mat-icon fontSet="material-icons-outlined">event</mat-icon>Due date &amp; late fee</h3>
-        <div class="fd__grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Due date rule</mat-label>
-            <mat-select formControlName="dueType">
-              <mat-option value="day-of-period">Day of the billing period</mat-option>
-              <mat-option value="days-after-issue">Days after the charge is issued</mat-option>
-              <mat-option value="fixed-date">Fixed date</mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          @switch (form.value.dueType) {
-            @case ('day-of-period') {
-              <mat-form-field appearance="outline">
-                <mat-label>Due on day</mat-label>
-                <input matInput type="number" min="1" max="28" formControlName="dueDay" />
-                @if (hasError('dueDay', 'range')) { <mat-error>Pick a day from 1 to 28</mat-error> }
-              </mat-form-field>
-            }
-            @case ('days-after-issue') {
-              <mat-form-field appearance="outline">
-                <mat-label>Days after issue</mat-label>
-                <input matInput type="number" min="0" max="90" formControlName="dueDays" />
-                @if (hasError('dueDays', 'range')) { <mat-error>0 to 90 days</mat-error> }
-              </mat-form-field>
-            }
-            @default {
-              <mat-form-field appearance="outline">
-                <mat-label>Due date</mat-label>
-                <input matInput type="date" formControlName="dueDate" [required]="form.value.dueType === 'fixed-date'" />
-              </mat-form-field>
-            }
-          }
-        </div>
-
-        <mat-slide-toggle formControlName="lateEnabled" color="primary" class="fd__switch">Charge a late fee</mat-slide-toggle>
-        @if (form.value.lateEnabled) {
-          <div class="fd__grid fd__grid--3">
-            <mat-form-field appearance="outline">
-              <mat-label>Late fee type</mat-label>
-              <mat-select formControlName="lateType">
-                <mat-option value="Fixed">Fixed amount</mat-option>
-                <mat-option value="Percentage">Percentage of amount</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>{{ form.value.lateType === 'Fixed' ? 'Amount' : 'Percent' }}</mat-label>
-              @if (form.value.lateType === 'Fixed') { <span matTextPrefix>₹&nbsp;</span> }
-              <input matInput type="number" min="0" formControlName="lateValue" />
-              @if (form.value.lateType === 'Percentage') { <span matTextSuffix>%</span> }
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Grace period</mat-label>
-              <input matInput type="number" min="0" formControlName="lateGrace" />
-              <span matTextSuffix>days</span>
-            </mat-form-field>
-          </div>
-        }
-      </section>
-
-      <section class="fd__section">
-        <h3><mat-icon fontSet="material-icons-outlined">groups</mat-icon>Applicable residents</h3>
-        <mat-button-toggle-group formControlName="applyMode" class="fd__toggle" aria-label="Applicable residents">
-          <mat-button-toggle value="All">All residents</mat-button-toggle>
-          <mat-button-toggle value="Types">Resident type</mat-button-toggle>
-          <mat-button-toggle value="Residents">Selected residents</mat-button-toggle>
+    <section class="fd__section">
+      <h3><mat-icon fontSet="material-icons-outlined">payments</mat-icon>Amount &amp; billing</h3>
+      @if (form.value.name === 'Hostel Fee/Rent') {
+        <mat-button-toggle-group formControlName="amountSource" class="fd__toggle" aria-label="Amount source">
+          <mat-button-toggle value="Bed rent">Use each bed's rent</mat-button-toggle>
+          <mat-button-toggle value="Fixed">Fixed amount</mat-button-toggle>
         </mat-button-toggle-group>
+      }
+      <div class="fd__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ form.value.amountSource === 'Bed rent' && form.value.name === 'Hostel Fee/Rent' ? 'Fallback amount (no bed)' : 'Amount' }}</mat-label>
+          <span matTextPrefix>₹&nbsp;</span>
+          <input matInput type="number" min="0" step="0.01" formControlName="amount" required />
+          @if (hasError('amount', 'min') || hasError('amount', 'required')) { <mat-error>Enter zero or a positive amount</mat-error> }
+        </mat-form-field>
 
-        @if (form.value.applyMode === 'Types') {
-          <mat-form-field appearance="outline" class="fd__full">
-            <mat-label>Resident types</mat-label>
-            <mat-select formControlName="applyTypes" multiple>
-              @for (t of residentTypes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
-            </mat-select>
+        <mat-form-field appearance="outline">
+          <mat-label>Tax</mat-label>
+          <mat-select formControlName="taxRate">
+            @for (t of taxOptions; track t.rate) { <mat-option [value]="t.rate">{{ t.label }}</mat-option> }
+          </mat-select>
+          <mat-hint>Added on top of the amount</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Billing frequency</mat-label>
+          <mat-select formControlName="frequency" required>
+            @for (f of frequencies; track f) { <mat-option [value]="f">{{ f }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+
+        @if (form.value.frequency === 'Custom') {
+          <mat-form-field appearance="outline">
+            <mat-label>Every (months)</mat-label>
+            <input matInput type="number" min="1" max="24" formControlName="customMonths" />
+            @if (hasError('customMonths', 'min') || hasError('customMonths', 'max')) { <mat-error>1 to 24 months</mat-error> }
           </mat-form-field>
-        } @else if (form.value.applyMode === 'Residents') {
-          <mat-form-field appearance="outline" class="fd__full">
-            <mat-label>Residents</mat-label>
-            <mat-select formControlName="applyResidents" multiple>
-              @for (r of residentOptions; track r.id) { <mat-option [value]="r.id">{{ r.label }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-        } @else {
-          <p class="fd__info"><mat-icon>info</mat-icon>Every Active or On Leave resident is charged when charges are generated.</p>
         }
-      </section>
-    </mat-dialog-content>
 
-    <footer class="fd__footer">
-      <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
-      <button mat-flat-button color="primary" type="submit"
+        <mat-form-field appearance="outline">
+          <mat-label>Effective from</mat-label>
+          <input matInput type="date" formControlName="effectiveFrom" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Effective to</mat-label>
+          <input matInput type="date" formControlName="effectiveTo" [min]="form.value.effectiveFrom" />
+          @if (form.hasError('range')) { <mat-hint class="fd__error">Must be on or after "Effective from"</mat-hint> }
+          @else { <mat-hint>Leave empty for no end date</mat-hint> }
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section class="fd__section">
+      <h3><mat-icon fontSet="material-icons-outlined">event</mat-icon>Due date &amp; late fee</h3>
+      <div class="fd__grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Due date rule</mat-label>
+          <mat-select formControlName="dueType">
+            <mat-option value="day-of-period">Day of the billing period</mat-option>
+            <mat-option value="days-after-issue">Days after the charge is issued</mat-option>
+            <mat-option value="fixed-date">Fixed date</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        @switch (form.value.dueType) {
+          @case ('day-of-period') {
+            <mat-form-field appearance="outline">
+              <mat-label>Due on day</mat-label>
+              <input matInput type="number" min="1" max="28" formControlName="dueDay" />
+              @if (hasError('dueDay', 'range')) { <mat-error>Pick a day from 1 to 28</mat-error> }
+            </mat-form-field>
+          }
+          @case ('days-after-issue') {
+            <mat-form-field appearance="outline">
+              <mat-label>Days after issue</mat-label>
+              <input matInput type="number" min="0" max="90" formControlName="dueDays" />
+              @if (hasError('dueDays', 'range')) { <mat-error>0 to 90 days</mat-error> }
+            </mat-form-field>
+          }
+          @default {
+            <mat-form-field appearance="outline">
+              <mat-label>Due date</mat-label>
+              <input matInput type="date" formControlName="dueDate" [required]="form.value.dueType === 'fixed-date'" />
+            </mat-form-field>
+          }
+        }
+      </div>
+
+      <mat-slide-toggle formControlName="lateEnabled" color="primary" class="fd__switch">Charge a late fee</mat-slide-toggle>
+      @if (form.value.lateEnabled) {
+        <div class="fd__grid fd__grid--3">
+          <mat-form-field appearance="outline">
+            <mat-label>Late fee type</mat-label>
+            <mat-select formControlName="lateType">
+              <mat-option value="Fixed">Fixed amount</mat-option>
+              <mat-option value="Percentage">Percentage of amount</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>{{ form.value.lateType === 'Fixed' ? 'Amount' : 'Percent' }}</mat-label>
+            @if (form.value.lateType === 'Fixed') { <span matTextPrefix>₹&nbsp;</span> }
+            <input matInput type="number" min="0" formControlName="lateValue" />
+            @if (form.value.lateType === 'Percentage') { <span matTextSuffix>%</span> }
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Grace period</mat-label>
+            <input matInput type="number" min="0" formControlName="lateGrace" />
+            <span matTextSuffix>days</span>
+          </mat-form-field>
+        </div>
+      }
+    </section>
+
+    <section class="fd__section">
+      <h3><mat-icon fontSet="material-icons-outlined">groups</mat-icon>Applicable residents</h3>
+      <mat-button-toggle-group formControlName="applyMode" class="fd__toggle" aria-label="Applicable residents">
+        <mat-button-toggle value="All">All residents</mat-button-toggle>
+        <mat-button-toggle value="Types">Resident type</mat-button-toggle>
+        <mat-button-toggle value="Residents">Selected residents</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      @if (form.value.applyMode === 'Types') {
+        <mat-form-field appearance="outline" class="fd__full">
+          <mat-label>Resident types</mat-label>
+          <mat-select formControlName="applyTypes" multiple>
+            @for (t of residentTypes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      } @else if (form.value.applyMode === 'Residents') {
+        <mat-form-field appearance="outline" class="fd__full">
+          <mat-label>Residents</mat-label>
+          <mat-select formControlName="applyResidents" multiple>
+            @for (r of residentOptions; track r.id) { <mat-option [value]="r.id">{{ r.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+      } @else {
+        <p class="fd__info"><mat-icon>info</mat-icon>Every Active or On Leave resident is charged when charges are generated.</p>
+      }
+    </section>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit"
         [disabled]="(form.value.name === 'Other' && !form.value.label?.trim()) || (form.value.applyMode === 'Types' && !form.value.applyTypes?.length) || (form.value.applyMode === 'Residents' && !form.value.applyResidents?.length) || (form.value.dueType === 'fixed-date' && !form.value.dueDate)">
         {{ isEdit ? 'Save changes' : 'Create fee' }}
-      </button>
-    </footer>
-  </form>
-</div>
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

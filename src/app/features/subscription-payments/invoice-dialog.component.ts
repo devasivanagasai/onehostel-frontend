@@ -1,24 +1,22 @@
 import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { PaymentTransaction } from './subscription-payment.models';
 import { statusTone } from '../../shared/constants/status.constants';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppDialogComponent } from '../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 @Component({
   selector: 'app-invoice-dialog',
   standalone: true,
-  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatDialogModule, MatIconModule],
+  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, AppDialogComponent, AppButtonComponent],
   template: `
-    <div class="invoice">
-      <button type="button" class="inv-close" mat-dialog-close aria-label="Close">
-        <mat-icon>close</mat-icon>
-      </button>
-
-      <!-- Header: brand | invoice number -->
+    <app-dialog title="Invoice" [subtitle]="payment.invoiceNumber" icon="receipt_long">
+      <!-- Issuer -->
       <header class="inv-head">
         <div class="brand">
           <span class="brand__logo" aria-hidden="true"><mat-icon>home</mat-icon></span>
@@ -29,11 +27,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
               <div class="brand__gstin">GSTIN: {{ payment.gstin }}</div>
             }
           </div>
-        </div>
-
-        <div class="doc">
-          <h2 class="doc__label">Invoice</h2>
-          <div class="doc__number">{{ payment.invoiceNumber }}</div>
         </div>
       </header>
 
@@ -72,9 +65,13 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
                 <div class="pay-box__label">Transaction ID</div>
                 <div class="pay-box__value">{{ payment.transactionId }}</div>
               </div>
-              <button type="button" class="copy-btn" [attr.aria-label]="copied ? 'Copied' : 'Copy transaction ID'" (click)="copyTxn()">
-                <mat-icon fontSet="material-icons-outlined">{{ copied ? 'check' : 'content_copy' }}</mat-icon>
-              </button>
+              <app-button
+                variant="icon"
+                [icon]="copied ? 'check' : 'content_copy'"
+                [iconOutlined]="true"
+                [ariaLabel]="copied ? 'Copied' : 'Copy transaction ID'"
+                (clicked)="copyTxn()"
+              ></app-button>
             </div>
           </div>
         </div>
@@ -127,71 +124,29 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
         </div>
       }
 
-      <div class="inv-actions">
-        <button type="button" class="btn-outline" mat-dialog-close>Close</button>
-        <button type="button" class="btn-primary" (click)="dialogRef.close('download')">
-          <mat-icon>download</mat-icon>
-          <span>Download Receipt</span>
-        </button>
-      </div>
-    </div>
+      <ng-container dialogFooter>
+        <app-button variant="secondary" (clicked)="dialogRef.close()">Close</app-button>
+        <app-button icon="download" (clicked)="dialogRef.close('download')">Download Receipt</app-button>
+      </ng-container>
+    </app-dialog>
   `,
   styles: [`
     :host {
       display: block;
     }
 
-    /* Rounder dialog shell (panelClass set in InvoiceService). */
-    ::ng-deep .invoice-dialog-panel .mat-mdc-dialog-surface {
-      border-radius: 20px !important;
-      overflow: hidden;
-      box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.35) !important;
-    }
-
-    .invoice {
-      position: relative;
-      padding: 32px 36px 28px;
-      background: #ffffff;
-      color: #0f172a;
-    }
-
-    .inv-close {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 36px;
-      height: 36px;
-      padding: 0;
-      border: none;
-      border-radius: 8px;
-      background: transparent;
-      color: #64748b;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .inv-close:hover {
-      background: #f1f5f9;
-      color: #0f172a;
-    }
-
-    /* Header */
+    /* Issuer */
     .inv-head {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      margin: 8px 0 24px;
+      margin-bottom: 24px;
+      color: #0f172a;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding-right: 28px;
-      border-right: 1px solid #e5eaf1;
     }
 
     .brand__logo {
@@ -231,25 +186,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       margin-top: 2px;
       font-size: 13px;
       color: #64748b;
-    }
-
-    .doc {
-      text-align: right;
-    }
-
-    .doc__label {
-      margin: 0;
-      font-size: 40px;
-      font-weight: 700;
-      line-height: 1.05;
-      color: #1e293b;
-    }
-
-    .doc__number {
-      margin-top: 6px;
-      font-size: 17px;
-      font-weight: 500;
-      color: #334155;
     }
 
     /* Cards */
@@ -389,31 +325,6 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       word-break: break-all;
     }
 
-    .copy-btn {
-      width: 34px;
-      height: 34px;
-      flex-shrink: 0;
-      padding: 0;
-      border: none;
-      border-radius: 8px;
-      background: transparent;
-      color: #2563eb;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .copy-btn:hover {
-      background: #eef4ff;
-    }
-
-    .copy-btn mat-icon {
-      font-size: 19px;
-      width: 19px;
-      height: 19px;
-    }
-
     /* Items + totals */
     .items {
       overflow: hidden;
@@ -536,70 +447,7 @@ import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
       height: 18px;
     }
 
-    /* Actions */
-    .inv-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 16px;
-      margin-top: 24px;
-    }
-
-    .btn-outline,
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      height: var(--btn-height-lg);
-      padding: 0 22px;
-      border-radius: 10px;
-      font: inherit;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn-outline {
-      min-width: 110px;
-      border: 1.5px solid #2563eb;
-      background: #ffffff;
-      color: #2563eb;
-    }
-
-    .btn-outline:hover {
-      background: #eff6ff;
-    }
-
-    .btn-primary {
-      border: none;
-      background: #2563eb;
-      color: #ffffff;
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
-    }
-
-    .btn-primary:hover {
-      background: #1d4ed8;
-    }
-
     @media (max-width: 640px) {
-      .invoice {
-        padding: 24px 18px 20px;
-      }
-
-      .inv-head {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .brand {
-        padding-right: 0;
-        border-right: none;
-      }
-
-      .doc {
-        text-align: left;
-      }
-
       .parties {
         grid-template-columns: 1fr;
       }
