@@ -28,6 +28,8 @@ const MESSAGES: Record<string, (error: unknown, fieldLabel: string) => string> =
   whitespace: (_e, label) => `${label} cannot be blank.`,
   phoneNumber: (_e, label) => `Enter a valid phone number.`,
   fieldMismatch: (_e, label) => `${label} does not match.`,
+  /** Set by a form from the backend's reply; the value is the backend's message. */
+  server: (e) => String(e),
   minAge: (e, label) => {
     const err = e as { requiredAge: number };
     return `${label} must be at least ${err.requiredAge} years.`;

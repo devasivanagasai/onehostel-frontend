@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, delay, map, of, tap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, catchError, delay, map, of, tap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { AuditLogService } from './audit-log.service';
 import { SystemSettingsService } from './system-settings.service';
@@ -126,10 +128,33 @@ export class AccountService {
     });
   }
 
-  /** Verifies the current password, then stores the new one. */
+  /**
+   * Verifies the current password, then stores the new one: on the gateway (Keycloak and the users
+   * collection), or in this browser for mock sign-in. Other backend failures (rules, reuse, network)
+   * are thrown as the HttpErrorResponse.
+   */
   changePassword(currentPassword: string, newPassword: string): Observable<ChangePasswordResult> {
     const profile = this.profile;
     if (!profile) return of('wrong-current' as const);
+
+    if (!environment.useMockAuth) {
+      const name = profileFullName(profile);
+      return this.auth.changePassword(currentPassword, newPassword).pipe(
+        map((): ChangePasswordResult => 'ok'),
+        catchError((error: HttpErrorResponse) => {
+          if (error.error?.errorCode !== 'INVALID_CURRENT_PASSWORD') return throwError(() => error);
+          this.auditLog.record('Change Password', name, { status: 'Failed', details: 'Current password was incorrect.' });
+          return of('wrong-current' as const);
+        }),
+        tap((result) => {
+          if (result !== 'ok') return;
+          const updated: UserProfile = { ...profile, passwordChangedAt: new Date().toISOString() };
+          this.persist(updated);
+          this.profileSubject.next(updated);
+          this.auditLog.record('Change Password', name, { details: 'Password changed by the account owner.' });
+        }),
+      );
+    }
 
     const adminAccount = this.hostelAdminFor(profile.userId);
     const savedPassword = adminAccount ? adminAccount.password : this.readPassword(profile.userId);
