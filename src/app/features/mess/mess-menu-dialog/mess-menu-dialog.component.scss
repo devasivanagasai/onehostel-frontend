@@ -1,0 +1,169 @@
+// Menu editor. Frame from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+$line: #e8edf3;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.mm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.mm__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.mm__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+// Status pill beside the title (global .status-badge only applies inside tables)
+.mm__status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+}
+
+.mm__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mm__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  > mat-icon:first-child { @include icon(18px); color: #64748b; }
+  &:hover:not(:disabled) { border-color: $teal; }
+  &:disabled { cursor: default; opacity: 0.7; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+
+    > mat-icon:first-child { color: $teal; }
+  }
+}
+
+.mm__check { @include icon(20px); margin-right: -4px; color: $teal; }
+
+/* ---- Item chip input ---- */
+.mm__items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+
+  &:focus-within { border-color: $teal; box-shadow: 0 0 0 3px rgba($teal, 0.12); }
+  &.is-invalid { border-color: #f87171; }
+
+  input {
+    flex: 1;
+    min-width: 160px;
+    height: 30px;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 14px;
+  }
+}
+
+.mm__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: #e6f7f5;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 500;
+
+  button {
+    display: flex;
+    padding: 1px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover { background: #ccede8; }
+  }
+
+  mat-icon { @include icon(15px); }
+}
+
+/* ---- Change history ---- */
+.mm__history {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.mm__change {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #334155;
+
+  mat-icon { @include icon(16px); color: #d97706; }
+  small { margin-left: auto; color: #64748b; }
+}
+
+.mm__banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+
+  mat-icon { @include icon(17px); }
+}

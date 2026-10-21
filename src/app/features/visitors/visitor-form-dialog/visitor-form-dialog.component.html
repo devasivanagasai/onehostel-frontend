@@ -1,0 +1,167 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog
+    title="New Visitor"
+    subtitle="Register an expected visitor or a walk-in at the gate. Hostel visitor rules are checked as you go."
+    icon="person_add"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <div class="vf">
+      <!-- Policy from Hostel Settings -->
+      <div class="vf__policy" aria-label="Visitor policy">
+        <span><mat-icon fontSet="material-icons-outlined">schedule</mat-icon>{{ clock(policy.visitingFrom) }} – {{ clock(policy.visitingTo) }}</span>
+        <span><mat-icon fontSet="material-icons-outlined">group</mat-icon>Max {{ policy.maxVisitors }} per visit</span>
+        <span><mat-icon fontSet="material-icons-outlined">badge</mat-icon>ID {{ policy.idRequired ? 'required' : 'optional' }}</span>
+        <span><mat-icon fontSet="material-icons-outlined">verified</mat-icon>Approval {{ rules.approvalRequired ? 'required' : 'not required' }}</span>
+      </div>
+
+      <!-- Pre-registered / walk-in -->
+      <div class="fk-field">
+        <span class="fk-label">Visit Type<span class="req">*</span></span>
+        <div class="vk-chips" role="radiogroup" aria-label="Visit type">
+          <button type="button" role="radio" class="vk-opt" [class.is-on]="!walkIn" [attr.aria-checked]="!walkIn" (click)="setWalkIn(false)">
+            <mat-icon fontSet="material-icons-outlined">event</mat-icon><span>Expected visit</span>
+            @if (!walkIn) { <mat-icon class="vk-check">check_circle</mat-icon> }
+          </button>
+          <button type="button" role="radio" class="vk-opt" [class.is-on]="walkIn" [attr.aria-checked]="walkIn" [disabled]="walkInBlocked"
+            [matTooltip]="walkInBlocked ? 'Walk-in visitors are not allowed (Visitor Rules)' : ''" (click)="setWalkIn(true)">
+            <mat-icon fontSet="material-icons-outlined">directions_walk</mat-icon><span>Walk-in (at the gate now)</span>
+            @if (walkIn) { <mat-icon class="vk-check">check_circle</mat-icon> }
+          </button>
+        </div>
+      </div>
+
+      <div class="vf__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="vf-name">Visitor Name<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="nameError">
+            <input id="vf-name" formControlName="name" maxlength="80" placeholder="Full name" autocomplete="off" />
+          </span>
+          @if (nameError) { <span class="fk-error">{{ nameError }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="vf-mobile">Mobile Number <span class="opt">(Optional)</span></label>
+          <span class="fk-control fk-control--lead vf__phone" [class.is-invalid]="mobileError">
+            <span class="fk-lead">+91</span>
+            <input id="vf-mobile" formControlName="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" />
+          </span>
+          @if (mobileError) { <span class="fk-error">{{ mobileError }}</span> }
+        </div>
+
+        <!-- Resident being visited -->
+        <div class="fk-field vf__wide">
+          <label class="fk-label" for="vf-resident">Resident<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="residentError">
+            <mat-icon class="fk-lead">search</mat-icon>
+            <input id="vf-resident" [formControl]="residentSearch" [matAutocomplete]="residentAuto" placeholder="Search by name, room or phone number..." autocomplete="off" />
+          </span>
+          <mat-autocomplete #residentAuto="matAutocomplete" [displayWith]="displayResident" (optionSelected)="onResidentSelected($event)">
+            @for (r of filteredResidents; track r.id) {
+              <mat-option [value]="r">
+                <span class="vf-opt">
+                  <span class="vf-opt__avatar">{{ initials(r.name) }}</span>
+                  <span class="vf-opt__text">
+                    <strong>{{ r.name }}</strong>
+                    <small>{{ r.location }} • {{ r.contact }}{{ r.onLeave ? ' • On leave' : '' }}</small>
+                  </span>
+                </span>
+              </mat-option>
+            } @empty {
+              <mat-option disabled>No current residents found</mat-option>
+            }
+          </mat-autocomplete>
+          @if (residentError) {
+            <span class="fk-error">{{ residentError }}</span>
+          } @else if (selected?.onLeave) {
+            <span class="fk-hint vf__warn">{{ selected?.name }} is currently on leave — confirm the visit with them first.</span>
+          } @else if (selected) {
+            <span class="fk-hint">{{ selected.location }}</span>
+          }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="vf-purpose">Purpose<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="purposeError && !form.controls.purpose.value">
+            <select id="vf-purpose" formControlName="purpose" [class.is-placeholder]="!form.controls.purpose.value">
+              <option value="" disabled>Select purpose</option>
+              @for (p of purposes; track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (form.controls.purpose.value === 'Other') {
+            <span class="fk-control vf__gap" [class.is-invalid]="purposeError">
+              <input formControlName="purposeOther" maxlength="120" placeholder="Describe the purpose" aria-label="Other purpose" />
+            </span>
+          }
+          @if (purposeError) { <span class="fk-error">{{ purposeError }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="vf-count">Visitor Count<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="countError">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">group</mat-icon>
+            <input id="vf-count" type="number" formControlName="count" min="1" [max]="policy.maxVisitors" step="1" />
+          </span>
+          @if (countError) { <span class="fk-error">{{ countError }}</span> }
+          @else { <span class="fk-hint">Including the named visitor. Max {{ policy.maxVisitors }}.</span> }
+        </div>
+
+        @if (!walkIn) {
+          <div class="fk-field vf__wide">
+            <label class="fk-label" for="vf-expected">Expected Visit Time<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="expectedError">
+              <input id="vf-expected" type="datetime-local" formControlName="expectedAt" [min]="minExpected" />
+            </span>
+            @if (expectedError) { <span class="fk-error">{{ expectedError }}</span> }
+          </div>
+        }
+
+        <div class="fk-field">
+          <label class="fk-label" for="vf-idtype">ID Type @if (policy.idRequired) { <span class="req">*</span> } @else { <span class="opt">(Optional)</span> }</label>
+          <span class="fk-control" [class.is-invalid]="idError && !form.controls.idType.value">
+            <select id="vf-idtype" formControlName="idType" [class.is-placeholder]="!form.controls.idType.value">
+              <option value="">Select ID type</option>
+              @for (t of idTypes; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="vf-idref">ID Reference @if (policy.idRequired) { <span class="req">*</span> } @else { <span class="opt">(Optional)</span> }</label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="idError && !form.controls.idReference.value.trim()">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">lock</mat-icon>
+            <input id="vf-idref" formControlName="idReference" maxlength="24" placeholder="ID number" autocomplete="off" />
+          </span>
+          @if (idError) { <span class="fk-error">{{ idError }}</span> }
+        </div>
+        <p class="vf__wide vf__privacy">
+          <mat-icon fontSet="material-icons-outlined">shield</mat-icon>
+          Collect only what the gate needs. The ID is stored masked (last 4 shown), every reveal is recorded, and it is purged {{ rules.idRetentionDays }} days after the visit.
+        </p>
+
+        @if (outsideHours) {
+          <div class="fk-field vf__wide">
+            <label class="fk-label" for="vf-override">Reason to allow outside visiting hours<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="overrideError">
+              <textarea id="vf-override" rows="2" formControlName="overrideReason" maxlength="200" placeholder="e.g. Parent arriving by late train, approved by warden"></textarea>
+            </span>
+            @if (overrideError) { <span class="fk-error">{{ overrideError }}</span> }
+            @else { <span class="fk-hint vf__warn">{{ walkIn ? 'It is now' : 'This time is' }} outside visiting hours ({{ clock(policy.visitingFrom) }} – {{ clock(policy.visitingTo) }}).</span> }
+          </div>
+        }
+      </div>
+
+      <p class="vk-note {{ outcome.tone }}"><mat-icon fontSet="material-icons-outlined">{{ outcome.icon }}</mat-icon>{{ outcome.text }}</p>
+      @if (saveError) { <p class="vk-note vk-note--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" [icon]="walkIn && rules.walkInPolicy === 'allow' ? 'login' : 'person_add'" [loading]="saving">
+        {{ walkIn && rules.walkInPolicy === 'allow' ? 'Save & Check In' : 'Save Visitor' }}
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

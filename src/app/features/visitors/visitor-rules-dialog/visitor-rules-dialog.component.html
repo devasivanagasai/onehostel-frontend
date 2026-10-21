@@ -1,0 +1,62 @@
+<app-dialog title="Visitor Rules" subtitle="How requests, walk-ins and visitor ID data are handled at the gate." icon="tune" tone="teal" (closed)="close()">
+  <div class="vr">
+    <!-- From Hostel Settings (read-only) -->
+    <section class="vr__settings">
+      <header>
+        <span class="vr__label">From Hostel Settings → Rules</span>
+        <app-button variant="text" size="sm" icon="open_in_new" (clicked)="openSettings()">Edit</app-button>
+      </header>
+      <dl>
+        <div><dt>Visitors allowed</dt><dd [class.is-off]="!policy.visitorsAllowed">{{ policy.visitorsAllowed ? 'Yes' : 'No' }}</dd></div>
+        <div><dt>Visiting hours</dt><dd>{{ clock(policy.visitingFrom) }} – {{ clock(policy.visitingTo) }}</dd></div>
+        <div><dt>Max visitors</dt><dd>{{ policy.maxVisitors }} per visit</dd></div>
+        <div><dt>Visitor ID</dt><dd>{{ policy.idRequired ? 'Required' : 'Optional' }}</dd></div>
+      </dl>
+    </section>
+
+    <div class="fk-field">
+      <span class="fk-label">Approval for visit requests</span>
+      <div class="vk-chips" role="radiogroup" aria-label="Approval required">
+        <button type="button" role="radio" class="vk-opt" [class.is-on]="rules.approvalRequired" [attr.aria-checked]="rules.approvalRequired" (click)="rules.approvalRequired = true">
+          <mat-icon fontSet="material-icons-outlined">verified</mat-icon><span>Required</span>
+          @if (rules.approvalRequired) { <mat-icon class="vk-check">check_circle</mat-icon> }
+        </button>
+        <button type="button" role="radio" class="vk-opt" [class.is-on]="!rules.approvalRequired" [attr.aria-checked]="!rules.approvalRequired" (click)="rules.approvalRequired = false">
+          <mat-icon fontSet="material-icons-outlined">do_not_disturb_on</mat-icon><span>Not required</span>
+          @if (!rules.approvalRequired) { <mat-icon class="vk-check">check_circle</mat-icon> }
+        </button>
+      </div>
+      <span class="fk-hint">Applies to expected visits raised by residents or staff.</span>
+    </div>
+
+    <div class="fk-field">
+      <span class="fk-label">Walk-in visitors</span>
+      <div class="vk-chips" role="radiogroup" aria-label="Walk-in policy">
+        @for (o of walkInOptions; track o.value) {
+          <button type="button" role="radio" class="vk-opt" [class.is-on]="rules.walkInPolicy === o.value" [attr.aria-checked]="rules.walkInPolicy === o.value" (click)="rules.walkInPolicy = o.value">
+            <mat-icon fontSet="material-icons-outlined">{{ o.icon }}</mat-icon><span>{{ o.label }}</span>
+            @if (rules.walkInPolicy === o.value) { <mat-icon class="vk-check">check_circle</mat-icon> }
+          </button>
+        }
+      </div>
+      @for (o of walkInOptions; track o.value) {
+        @if (rules.walkInPolicy === o.value) { <span class="fk-hint">{{ o.hint }}.</span> }
+      }
+    </div>
+
+    <div class="fk-field vr__days">
+      <label class="fk-label" for="vr-days">Keep visitor ID data for</label>
+      <span class="fk-control" [class.is-invalid]="retentionError">
+        <input id="vr-days" type="number" min="1" max="365" step="1" [(ngModel)]="rules.idRetentionDays" />
+        <span class="vr__unit">days</span>
+      </span>
+      @if (retentionError) { <span class="fk-error">{{ retentionError }}</span> }
+      @else { <span class="fk-hint">After the visit closes. ID references older than this are purged automatically.</span> }
+    </div>
+  </div>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+    <app-button variant="accent" icon="save" [iconOutlined]="true" [disabled]="!!retentionError" (clicked)="save()">Save Rules</app-button>
+  </ng-container>
+</app-dialog>

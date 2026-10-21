@@ -1,0 +1,136 @@
+<div class="mpl">
+  <!-- Billing rule + pay-per-meal billing run -->
+  <section class="mpl__billing" aria-label="Mess billing">
+    <div class="mpl__rule">
+      <span class="mpl__rule-icon"><mat-icon fontSet="material-icons-outlined">rule</mat-icon></span>
+      <div>
+        <h3>Mess billing rule</h3>
+        <p>
+          <strong>Full Board</strong> and <strong>Breakfast &amp; Dinner</strong> residents pay the monthly <em>Mess</em> fee in Fees &amp; Payments.
+          <strong>Pay per Meal</strong> residents are billed once per completed month for meals marked <em>Present</em>:
+          @for (m of mealTypes; track m; let last = $last) { {{ m }} {{ fmt.money(service.settings.rates[m], 0) }}{{ last ? '.' : ',' }} }
+        </p>
+      </div>
+    </div>
+
+    <div class="mpl__run">
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Billing month" [(ngModel)]="period">
+            @for (p of periods; track p.value) { <option [value]="p.value">{{ p.label }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+      <span class="mpl__run-text">
+        @if (previewTotals.pending) {
+          {{ previewTotals.pending }} to bill · <strong>{{ fmt.money(previewTotals.pendingAmount, 0) }}</strong>
+        } @else {
+          Nothing left to bill
+        }
+        @if (previewTotals.billed) { · {{ previewTotals.billed }} already billed }
+      </span>
+      <app-button variant="accent" icon="receipt_long" [iconOutlined]="true" [disabled]="!previewTotals.pending" (clicked)="generate()">Generate Charges</app-button>
+    </div>
+
+    @if (preview.length) {
+      <div class="mpl__preview">
+        @for (r of preview; track r.residentId) {
+          <span class="mpl__chip" [class.is-billed]="r.chargeId">
+            {{ r.residentName }} · {{ r.meals }} meals · {{ fmt.money(r.amount, 0) }}
+            @if (r.chargeId) { <mat-icon matTooltip="Billed">check</mat-icon>{{ r.chargeId }} }
+          </span>
+        }
+      </div>
+    }
+  </section>
+
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Search resident or room" aria-label="Search residents" [(ngModel)]="search" />
+      @if (search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="search = ''"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Meal plan" [(ngModel)]="planFilter">
+          <option value="All">All Plans</option>
+          @for (p of plans; track p) { <option [value]="p">{{ p }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+  </div>
+
+  <app-table-card [empty]="rows.length === 0" [paginate]="false" [emptyIcon]="hasFilters ? 'search_off' : 'groups'"
+    [emptyMessage]="hasFilters ? 'No residents match your filters' : 'No current residents'" [clearable]="hasFilters" (clear)="clearFilters()">
+    <table mat-table [dataSource]="rows" class="saas-table mpl-table">
+      <ng-container matColumnDef="resident">
+        <th mat-header-cell *matHeaderCellDef> Resident </th>
+        <td mat-cell *matCellDef="let r">
+          <span class="with-icon">
+            <span class="mpl__avatar">{{ initials(r.name) }}</span>
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ r.name }}</span>
+              <span class="list-entity__sub">{{ r.id }} · {{ r.room }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="plan">
+        <th mat-header-cell *matHeaderCellDef> Meal Plan </th>
+        <td mat-cell *matCellDef="let r">
+          <span class="list-entity__text">
+            <span>{{ r.plan }}</span>
+            <span class="list-entity__sub">{{ hint(r.plan) }}</span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="meals">
+        <th mat-header-cell *matHeaderCellDef> Meals </th>
+        <td mat-cell *matCellDef="let r">{{ mealsFor(r.plan) }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="note">
+        <th mat-header-cell *matHeaderCellDef> Dietary Notes </th>
+        <td mat-cell *matCellDef="let r">
+          @if (!r.note) {
+            <span class="muted">None</span>
+          } @else {
+            <span class="list-entity__text">
+              @if (revealed.has(r.id)) {
+                <span class="mpl__note">{{ r.note }}</span>
+              } @else {
+                <span class="mpl__masked"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>Restricted</span>
+              }
+              <span class="list-entity__sub">{{ lastAccess(r.id) }}</span>
+            </span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let r" class="actions-cell">
+          <span class="mpl__actions">
+            @if (r.note) {
+              <app-button class="mpl__act" variant="icon" size="sm" [icon]="revealed.has(r.id) ? 'visibility_off' : 'visibility'"
+                [matTooltip]="revealed.has(r.id) ? 'Hide note' : 'Show note (logged)'" [ariaLabel]="'Show dietary note of ' + r.name" (clicked)="toggleNote(r.id)"></app-button>
+            }
+            <app-button class="mpl__act" variant="icon" size="sm" icon="edit" matTooltip="Edit plan & notes" [ariaLabel]="'Edit ' + r.name" (clicked)="edit(r)"></app-button>
+          </span>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="row.plan === 'No Mess'"></tr>
+    </table>
+  </app-table-card>
+</div>

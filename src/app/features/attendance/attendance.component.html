@@ -1,0 +1,245 @@
+<div class="onboarding-page attendance-page">
+  <!-- KPI Summary for the selected date -->
+  @if (stats; as s) {
+    <section class="kpi-row att-kpis" aria-label="Attendance summary">
+      <div class="kpi-card att-kpi--green">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">how_to_reg</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Present</span>
+          <span class="kpi-card__value">{{ s.present }}</span>
+          <span class="kpi-card__sub">{{ isToday ? s.inNow + ' checked in now' : 'of ' + s.expected + ' expected' }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card att-kpi--red">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">person_off</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Absent</span>
+          <span class="kpi-card__value">{{ s.absent }}</span>
+          <span class="kpi-card__sub">{{ s.conflicts ? s.conflicts + ' leave conflict' + (s.conflicts === 1 ? '' : 's') : 'Recorded absent' }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card att-kpi--amber">
+        <span class="kpi-card__icon kpi-card__icon--amber"><mat-icon fontSet="material-icons-outlined">luggage</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">On Leave</span>
+          <span class="kpi-card__value">{{ s.onLeave }}</span>
+          <span class="kpi-card__sub">{{ s.withLeave }} with approved leave</span>
+        </div>
+      </div>
+
+      <div class="kpi-card att-kpi--slate">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">pending</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Unmarked</span>
+          <span class="kpi-card__value">{{ s.unmarked }}</span>
+          <span class="kpi-card__sub">of {{ s.expected }} expected</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Filter card: date navigator, filters, bulk action -->
+  <div class="filter-card">
+    <div class="att-date" role="group" aria-label="Attendance date">
+      <app-button variant="icon" size="sm" icon="chevron_left" ariaLabel="Previous day" (clicked)="shiftDate(-1)"></app-button>
+      <label class="att-date__pick">
+        <mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon>
+        <span>{{ fmt.date(date, 'dayDate') }}</span>
+        <input type="date" [max]="today" [value]="date" (change)="setDate($any($event.target).value)" aria-label="Pick a date" />
+      </label>
+      <app-button variant="icon" size="sm" icon="chevron_right" ariaLabel="Next day" [disabled]="isToday" (clicked)="shiftDate(1)"></app-button>
+      @if (!isToday) { <app-button variant="text" size="sm" (clicked)="setDate(today)">Today</app-button> }
+    </div>
+
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Search name, ID or room" aria-label="Search residents"
+        [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+          <option value="All">All Status</option>
+          @for (o of statusFilters; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Building" [(ngModel)]="filters.building" (ngModelChange)="currentPage = 0">
+          <option value="All">All Buildings</option>
+          @for (b of buildings; track b) { <option [value]="b">{{ b }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    <span class="filter-card__add att-top-actions">
+      <app-button variant="secondary" icon="tune" [matMenuTriggerFor]="methodsMenu">Methods</app-button>
+      <app-button icon="done_all" [disabled]="!isToday || !stats.unmarked" [matTooltip]="isToday ? '' : 'Bulk marking is only for today'" (clicked)="markAllPresent()">Mark Unmarked Present</app-button>
+    </span>
+  </div>
+
+  <mat-menu #methodsMenu="matMenu" xPosition="before" class="att-methods-menu">
+    <div class="att-methods" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      <strong>Recording methods</strong>
+      <small>Methods allowed to record check-in / check-out.</small>
+      @for (m of allMethods; track m) {
+        <label class="att-methods__item">
+          <input type="checkbox" [checked]="methods[m]" (change)="toggleMethod(m)" />
+          <mat-icon fontSet="material-icons-outlined">{{ methodIcons[m] }}</mat-icon>
+          {{ methodLabels[m] }}
+        </label>
+      }
+    </div>
+  </mat-menu>
+
+  @if (!canRecord) {
+    <p class="att-banner"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Only QR scanning is enabled, so attendance can't be recorded by hand. Enable Admin or Security under Methods.</p>
+  }
+
+  <app-table-card
+    class="attendance-table-card"
+    [empty]="filtered.length === 0"
+    [emptyIcon]="hasFilters ? 'search_off' : 'groups'"
+    [emptyMessage]="hasFilters ? 'No residents match your filters' : 'No residents expected on this date'"
+    [emptyHint]="hasFilters ? 'Try a different search, status or building.' : 'Residents with a bed appear here once they join.'"
+    [clearable]="hasFilters"
+    (clear)="clearFilters()"
+    [page]="safePage"
+    [totalPages]="totalPages"
+    [pageSize]="pageSize"
+    (pageChange)="currentPage = $event"
+    (pageSizeChange)="onPageSizeChange($event)"
+  >
+    <table mat-table [dataSource]="paged" class="saas-table attendance-table">
+      <ng-container matColumnDef="resident">
+        <th mat-header-cell *matHeaderCellDef> Resident </th>
+        <td mat-cell *matCellDef="let r">
+          <span class="with-icon att-resident">
+            @if (r.resident.photoUrl) { <img class="att-avatar" [src]="r.resident.photoUrl" alt="" /> }
+            @else { <span class="att-avatar">{{ initials(r.name) }}</span> }
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ r.name }}</span>
+              <span class="list-entity__sub">{{ r.location }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Status </th>
+        <td mat-cell *matCellDef="let r">
+          @if (r.expected) {
+            <span class="att-status">
+              <span class="att-seg" role="radiogroup" [attr.aria-label]="'Attendance for ' + r.name">
+                @for (s of recorded; track s) {
+                  <button type="button" role="radio" class="att-seg__btn att-seg__btn--{{ s === 'On Leave' ? 'leave' : s.toLowerCase() }}"
+                    [class.is-on]="r.status === s" [attr.aria-checked]="r.status === s" (click)="setStatus(r, s)">
+                    <mat-icon fontSet="material-icons-outlined">{{ statusIcons[s] }}</mat-icon>{{ s }}
+                  </button>
+                }
+              </span>
+              @if (r.conflict) {
+                <mat-icon class="att-conflict" fontSet="material-icons-outlined" [matTooltip]="r.conflict" aria-label="Leave conflict">warning</mat-icon>
+              }
+            </span>
+          } @else {
+            <span class="list-entity__text">
+              <span class="status-badge status-badge--neutral">Not Expected</span>
+              <span class="list-entity__sub">{{ notExpectedHint(r) }}</span>
+            </span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="times">
+        <th mat-header-cell *matHeaderCellDef> Check-in / Out </th>
+        <td mat-cell *matCellDef="let r" class="date-cell">
+          @if (lastSession(r); as s) {
+            <span class="list-entity__text">
+              <span>
+                <span class="att-time att-time--in">In {{ fmt.date(s.in, 'time') }}</span>
+                @if (s.out) { <span class="att-time"> · Out {{ fmt.date(s.out, 'time') }}</span> }
+                @else { <span class="att-time att-time--open"> · Inside</span> }
+              </span>
+              <span class="list-entity__sub att-method">
+                <mat-icon fontSet="material-icons-outlined">{{ methodIcons[s.outMethod ?? s.inMethod] }}</mat-icon>{{ methodLabels[s.outMethod ?? s.inMethod] }}
+                @if (r.record.sessions.length > 1) { · {{ r.record.sessions.length }} stays }
+              </span>
+            </span>
+          } @else if (r.record) {
+            <span class="list-entity__text">
+              <span class="muted">No times</span>
+              <span class="list-entity__sub att-method"><mat-icon fontSet="material-icons-outlined">{{ methodIcon(r.record.method) }}</mat-icon>{{ methodLabel(r.record.method) }}</span>
+            </span>
+          } @else {
+            <span class="muted">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="leave">
+        <th mat-header-cell *matHeaderCellDef> Leave </th>
+        <td mat-cell *matCellDef="let r">
+          @if (r.leave) {
+            <span class="att-leave" [class.is-out]="r.leaveOut" [matTooltip]="leaveTip(r)">
+              <mat-icon fontSet="material-icons-outlined">{{ r.leave.type === 'Leave' ? 'luggage' : 'directions_walk' }}</mat-icon>
+              {{ r.leave.type }} (approved)
+            </span>
+            <span class="list-entity__sub att-leave-sub">{{ leave.movement(r.leave) ?? 'Movement not tracked' }}</span>
+          } @else {
+            <span class="muted">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="remarks">
+        <th mat-header-cell *matHeaderCellDef> Remarks </th>
+        <td mat-cell *matCellDef="let r" class="remarks-cell">
+          @if (r.record) {
+            <span class="list-entity__text">
+              <span class="att-clip" [title]="r.record.remarks || ''">{{ r.record.remarks || '—' }}</span>
+              <span class="list-entity__sub">{{ r.record.recordedBy }} · {{ fmt.date(r.record.recordedAt, r.record.recordedAt.slice(0, 10) === date ? 'time' : 'datetime') }}</span>
+            </span>
+          } @else {
+            <span class="muted">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let r" class="actions-cell">
+          @if (r.expected) {
+            <span class="att-actions">
+              @if (isIn(r)) {
+                <app-button class="att-act" variant="icon" size="sm" icon="logout" matTooltip="Check out" [ariaLabel]="'Check out ' + r.name" (clicked)="openEntry(r, 'checkout')"></app-button>
+              } @else {
+                <app-button class="att-act att-act--ok" variant="icon" size="sm" icon="login" [matTooltip]="r.status === 'Absent' ? 'Marked Absent — correct the status to check in' : 'Check in'"
+                  [disabled]="r.status === 'Absent'" [ariaLabel]="'Check in ' + r.name" (clicked)="openEntry(r, 'checkin')"></app-button>
+              }
+              <app-button class="att-act" variant="icon" size="sm" icon="edit_calendar" [matTooltip]="r.record ? 'Correct attendance' : 'Mark with details'" [ariaLabel]="'Edit attendance for ' + r.name" (clicked)="openEntry(r, 'edit')"></app-button>
+              <app-button class="att-act" variant="icon" size="sm" icon="history" matTooltip="History" [disabled]="!r.record" [ariaLabel]="'History for ' + r.name" (clicked)="openHistory(r)"></app-button>
+            </span>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="!row.expected" [class.is-conflict]="!!row.conflict"></tr>
+    </table>
+  </app-table-card>
+</div>

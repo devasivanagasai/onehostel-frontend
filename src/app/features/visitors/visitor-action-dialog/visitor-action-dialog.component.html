@@ -1,0 +1,78 @@
+<app-dialog [title]="meta.title" [subtitle]="meta.subtitle" [icon]="meta.icon" [tone]="meta.tone" (closed)="close()">
+  <div class="va">
+    <div class="vk-summary">
+      <span class="vk-avatar">{{ initials(v.name) }}</span>
+      <div>
+        <strong>{{ v.name }}{{ v.count > 1 ? ' +' + (v.count - 1) : '' }}</strong>
+        <small>{{ v.id }} · {{ v.purpose }}</small>
+      </div>
+      <div class="va__visiting">
+        <small>Visiting</small>
+        <strong>{{ residentName }}</strong>
+        <small>{{ location }}</small>
+      </div>
+    </div>
+
+    <dl class="va__facts">
+      <div><dt>Expected</dt><dd>{{ fmt.date(v.expectedAt, 'datetime') }}</dd></div>
+      <div><dt>Raised by</dt><dd>{{ v.createdBy }}{{ v.source === 'Resident' ? ' (resident)' : '' }}</dd></div>
+      @if (mode === 'checkin') {
+        <div><dt>Approval</dt><dd>{{ v.approval }}</dd></div>
+        <div><dt>ID on record</dt><dd>{{ v.idReference ? v.idType + ' · ' + maskId(v.idReference) : 'None' }}</dd></div>
+      }
+    </dl>
+
+    @if (mode === 'checkin') {
+      @if (outsideHours) {
+        <p class="vk-note vk-note--warn"><mat-icon fontSet="material-icons-outlined">schedule</mat-icon>It is outside visiting hours ({{ clock(policy.visitingFrom) }} – {{ clock(policy.visitingTo) }}). Entry needs a reason.</p>
+      }
+      @if (needsId) {
+        <div class="va__grid">
+          <div class="fk-field">
+            <label class="fk-label" for="va-idtype">ID Type<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="idError && !idType">
+              <select id="va-idtype" [(ngModel)]="idType" [class.is-placeholder]="!idType">
+                <option value="">Select ID type</option>
+                @for (t of idTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+              <mat-icon class="fk-caret">expand_more</mat-icon>
+            </span>
+          </div>
+          <div class="fk-field">
+            <label class="fk-label" for="va-idref">ID Reference<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="idError && !idReference.trim()">
+              <input id="va-idref" [(ngModel)]="idReference" maxlength="24" placeholder="ID number" autocomplete="off" />
+            </span>
+          </div>
+          @if (idError) { <span class="fk-error va__wide">{{ idError }}</span> }
+        </div>
+      }
+    }
+
+    @if (mode !== 'checkin' || outsideHours) {
+      <div class="fk-field">
+        <label class="fk-label" for="va-reason">{{ reasonLabel }}@if (reasonRequired) { <span class="req">*</span> } @else { <span class="opt"> (Optional)</span> }</label>
+        <span class="fk-control" [class.is-invalid]="reasonError">
+          <textarea id="va-reason" rows="3" [(ngModel)]="reason" maxlength="200"
+            [placeholder]="mode === 'reject' ? 'e.g. Visit time is after the gate closes' : mode === 'approve' ? 'Anything security should know' : 'Why is this being allowed or cancelled?'"></textarea>
+        </span>
+        @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+      </div>
+    }
+
+    @if (mode === 'checkin') {
+      <label class="va__verify" [class.is-invalid]="verifyError">
+        <input type="checkbox" [(ngModel)]="idVerified" />
+        I have checked the visitor's identity and the number of people against this record.
+      </label>
+      @if (verifyError) { <span class="fk-error">{{ verifyError }}</span> }
+    }
+
+    @if (error) { <p class="vk-note vk-note--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+  </div>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    <app-button [variant]="meta.tone === 'red' ? 'danger' : 'accent'" [icon]="meta.icon" (clicked)="submit()">{{ meta.confirm }}</app-button>
+  </ng-container>
+</app-dialog>

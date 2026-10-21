@@ -47,6 +47,30 @@ export const routes: Routes = [
           import('./features/complaints/complaints.component').then((m) => m.ComplaintsComponent),
       },
       {
+        path: 'laundry',
+        loadComponent: () => import('./features/laundry/laundry.component').then((m) => m.LaundryComponent),
+      },
+      {
+        path: 'visitors',
+        loadComponent: () => import('./features/visitors/visitors.component').then((m) => m.VisitorsComponent),
+      },
+      {
+        path: 'mess',
+        loadComponent: () => import('./features/mess/mess.component').then((m) => m.MessComponent),
+      },
+      {
+        path: 'leave-outpass',
+        loadComponent: () => import('./features/leave-outpass/leave-outpass.component').then((m) => m.LeaveOutpassComponent),
+      },
+      {
+        path: 'attendance',
+        loadComponent: () => import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent),
+      },
+      {
+        path: 'parcels',
+        loadComponent: () => import('./features/parcels/parcels.component').then((m) => m.ParcelsComponent),
+      },
+      {
         path: 'announcements',
         loadComponent: () =>
           import('./features/announcements/announcements.component').then((m) => m.AnnouncementsComponent),

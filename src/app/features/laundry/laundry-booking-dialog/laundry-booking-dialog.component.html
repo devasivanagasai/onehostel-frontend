@@ -1,0 +1,112 @@
+<app-dialog
+  title="New Booking"
+  subtitle="Book a slot on a resident's behalf. Taken, passed and blocked slots can't be picked."
+  icon="event_available"
+  tone="teal"
+  (closed)="cancel()"
+>
+  <div class="lb">
+    <!-- ============ Details ============ -->
+    <div class="lb__form">
+      <div class="fk-field">
+        <label class="fk-label" for="lb-res">Resident<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="errors.resident">
+          <mat-icon class="fk-lead" fontSet="material-icons-outlined">person</mat-icon>
+          <select id="lb-res" [class.is-placeholder]="!residentId" [(ngModel)]="residentId">
+            <option value="" disabled>Select a current resident</option>
+            @for (r of residents; track r.id) { <option [value]="r.id">{{ r.name }} · {{ r.room }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+        @if (errors.resident) { <span class="fk-error">{{ errors.resident }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label">Machine / Service<span class="req">*</span></span>
+        <div class="lb__units" role="radiogroup" aria-label="Machine or service">
+          @for (u of units; track u.id) {
+            <button type="button" role="radio" class="lb__unit" [class.is-on]="unitId === u.id" [attr.aria-checked]="unitId === u.id" (click)="pickUnit(u.id)">
+              <span class="lb__unit-text">
+                <strong>{{ u.name }}</strong>
+                <small>{{ u.location }}</small>
+              </span>
+              <small class="lb__unit-price">{{ u.price > 0 ? fmt.money(u.price, 0) + ' ' + u.priceUnit : 'Free' }}</small>
+              @if (unitId === u.id) { <mat-icon class="lb__check">check_circle</mat-icon> }
+            </button>
+          } @empty {
+            <p class="lb__empty">No machine or service is available for booking.</p>
+          }
+        </div>
+      </div>
+
+      <div class="lb__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="lb-date">Date<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.date">
+            <input id="lb-date" type="date" [min]="minDate" [max]="maxDate" [ngModel]="date" (ngModelChange)="pickDate($event)" />
+          </span>
+          @if (errors.date) { <span class="fk-error">{{ errors.date }}</span> }
+        </div>
+
+        @if (perItem) {
+          <div class="fk-field">
+            <label class="fk-label" for="lb-items">Items<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="errors.items">
+              <input id="lb-items" type="number" min="1" max="50" [(ngModel)]="items" placeholder="e.g. 10" />
+            </span>
+            @if (errors.items) { <span class="fk-error">{{ errors.items }}</span> }
+          </div>
+        }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="lb-notes">Notes <span class="opt">(Optional)</span></label>
+        <span class="fk-control"><input id="lb-notes" maxlength="120" [(ngModel)]="notes" placeholder="e.g. Delicate wash" /></span>
+      </div>
+    </div>
+
+    <!-- ============ Slot grid ============ -->
+    <section class="lb__slots" aria-label="Slots">
+      <div class="lb__slots-head">
+        <span class="lb__label">Slots · {{ date ? fmt.date(date, 'dayDate') : '—' }}</span>
+        @if (unit) { <small>{{ clock(unit.openTime) }} – {{ clock(unit.closeTime) }} · {{ daysLabel(unit.days) }}</small> }
+      </div>
+
+      @if (!unit) {
+        <p class="lb__empty">Pick a machine or service.</p>
+      } @else if (closedDay) {
+        <p class="lb__empty"><mat-icon fontSet="material-icons-outlined">event_busy</mat-icon>{{ unit.name }} is closed on this day.</p>
+      } @else {
+        @if (limitReached) {
+          <p class="lb__warn"><mat-icon fontSet="material-icons-outlined">block</mat-icon>{{ selectedResident?.name }} already has {{ used }} booking(s) this {{ unit.limitPeriod }} — the limit is {{ unit.limitCount }}.</p>
+        }
+        <div class="lb__grid-slots" role="radiogroup" aria-label="Pick a slot">
+          @for (s of slots; track s.start) {
+            <button type="button" role="radio" class="lb__slot" [class.is-on]="start === s.start" [class.is-taken]="s.blocked === 'Booked'"
+              [disabled]="!!s.blocked || limitReached" [attr.aria-checked]="start === s.start" (click)="start = s.start">
+              <strong>{{ clock(s.start) }}</strong>
+              <small>{{ start === s.start ? 'Selected' : slotLabel(s) }}</small>
+            </button>
+          }
+        </div>
+        <span class="lb__legend">{{ freeCount }} free of {{ slots.length }} · {{ unit.slotMinutes }} min each</span>
+      }
+      @if (errors.slot) { <span class="fk-error">{{ errors.slot }}</span> }
+
+      @if (start && unit) {
+        <dl class="lb__summary">
+          <div><dt>Slot</dt><dd>{{ clock(start) }} – {{ clock(selectedEnd) }}</dd></div>
+          <div><dt>Charge</dt><dd>{{ amount > 0 ? fmt.money(amount, 0) : unit.price > 0 ? 'Enter items' : 'Free' }}</dd></div>
+        </dl>
+        <p class="lb__note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Charged to the resident's bill once the booking is completed.</p>
+      }
+    </section>
+  </div>
+
+  @if (saveError) { <p class="lb__banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+    <app-button variant="accent" icon="event_available" [disabled]="limitReached || !units.length" (clicked)="save()">Confirm Booking</app-button>
+  </ng-container>
+</app-dialog>

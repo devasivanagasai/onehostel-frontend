@@ -1,0 +1,100 @@
+<app-dialog
+  [title]="title"
+  [subtitle]="readOnly ? 'This meal has passed — the menu is archived and read-only.' : published ? 'Published: residents can see it. Saved changes are logged and residents notified.' : 'Drafts are not visible to residents until published.'"
+  [icon]="mealIcons[form.controls.mealType.value]"
+  tone="teal"
+  (closed)="close()"
+>
+  <span dialogMeta class="mm__status mm__status--{{ statusTone }}">{{ status === 'New' ? 'New' : status }}</span>
+
+  <div class="mm" [formGroup]="form">
+    <div class="mm__grid">
+      <div class="fk-field">
+        <label class="fk-label" for="mm-date">Meal Date<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="dateError">
+          <input id="mm-date" type="date" formControlName="date" [min]="readOnly ? '' : today" />
+        </span>
+        @if (dateError) { <span class="fk-error">{{ dateError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label">Serving Time<span class="req">*</span></span>
+        <div class="mm__pair">
+          <span class="fk-control" [class.is-invalid]="timeError"><input type="time" formControlName="start" aria-label="Serving starts" /></span>
+          <span class="fk-control" [class.is-invalid]="timeError"><input type="time" formControlName="end" aria-label="Serving ends" /></span>
+        </div>
+        @if (timeError) { <span class="fk-error">{{ timeError }}</span> }
+      </div>
+    </div>
+
+    <div class="fk-field">
+      <span class="fk-label">Meal Type<span class="req">*</span></span>
+      <div class="mm__chips" role="radiogroup" aria-label="Meal type">
+        @for (meal of meals; track meal) {
+          <button type="button" role="radio" class="mm__opt" [class.is-on]="form.controls.mealType.value === meal" [disabled]="readOnly"
+            [attr.aria-checked]="form.controls.mealType.value === meal" (click)="setMeal(meal)">
+            <mat-icon fontSet="material-icons-outlined">{{ mealIcons[meal] }}</mat-icon>
+            <span>{{ meal }}</span>
+            @if (form.controls.mealType.value === meal) { <mat-icon class="mm__check">check_circle</mat-icon> }
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="mm-item">Menu Items<span class="req">*</span></label>
+      <div class="mm__items" [class.is-invalid]="itemsError">
+        @for (item of items; track item; let i = $index) {
+          <span class="mm__chip">
+            {{ item }}
+            @if (!readOnly) { <button type="button" [attr.aria-label]="'Remove ' + item" (click)="removeItem(i)"><mat-icon>close</mat-icon></button> }
+          </span>
+        }
+        @if (!readOnly) {
+          <input id="mm-item" [value]="newItem" (input)="newItem = $any($event.target).value" (keydown.enter)="addItem($event)" (blur)="addItem()"
+            [attr.maxlength]="itemMax" [placeholder]="items.length ? 'Add another item' : 'Type an item and press Enter'" />
+        }
+      </div>
+      @if (itemsError) { <span class="fk-error">{{ itemsError }}</span> }
+      @else if (!readOnly) { <span class="fk-hint">Press Enter or use commas to add several items.</span> }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="mm-notes">Notes <span class="opt">(Optional)</span></label>
+      <span class="fk-control"><textarea id="mm-notes" rows="2" formControlName="notes" maxlength="200" placeholder="e.g. Contains nuts; Jain option on request"></textarea></span>
+    </div>
+
+    @if (menu?.changes?.length) {
+      <div class="mm__history">
+        <span class="fk-label">Changes after publishing</span>
+        @for (c of menu!.changes; track c.at) {
+          <div class="mm__change">
+            <mat-icon fontSet="material-icons-outlined">history</mat-icon>
+            <span>{{ c.summary }}</span>
+            <small>{{ c.by }} · {{ fmt.date(c.at, 'datetime') }} · {{ c.notified ? c.notified + ' notified' : 'not notified' }}</small>
+          </div>
+        }
+      </div>
+    }
+
+    @if (saveError) { <p class="mm__banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+  </div>
+
+  <ng-container dialogFooter>
+    @if (readOnly) {
+      <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    } @else {
+      @if (status === 'Draft') {
+        <app-button variant="danger-outline" icon="delete" [iconOutlined]="true" (clicked)="deleteDraft()">Delete</app-button>
+        <span class="app-dialog__spacer"></span>
+      }
+      <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+      @if (published) {
+        <app-button variant="accent" icon="save" [iconOutlined]="true" (clicked)="save(false)">{{ service.settings.notifyResidents ? 'Save & Notify' : 'Save Changes' }}</app-button>
+      } @else {
+        <app-button variant="secondary" icon="save" [iconOutlined]="true" (clicked)="save(false)">Save Draft</app-button>
+        <app-button variant="accent" icon="publish" (clicked)="save(true)">Publish</app-button>
+      }
+    }
+  </ng-container>
+</app-dialog>

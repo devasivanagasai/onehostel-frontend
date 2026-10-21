@@ -1,0 +1,69 @@
+<app-dialog [title]="copy.title" [subtitle]="copy.subtitle" [icon]="copy.icon" [tone]="copy.tone" (closed)="close()">
+  <!-- Request summary -->
+  <div class="la-summary">
+    <div class="la-row">
+      <span class="la-label">Resident</span>
+      <strong>{{ name }}</strong>
+      <small>{{ r.id }} · {{ service.location(r.residentId) }}</small>
+    </div>
+    <div class="la-row">
+      <span class="la-label">{{ r.type }}</span>
+      <strong>{{ fmt.date(r.departAt, 'datetime') }} → {{ fmt.date(r.returnAt, 'datetime') }}</strong>
+      <small>{{ duration }}{{ r.destination ? ' · ' + r.destination : '' }}</small>
+    </div>
+    <div class="la-row">
+      <span class="la-label">Reason</span>
+      <span>{{ r.reason }}</span>
+    </div>
+    @if (action === 'return' && r.exitAt) {
+      <div class="la-row">
+        <span class="la-label">Exit</span>
+        <span>{{ fmt.date(r.exitAt, 'datetime') }} · {{ r.exitBy }}</span>
+      </div>
+    }
+  </div>
+
+  @if (isMovement) {
+    <div class="fk-field">
+      <label class="fk-label" for="la-when">{{ action === 'exit' ? 'Actual Exit' : 'Actual Return' }}<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="whenError">
+        <input id="la-when" type="datetime-local" [(ngModel)]="when" [max]="maxWhen" />
+      </span>
+      @if (whenError) { <span class="fk-error">{{ whenError }}</span> }
+      @else if (lateBy) { <span class="fk-hint la-late">Late by {{ lateBy }} against the expected return</span> }
+      @else { <span class="fk-hint">Defaults to now. Recorded by you as the authorised user.</span> }
+    </div>
+  } @else {
+    <div class="fk-field">
+      <label class="fk-label" for="la-note">
+        {{ noteLabel }} @if (action === 'reject') { <span class="req">*</span> } @else { <span class="opt">(Optional)</span> }
+      </label>
+      <span class="fk-control" [class.is-invalid]="noteError">
+        <textarea id="la-note" rows="3" [(ngModel)]="note" [maxlength]="reasonMax"
+          [placeholder]="action === 'reject' ? 'e.g. Return after gate closing time is not permitted' : 'Add a note'"></textarea>
+      </span>
+      @if (noteError) { <span class="fk-error">{{ noteError }}</span> }
+    </div>
+  }
+
+  @if (isDecision) {
+    <ul class="la-notify" aria-label="Notifications">
+      <li><mat-icon fontSet="material-icons-outlined" class="is-on">notifications_active</mat-icon>{{ name }} will be notified (in-app · push)</li>
+      @if (guardianBlock) {
+        <li><mat-icon fontSet="material-icons-outlined">notifications_off</mat-icon>Guardian not notified — {{ guardianBlock.toLowerCase() }}</li>
+      } @else {
+        <li><mat-icon fontSet="material-icons-outlined" class="is-on">sms</mat-icon>Guardian {{ guardianName }} will be notified by SMS</li>
+      }
+    </ul>
+  }
+  @if (action === 'approve' && service.policy.movementTracking) {
+    <p class="la-hint"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Approval is not an exit. Security records the actual exit and return.</p>
+  }
+
+  @if (saveError) { <p class="la-banner" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">{{ action === 'cancel' ? 'Keep' : 'Cancel' }}</app-button>
+    <app-button [variant]="copy.variant" [icon]="copy.icon" [loading]="saving" (clicked)="confirm()">{{ copy.confirm }}</app-button>
+  </ng-container>
+</app-dialog>

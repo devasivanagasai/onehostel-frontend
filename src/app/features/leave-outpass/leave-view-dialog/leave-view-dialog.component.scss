@@ -1,0 +1,169 @@
+// Request details, timeline and notifications. Frame comes from <app-dialog>.
+
+$teal: #0d9488;
+$line: #e8edf3;
+$tile: #f8fafb;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+// Own pill style: the global .status-badge only applies inside tables / cards.
+.lv-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}
+
+.lv-label {
+  display: block;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.lv-muted { color: #94a3b8 !important; font-weight: 500 !important; }
+
+.lv-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.lv-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: $tile;
+
+  > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 14.5px; color: #0f172a; }
+  small { font-size: 12.5px; color: #64748b; }
+
+  &--wide { grid-column: span 2; }
+
+  @media (max-width: 720px) { &--wide { grid-column: auto; } }
+}
+
+.lv-reason { font-size: 13.5px; color: #1e293b; overflow-wrap: anywhere; }
+
+.lv-tile-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: $teal;
+
+  mat-icon { @include icon(21px); }
+
+  &--blue { background: #e0ecff; color: #2563eb; }
+  &--purple { background: #f1e8ff; color: #7c3aed; }
+  &--amber { background: #fef3c7; color: #d97706; }
+}
+
+.lv-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.lv-card {
+  padding: 14px 16px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.lv-card-title {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.lv-timeline,
+.lv-notes {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li { display: flex; gap: 12px; }
+  li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding-bottom: 14px; }
+  strong { font-size: 13.5px; color: #1e293b; }
+  small { font-size: 12px; color: #64748b; }
+  p { margin: 2px 0 0; font-size: 12.5px; color: #475569; overflow-wrap: anywhere; }
+}
+
+// Steps joined by a line
+.lv-timeline li {
+  position: relative;
+
+  &:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 30px;
+    bottom: 2px;
+    width: 2px;
+    background: #e2e8f0;
+  }
+}
+
+.lv-dot {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #94a3b8;
+
+  mat-icon { @include icon(16px); }
+
+  .is-done & { background: #dcfce7; color: #16a34a; }
+  .is-current & { background: #e0f2fe; color: #0369a1; box-shadow: 0 0 0 3px #bae6fd; }
+  .is-bad & { background: #fee2e2; color: #dc2626; }
+}
+
+.lv-timeline .is-todo strong { color: #94a3b8; }
+
+.lv-notes {
+  mat-icon { @include icon(18px); margin-top: 1px; color: $teal; flex-shrink: 0; }
+
+  .is-skipped mat-icon { color: #94a3b8; }
+  .is-skipped small { color: #b45309; }
+}
+
+.lv-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: #64748b;
+}

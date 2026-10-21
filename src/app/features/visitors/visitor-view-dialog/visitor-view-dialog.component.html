@@ -1,0 +1,121 @@
+<app-dialog [eyebrow]="'Visitor ID · ' + v.id" [title]="v.name" icon="badge" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="vk-pill vk-pill--{{ statusTone }}">{{ statusLabel }}</span>
+    <span class="vk-pill vk-pill--{{ approvalTone }}">Approval: {{ v.approval }}</span>
+    @if (v.walkIn) { <span class="vk-pill vk-pill--warning">Walk-in</span> }
+  </ng-container>
+
+  <div class="vv__facts">
+    <div class="vv__tile">
+      <span class="vv__icon"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+      <div>
+        <span class="vv__label">Visiting</span>
+        <strong>{{ residentName }}</strong>
+        <small>{{ service.location(v.residentId) }}</small>
+      </div>
+    </div>
+    <div class="vv__tile">
+      <span class="vv__icon vv__icon--blue"><mat-icon fontSet="material-icons-outlined">call</mat-icon></span>
+      <div>
+        <span class="vv__label">Mobile</span>
+        <strong [class.vv__muted]="!v.mobile">{{ v.mobile ? '+91 ' + v.mobile : 'Not given' }}</strong>
+        <small>{{ v.count }} visitor{{ v.count === 1 ? '' : 's' }}</small>
+      </div>
+    </div>
+    <div class="vv__tile">
+      <span class="vv__icon vv__icon--purple"><mat-icon fontSet="material-icons-outlined">assignment</mat-icon></span>
+      <div>
+        <span class="vv__label">Purpose</span>
+        <strong>{{ v.purpose }}</strong>
+        <small>Raised by {{ v.createdBy }}{{ v.source === 'Resident' ? ' (resident)' : '' }}</small>
+      </div>
+    </div>
+    <div class="vv__tile">
+      <span class="vv__icon vv__icon--blue"><mat-icon fontSet="material-icons-outlined">event</mat-icon></span>
+      <div>
+        <span class="vv__label">Expected</span>
+        <strong>{{ fmt.date(v.expectedAt, 'datetime') }}</strong>
+      </div>
+    </div>
+    <div class="vv__tile">
+      <span class="vv__icon"><mat-icon fontSet="material-icons-outlined">login</mat-icon></span>
+      <div>
+        <span class="vv__label">Entry</span>
+        <strong [class.vv__muted]="!v.checkInAt">{{ v.checkInAt ? fmt.date(v.checkInAt, 'datetime') : 'Not yet' }}</strong>
+        @if (v.checkInBy) { <small>by {{ v.checkInBy }}</small> }
+      </div>
+    </div>
+    <div class="vv__tile">
+      <span class="vv__icon vv__icon--red"><mat-icon fontSet="material-icons-outlined">logout</mat-icon></span>
+      <div>
+        <span class="vv__label">Exit</span>
+        <strong [class.vv__muted]="!v.checkOutAt">{{ v.checkOutAt ? fmt.date(v.checkOutAt, 'datetime') : v.status === 'Checked In' ? 'Inside' : '—' }}</strong>
+        @if (v.checkOutBy) { <small>by {{ v.checkOutBy }}</small> }
+      </div>
+    </div>
+  </div>
+
+  <!-- Restricted identity data -->
+  <section class="vv__card vv__id">
+    <span class="vv__icon vv__icon--slate"><mat-icon fontSet="material-icons-outlined">lock</mat-icon></span>
+    <div class="vv__id-body">
+      <span class="vv__label">ID Type / Reference · restricted</span>
+      @if (v.idReference) {
+        <strong>{{ v.idType }} · <span class="vv__mono">{{ revealed || maskId(v.idReference) }}</span></strong>
+        <small>{{ revealed ? 'Reveal recorded in the history below.' : 'Purged ' + retentionDays + ' days after the visit closes.' }}</small>
+      } @else if (v.idPurgedAt) {
+        <strong class="vv__muted">ID purged per retention policy</strong>
+        <small>Removed {{ fmt.date(v.idPurgedAt, 'date') }}</small>
+      } @else {
+        <strong class="vv__muted">No ID collected</strong>
+      }
+      @if (revealError) { <small class="vv__err">{{ revealError }}</small> }
+    </div>
+    @if (v.idReference && !revealed) {
+      <app-button variant="outline" size="sm" icon="visibility" [iconOutlined]="true" matTooltip="Viewing the full ID is recorded" (clicked)="reveal()">Reveal</app-button>
+    }
+  </section>
+
+  @if (v.approvalReason || v.cancelReason || v.overrideReason) {
+    <section class="vv__card vv__notes">
+      @if (v.approvalReason) { <p><strong>{{ v.approval === 'Rejected' ? 'Rejection reason' : 'Approval note' }}:</strong> {{ v.approvalReason }}</p> }
+      @if (v.overrideReason) { <p><strong>Visiting hours override:</strong> {{ v.overrideReason }}</p> }
+      @if (v.cancelReason) { <p><strong>Cancelled:</strong> {{ v.cancelReason }}</p> }
+    </section>
+  }
+
+  <!-- Timeline -->
+  <section class="vv__card">
+    <span class="vv__label">Timeline</span>
+    <ol class="vv__timeline">
+      @for (e of history; track $index) {
+        <li>
+          <span class="vv__dot"><mat-icon fontSet="material-icons-outlined">{{ e.icon }}</mat-icon></span>
+          <div>
+            <strong>{{ e.action }}</strong>
+            <small>{{ fmt.date(e.at, 'datetime') }} · {{ e.by }}</small>
+            @if (e.note) { <p>{{ e.note }}</p> }
+          </div>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <ng-container dialogFooter>
+    @if (canDecide) {
+      <app-button variant="danger-outline" icon="block" (clicked)="close('reject')">Reject</app-button>
+    }
+    @if (canCancel) {
+      <app-button variant="danger-outline" icon="event_busy" [iconOutlined]="true" (clicked)="close('cancel')">Cancel Visit</app-button>
+    }
+    <span class="app-dialog__spacer"></span>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    @if (canDecide) {
+      <app-button variant="accent" icon="verified" (clicked)="close('approve')">Approve</app-button>
+    } @else if (!checkInBlocker) {
+      <app-button variant="accent" icon="login" (clicked)="close('checkin')">Check In</app-button>
+    } @else if (v.status === 'Checked In') {
+      <app-button variant="accent" icon="logout" (clicked)="close('checkout')">Check Out</app-button>
+    }
+  </ng-container>
+</app-dialog>

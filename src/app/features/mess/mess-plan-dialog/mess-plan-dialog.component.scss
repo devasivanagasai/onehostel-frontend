@@ -1,0 +1,50 @@
+// Meal plan + dietary note editor. Frame from <app-dialog>; fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+.mpd__plans {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  @media (max-width: 520px) { grid-template-columns: 1fr; }
+}
+
+.mpd__plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #ffffff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  span { display: flex; flex-direction: column; gap: 2px; }
+  strong { font-size: 13.5px; color: #1e293b; }
+  small { font-size: 12px; color: #64748b; }
+  mat-icon { font-size: 20px; width: 20px; height: 20px; color: $teal; }
+
+  &:hover { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+  &.is-on { border-color: $teal; background: #f0fbf9; }
+}
+
+.mpd__note { margin-top: 18px; }
+
+.mpd__restricted {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #92400e;
+
+  mat-icon { flex-shrink: 0; font-size: 16px; width: 16px; height: 16px; }
+}

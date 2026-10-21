@@ -1,0 +1,96 @@
+<app-dialog [eyebrow]="'Request ID · ' + r.id" [title]="name + ' — ' + r.type" [icon]="r.type === 'Leave' ? 'luggage' : 'directions_walk'" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="lv-pill lv-pill--{{ approvalTone }}">{{ r.status }}</span>
+    @if (movement) { <span class="lv-pill lv-pill--{{ movementTone }}">{{ movement }}</span> }
+  </ng-container>
+
+  <!-- Key facts -->
+  <div class="lv-facts">
+    <div class="lv-tile">
+      <span class="lv-tile-icon"><mat-icon fontSet="material-icons-outlined">bed</mat-icon></span>
+      <div><span class="lv-label">Resident</span><strong>{{ name }}</strong><small>{{ r.residentId }} · {{ service.location(r.residentId) }}</small></div>
+    </div>
+    <div class="lv-tile">
+      <span class="lv-tile-icon lv-tile-icon--blue"><mat-icon fontSet="material-icons-outlined">schedule</mat-icon></span>
+      <div>
+        <span class="lv-label">Departure → Expected Return</span>
+        <strong>{{ fmt.date(r.departAt, 'datetime') }}</strong>
+        <small>→ {{ fmt.date(r.returnAt, 'datetime') }} · {{ duration }}</small>
+      </div>
+    </div>
+    <div class="lv-tile">
+      <span class="lv-tile-icon lv-tile-icon--purple"><mat-icon fontSet="material-icons-outlined">place</mat-icon></span>
+      <div><span class="lv-label">Destination</span><strong [class.lv-muted]="!r.destination">{{ r.destination || 'Not given' }}</strong></div>
+    </div>
+    <div class="lv-tile lv-tile--wide">
+      <span class="lv-tile-icon lv-tile-icon--amber"><mat-icon fontSet="material-icons-outlined">contact_emergency</mat-icon></span>
+      <div>
+        <span class="lv-label">Emergency Contact · {{ r.contact.source === 'Emergency' ? 'from profile' : r.contact.source === 'Guardian' ? 'guardian on profile' : 'other contact' }}</span>
+        <strong>{{ r.contact.name }}{{ r.contact.relationship ? ' (' + r.contact.relationship + ')' : '' }}</strong>
+        <small>{{ r.contact.mobile }}{{ r.contact.reason ? ' · ' + r.contact.reason : '' }}</small>
+      </div>
+    </div>
+    <div class="lv-tile">
+      <span class="lv-tile-icon"><mat-icon fontSet="material-icons-outlined">notes</mat-icon></span>
+      <div><span class="lv-label">Reason</span><span class="lv-reason">{{ r.reason }}</span></div>
+    </div>
+  </div>
+
+  <div class="lv-cols">
+    <!-- Timeline -->
+    <section class="lv-card">
+      <span class="lv-card-title">Timeline</span>
+      <ol class="lv-timeline">
+        @for (s of steps; track $index) {
+          <li class="is-{{ s.state }}">
+            <span class="lv-dot"><mat-icon fontSet="material-icons-outlined">{{ s.icon }}</mat-icon></span>
+            <div>
+              <strong>{{ s.title }}</strong>
+              @if (s.at) { <small>{{ fmt.date(s.at, 'datetime') }}{{ s.by ? ' · ' + s.by : '' }}</small> }
+              @if (s.note) { <p>{{ s.note }}</p> }
+            </div>
+          </li>
+        }
+      </ol>
+      @if (!tracking && r.status === 'Approved' && !r.exitAt) {
+        <p class="lv-hint">Movement tracking is off, so exit and return are not recorded.</p>
+      }
+    </section>
+
+    <!-- Notifications (mock) -->
+    <section class="lv-card">
+      <span class="lv-card-title">Notifications</span>
+      <ul class="lv-notes">
+        @for (n of notifications; track $index) {
+          <li [class.is-skipped]="n.status === 'Skipped'">
+            <mat-icon fontSet="material-icons-outlined">{{ n.status === 'Skipped' ? 'notifications_off' : n.to === 'Guardian' ? 'sms' : 'notifications_active' }}</mat-icon>
+            <div>
+              <strong>{{ n.to }} · {{ n.name }}</strong>
+              <small>{{ n.status === 'Skipped' ? 'Not sent — ' + n.note : n.channel + ' · ' + fmt.date(n.at, 'datetime') }}</small>
+              @if (n.status === 'Sent') { <p>{{ n.message }}</p> }
+            </div>
+          </li>
+        } @empty {
+          <li class="is-skipped"><mat-icon fontSet="material-icons-outlined">notifications_none</mat-icon><div><small>No notifications sent yet.</small></div></li>
+        }
+      </ul>
+    </section>
+  </div>
+
+  <ng-container dialogFooter>
+    @if (canCancel) {
+      <app-button variant="danger-outline" icon="event_busy" [iconOutlined]="true" (clicked)="close('cancel')">Cancel Request</app-button>
+    }
+    <span class="app-dialog__spacer"></span>
+    @if (r.status === 'Pending') {
+      <app-button variant="danger-outline" icon="block" (clicked)="close('reject')">Reject</app-button>
+      <app-button variant="accent" icon="check_circle" (clicked)="close('approve')">Approve</app-button>
+    } @else if (canExit) {
+      <app-button variant="primary" icon="logout" (clicked)="close('exit')">Record Exit</app-button>
+    } @else if (canReturn) {
+      <app-button variant="accent" icon="login" (clicked)="close('return')">Record Return</app-button>
+    } @else {
+      <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    }
+  </ng-container>
+</app-dialog>

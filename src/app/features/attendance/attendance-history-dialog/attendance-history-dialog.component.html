@@ -1,0 +1,26 @@
+<app-dialog [eyebrow]="'Attendance ID · ' + record.id" [title]="name + ' · ' + fmt.date(record.date, 'dayDate')" icon="history" tone="slate" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="ah-pill ah-pill--{{ tone }}">{{ record.status }}</span>
+  </ng-container>
+
+  <ol class="ah">
+    @for (e of entries; track $index) {
+      <li [class.is-correction]="e.action === 'Corrected' || e.action === 'Late entry'">
+        <span class="ah-dot"><mat-icon fontSet="material-icons-outlined">{{ actionIcons[e.action] }}</mat-icon></span>
+        <div>
+          <strong>{{ e.action }}</strong>
+          <span class="ah-details">{{ e.details }}</span>
+          @if (e.reason) { <span class="ah-reason"><mat-icon fontSet="material-icons-outlined">format_quote</mat-icon>{{ e.reason }}</span> }
+          <small>
+            {{ fmt.date(e.at, 'datetime') }} · {{ e.by }} ·
+            <mat-icon fontSet="material-icons-outlined">{{ methodIcons[e.method] }}</mat-icon>{{ methodLabels[e.method] }}
+          </small>
+        </div>
+      </li>
+    }
+  </ol>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+  </ng-container>
+</app-dialog>

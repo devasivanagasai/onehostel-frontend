@@ -1,0 +1,132 @@
+// Meal plans, dietary notes and billing. Table look from styles/_table.scss; filters from styles/_page-kit.scss.
+
+$teal: #0d9488;
+$line: #e8edf3;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.mpl {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---- Billing panel ---- */
+.mpl__billing {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid $line;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.mpl__rule {
+  display: flex;
+  gap: 14px;
+
+  h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #1e293b; }
+  p { margin: 0; font-size: 13px; line-height: 1.55; color: #475569; }
+}
+
+.mpl__rule-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: $teal;
+
+  mat-icon { @include icon(22px); }
+}
+
+.mpl__run {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+
+  app-button { margin-left: auto; }
+}
+
+.mpl__run-text { font-size: 13px; color: #475569; }
+
+.mpl__preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mpl__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12.5px;
+
+  mat-icon { @include icon(15px); }
+  &.is-billed { background: #dcfce7; color: #15803d; }
+}
+
+/* ---- Table ---- */
+.mpl-table {
+  .mpl__avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mpl__note {
+    max-width: 300px;
+    color: #92400e;
+    white-space: normal;
+  }
+
+  .mpl__masked {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border: 1px dashed #fcd34d;
+    border-radius: 999px;
+    width: fit-content;
+    background: #fffbeb;
+    color: #b45309;
+    font-size: 12.5px;
+    font-weight: 600;
+
+    mat-icon { @include icon(14px); }
+  }
+
+  .mpl__act ::ng-deep button { color: #2563eb; }
+
+  .mpl__actions {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .is-muted td { color: #94a3b8; }
+}
+
+.muted { color: #94a3b8; }

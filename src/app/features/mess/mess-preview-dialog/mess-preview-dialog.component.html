@@ -1,0 +1,39 @@
+<app-dialog
+  title="Preview Weekly Menu"
+  [subtitle]="'Week of ' + fmt.date(days[0].date) + ' — as residents will see it in the app.'"
+  icon="visibility"
+  tone="teal"
+  (closed)="close()"
+>
+  <div class="mp">
+    @for (d of days; track d.date) {
+      <section class="mp__day" [class.is-today]="d.date === today">
+        <h4>{{ fmt.date(d.date, 'dayDate') }}@if (d.date === today) { <span>Today</span> }</h4>
+        @for (m of d.menus; track m.id) {
+          <div class="mp__meal" [class.is-draft]="m.status === 'Draft'">
+            <mat-icon fontSet="material-icons-outlined">{{ mealIcons[m.mealType] }}</mat-icon>
+            <div class="mp__meal-body">
+              <strong>{{ m.mealType }} <small>{{ clock(m.start) }} – {{ clock(m.end) }}</small></strong>
+              <span>{{ m.items.join(' · ') }}</span>
+              @if (m.notes) { <em>{{ m.notes }}</em> }
+            </div>
+            <span class="mp__tag" [class.mp__tag--new]="m.status === 'Draft' && m.date >= today">{{ label(m) }}</span>
+          </div>
+        } @empty {
+          <p class="mp__empty">No menu planned.</p>
+        }
+      </section>
+    }
+  </div>
+
+  @if (pastDrafts) {
+    <p class="mp__note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>{{ pastDrafts }} draft(s) for past days won't be published.</p>
+  }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    <app-button variant="accent" icon="publish" [disabled]="!toPublish" (clicked)="publish()">
+      {{ toPublish ? 'Publish ' + toPublish + ' Draft' + (toPublish === 1 ? '' : 's') : 'Nothing to Publish' }}
+    </app-button>
+  </ng-container>
+</app-dialog>

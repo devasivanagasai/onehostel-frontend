@@ -1,0 +1,97 @@
+<app-dialog [title]="title" [subtitle]="row.name + ' · ' + row.location + ' · ' + fmt.date(date, 'dayDate')" [icon]="icon" [tone]="tone" (closed)="close()">
+  <div class="ae">
+    <!-- Approved leave is shown for context only; it is not proof of exit -->
+    @if (row.leave) {
+      <p class="ae-banner ae-banner--leave">
+        <mat-icon fontSet="material-icons-outlined">luggage</mat-icon>
+        <span>Approved {{ row.leave.type.toLowerCase() }} {{ row.leave.id }}: {{ fmt.date(row.leave.departAt, 'datetime') }} → {{ fmt.date(row.leave.returnAt, 'datetime') }}
+          · Movement: <strong>{{ leaveMovement ?? 'not tracked' }}</strong>. Record what you actually see.</span>
+      </p>
+    }
+    @if (row.conflict) {
+      <p class="ae-banner ae-banner--warn"><mat-icon fontSet="material-icons-outlined">warning</mat-icon><span>{{ row.conflict }}</span></p>
+    }
+
+    @if (mode === 'edit') {
+      <!-- Status -->
+      <div class="fk-field">
+        <span class="fk-label">Attendance Status<span class="req">*</span></span>
+        <div class="ae-chips" role="radiogroup" aria-label="Attendance status">
+          @for (s of statuses; track s) {
+            <button type="button" role="radio" class="ae-opt" [class.is-on]="status === s" [attr.aria-checked]="status === s" (click)="status = s">
+              <mat-icon fontSet="material-icons-outlined">{{ statusIcons[s] }}</mat-icon><span>{{ s }}</span>
+              @if (status === s) { <mat-icon class="ae-check">check_circle</mat-icon> }
+            </button>
+          }
+        </div>
+        @if (statusError) { <span class="fk-error">{{ statusError }}</span> }
+        @else if (record && record.status !== status) { <span class="fk-hint">Changing {{ record.status }} → {{ status }}</span> }
+      </div>
+
+      <!-- Stays -->
+      <div class="fk-field">
+        <span class="fk-label">Check-in / Check-out <span class="opt">(Optional)</span></span>
+        @for (s of sessions; track $index; let i = $index) {
+          <div class="ae-session">
+            <div class="fk-field">
+              <span class="fk-control" [class.is-invalid]="sessionErrors[i].in"><input type="time" [(ngModel)]="s.in" [attr.aria-label]="'Check-in ' + (i + 1)" /></span>
+              @if (sessionErrors[i].in) { <span class="fk-error">{{ sessionErrors[i].in }}</span> }
+            </div>
+            <mat-icon class="ae-arrow">arrow_forward</mat-icon>
+            <div class="fk-field">
+              <span class="fk-control" [class.is-invalid]="sessionErrors[i].out"><input type="time" [(ngModel)]="s.out" [attr.aria-label]="'Check-out ' + (i + 1)" /></span>
+              @if (sessionErrors[i].out) { <span class="fk-error">{{ sessionErrors[i].out }}</span> }
+              @else if (!s.out) { <span class="fk-hint">Still in</span> }
+            </div>
+            <app-button variant="icon" size="sm" icon="delete" ariaLabel="Remove this stay" (clicked)="removeSession(i)"></app-button>
+          </div>
+        }
+        <app-button class="ae-add" variant="text" size="sm" icon="add" (clicked)="addSession()">Add check-in</app-button>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="ae-remarks">Remarks <span class="opt">(Optional)</span></label>
+        <span class="fk-control"><input id="ae-remarks" [(ngModel)]="remarks" maxlength="160" placeholder="e.g. Informed warden, back late" /></span>
+      </div>
+    } @else {
+      <div class="fk-field">
+        <label class="fk-label" for="ae-when">{{ mode === 'checkin' ? 'Check-in Time' : 'Check-out Time' }}<span class="req">*</span></label>
+        <span class="fk-control ae-time" [class.is-invalid]="whenError"><input id="ae-when" type="time" [(ngModel)]="when" /></span>
+        @if (whenError) { <span class="fk-error">{{ whenError }}</span> }
+        @else if (mode === 'checkout' && openSession) { <span class="fk-hint">Checked in at {{ fmt.date(openSession.in, 'time') }}</span> }
+        @else if (mode === 'checkin' && !record) { <span class="fk-hint">Also marks {{ row.name }} Present.</span> }
+      </div>
+    }
+
+    <!-- Method -->
+    <div class="fk-field">
+      <span class="fk-label">Recorded Via</span>
+      <div class="ae-chips">
+        @for (m of methods; track m) {
+          <button type="button" class="ae-opt" [class.is-on]="method === m" (click)="method = m">
+            <mat-icon fontSet="material-icons-outlined">{{ methodIcons[m] }}</mat-icon><span>{{ methodLabels[m] }}</span>
+            @if (method === m) { <mat-icon class="ae-check">check_circle</mat-icon> }
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (needsReason) {
+      <div class="fk-field">
+        <label class="fk-label" for="ae-reason">Reason for {{ record && mode === 'edit' ? 'correction' : 'late entry' }}<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="reasonError">
+          <textarea id="ae-reason" rows="2" [(ngModel)]="reason" maxlength="240" placeholder="Why is this being recorded or changed? Kept in the record's history."></textarea>
+        </span>
+        @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+        @else if (!service.canCorrect) { <span class="fk-error">You do not have permission to correct attendance.</span> }
+      </div>
+    }
+  </div>
+
+  @if (saveError) { <p class="ae-banner ae-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon><span>{{ saveError }}</span></p> }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+    <app-button variant="accent" [icon]="icon" [loading]="saving" (clicked)="save()">{{ mode === 'checkin' ? 'Check In' : mode === 'checkout' ? 'Check Out' : 'Save' }}</app-button>
+  </ng-container>
+</app-dialog>

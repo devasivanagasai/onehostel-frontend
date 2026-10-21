@@ -1,0 +1,39 @@
+<app-dialog title="Leave &amp; Outpass Policy" subtitle="Hostel rules applied to new requests and movement records." icon="tune" tone="teal" (closed)="close()">
+  <ul class="lp">
+    <li>
+      <span class="lp-icon"><mat-icon fontSet="material-icons-outlined">place</mat-icon></span>
+      <div><strong>Destination required for Leave</strong><small>Residents must say where they are going overnight.</small></div>
+      <mat-slide-toggle [(ngModel)]="policy.destinationRequired.Leave" aria-label="Destination required for leave"></mat-slide-toggle>
+    </li>
+    <li>
+      <span class="lp-icon"><mat-icon fontSet="material-icons-outlined">place</mat-icon></span>
+      <div><strong>Destination required for Outpass</strong><small>Optional for short trips unless turned on.</small></div>
+      <mat-slide-toggle [(ngModel)]="policy.destinationRequired.Outpass" aria-label="Destination required for outpass"></mat-slide-toggle>
+    </li>
+    <li>
+      <span class="lp-icon lp-icon--blue"><mat-icon fontSet="material-icons-outlined">sensor_door</mat-icon></span>
+      <div><strong>Movement tracking</strong><small>Security records the actual exit and return of approved requests.</small></div>
+      <mat-slide-toggle [(ngModel)]="policy.movementTracking" aria-label="Movement tracking"></mat-slide-toggle>
+    </li>
+    <li>
+      <span class="lp-icon lp-icon--purple"><mat-icon fontSet="material-icons-outlined">family_restroom</mat-icon></span>
+      <div><strong>Notify guardian of decisions</strong><small>Only residents with a guardian on record who has given consent.</small></div>
+      <mat-slide-toggle [(ngModel)]="policy.notifyGuardian" aria-label="Notify guardian"></mat-slide-toggle>
+    </li>
+    <li>
+      <span class="lp-icon lp-icon--amber"><mat-icon fontSet="material-icons-outlined">timer</mat-icon></span>
+      <div><strong>Outpass limit</strong><small>Longest outpass allowed; longer trips need a leave request.</small></div>
+      <span class="lp-hours" [class.is-invalid]="hoursError">
+        <input type="number" min="1" max="24" step="1" [(ngModel)]="policy.outpassMaxHours" aria-label="Outpass limit in hours" />
+        <span>hours</span>
+      </span>
+    </li>
+  </ul>
+  @if (hoursError) { <p class="lp-error">{{ hoursError }}</p> }
+  @if (saveError) { <p class="lp-error" role="alert">{{ saveError }}</p> }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+    <app-button variant="accent" icon="save" [iconOutlined]="true" [disabled]="!!hoursError" (clicked)="save()">Save Policy</app-button>
+  </ng-container>
+</app-dialog>

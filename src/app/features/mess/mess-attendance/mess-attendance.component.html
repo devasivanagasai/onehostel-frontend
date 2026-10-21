@@ -1,0 +1,115 @@
+<div class="ma">
+  <div class="filter-card">
+    @if (enabled) {
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search resident or room" aria-label="Search residents" [(ngModel)]="search" />
+        @if (search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="search = ''"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control ma__date">
+          <input type="date" aria-label="Meal date" [max]="maxDate" [(ngModel)]="date" />
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Meal" [(ngModel)]="meal">
+            @for (m of meals; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+    }
+
+    <div class="filter-toggle filter-card__add">
+      <span>Track meal attendance</span>
+      <mat-slide-toggle [ngModel]="enabled" (ngModelChange)="setEnabled($event)" color="primary" aria-label="Track meal attendance"></mat-slide-toggle>
+    </div>
+  </div>
+
+  @if (!enabled) {
+    <app-table-card [empty]="true" [paginate]="false" emptyIcon="toggle_off" emptyMessage="Meal attendance is turned off"
+      emptyHint="Turn on “Track meal attendance” to record who ate or opted out of each meal. Pay-per-meal billing uses these records." />
+  } @else {
+    <app-table-card [empty]="rows.length === 0" [paginate]="false" emptyIcon="no_meals"
+      [emptyMessage]="search ? 'No residents match your search' : 'No residents expected at this meal'"
+      emptyHint="Only current residents whose meal plan covers this meal are listed.">
+      <div tableToolbar class="ma__bar">
+        <div class="ma__menu">
+          <span class="ma__menu-title">{{ meal }} · {{ date ? fmt.date(date, 'dayDate') : '—' }}</span>
+          @if (menu; as m) {
+            <span class="ma__menu-items">{{ clock(m.start) }} – {{ clock(m.end) }} · {{ m.items.join(', ') }}</span>
+          } @else {
+            <span class="ma__menu-items ma__warn">No published menu for this meal</span>
+          }
+        </div>
+        <div class="ma__counts">
+          <span class="ma__count ma__count--green"><strong>{{ counts.present }}</strong> Present</span>
+          <span class="ma__count ma__count--amber"><strong>{{ counts.optedOut }}</strong> Opted out</span>
+          <span class="ma__count"><strong>{{ counts.unmarked }}</strong> Not marked</span>
+          @if (!future && counts.unmarked) {
+            <app-button variant="secondary" size="sm" icon="done_all" (clicked)="markRestPresent()">Mark rest present</app-button>
+          }
+        </div>
+      </div>
+
+      <table mat-table [dataSource]="rows" class="saas-table ma-table">
+        <ng-container matColumnDef="resident">
+          <th mat-header-cell *matHeaderCellDef> Resident </th>
+          <td mat-cell *matCellDef="let r">
+            <span class="with-icon">
+              <span class="ma__avatar">{{ initials(r.name) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ r.name }}</span>
+                <span class="list-entity__sub">{{ r.id }} · {{ r.room }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="plan">
+          <th mat-header-cell *matHeaderCellDef> Meal Plan </th>
+          <td mat-cell *matCellDef="let r">
+            <span class="list-entity__text">
+              <span>{{ r.plan }}</span>
+              @if (r.onLeave) { <span class="list-entity__sub ma__warn">On leave</span> }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="mark">
+          <th mat-header-cell *matHeaderCellDef> Attendance </th>
+          <td mat-cell *matCellDef="let r">
+            <span class="ma__seg" role="group" [attr.aria-label]="'Attendance for ' + r.name">
+              <button type="button" class="is-present" [class.is-on]="r.mark === 'Present'" [disabled]="future" [attr.aria-pressed]="r.mark === 'Present'"
+                [matTooltip]="future ? 'Can be marked once the meal is served' : ''" (click)="set(r, 'Present')">
+                <mat-icon fontSet="material-icons-outlined">check_circle</mat-icon>Present
+              </button>
+              <button type="button" class="is-out" [class.is-on]="r.mark === 'Opted out'" [attr.aria-pressed]="r.mark === 'Opted out'" (click)="set(r, 'Opted out')">
+                <mat-icon fontSet="material-icons-outlined">do_not_disturb_on</mat-icon>Opted out
+              </button>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef > Status </th>
+          <td mat-cell *matCellDef="let r">
+            @if (r.mark) {
+              <span class="status-badge status-badge--{{ r.mark === 'Present' ? 'success' : 'warning' }}">{{ r.mark }}</span>
+            } @else {
+              <span class="status-badge status-badge--neutral">Not marked</span>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns" class="table-row"></tr>
+      </table>
+    </app-table-card>
+  }
+</div>
