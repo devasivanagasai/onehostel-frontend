@@ -66,38 +66,6 @@
   margin-left: auto;
 }
 
-.secondary-btn {
-  height: var(--btn-height);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 var(--btn-padding-x);
-  border: 1px solid #cbd5e1;
-  border-radius: var(--btn-radius);
-  background: #ffffff;
-  font: inherit;
-  font-size: var(--btn-font-size);
-  font-weight: 600;
-  color: #334155;
-  cursor: pointer;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover:not(:disabled) {
-    border-color: #94a3b8;
-    background: #f8fafc;
-  }
-
-  &:disabled {
-    color: #94a3b8;
-    cursor: not-allowed;
-  }
-}
-
 /* ---- Tables ---- */
 .fees-table-card {
   padding-top: 8px;
@@ -141,14 +109,5 @@
 
   .is-cancelled td {
     color: #94a3b8;
-  }
-
-  .row-edit-btn--danger {
-    color: #dc2626;
-
-    &:hover:not(:disabled) {
-      border-color: #fca5a5;
-      background: #fef2f2;
-    }
   }
 }

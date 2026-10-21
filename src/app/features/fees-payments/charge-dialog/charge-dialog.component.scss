@@ -1,9 +1,4 @@
 @use '../../../../styles/dialog-kit' as *;
-.cd { @include dialog-shell(560px); }
-.cd__header { @include dialog-header; }
-.cd__title { @include dialog-title; }
-.cd__content { @include dialog-content; }
-.cd__footer { @include dialog-footer; }
 .cd__full { width: 100%; }
 .cd__grid {
   display: grid;

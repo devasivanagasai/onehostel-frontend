@@ -20,32 +20,32 @@
         </div>
       </div>
 
-      <button type="button" class="kpi-card kpi-card--action" (click)="showOverdue()" matTooltip="Show overdue charges">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">alarm</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Overdue</span>
           <span class="kpi-card__value">₹{{ s.overdueAmount | number: '1.0-0' }}</span>
           <span class="kpi-card__sub">{{ s.overdueCount }} charge{{ s.overdueCount === 1 ? '' : 's' }} past due</span>
         </div>
-      </button>
+      </div>
 
-      <button type="button" class="kpi-card kpi-card--action" (click)="showPending()" matTooltip="Show pending online payments">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">hourglass_top</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Pending confirmation</span>
           <span class="kpi-card__value">{{ s.pendingCount }}</span>
           <span class="kpi-card__sub">₹{{ s.pendingAmount | number: '1.0-0' }} not yet counted</span>
         </div>
-      </button>
+      </div>
 
-      <button type="button" class="kpi-card kpi-card--action" (click)="setTab('fees')" matTooltip="Open fee setup">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">tune</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Active fees</span>
           <span class="kpi-card__value">{{ s.activeFees }}</span>
           <span class="kpi-card__sub">Configured charges</span>
         </div>
-      </button>
+      </div>
     </section>
   }
 
@@ -99,107 +99,100 @@
           </span>
         </label>
         @if (paymentFiltersActive) {
-          <button type="button" class="filter-card__reset" (click)="clearPaymentFilters()"><mat-icon>filter_alt_off</mat-icon>Reset</button>
+          <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearPaymentFilters()">Reset</app-button>
         }
-        <button type="button" class="primary-green-btn filter-card__add" (click)="openRecordPayment()">
-          <mat-icon>add</mat-icon><span>Record Payment</span>
-        </button>
+        <app-button class="filter-card__add" icon="add" (clicked)="openRecordPayment()">Record Payment</app-button>
       </div>
 
-      <div class="saas-card fees-table-card">
-        <div class="table-responsive">
-          <table mat-table [dataSource]="page(filteredPayments)" class="saas-table fees-table">
-            <ng-container matColumnDef="payment">
-              <th mat-header-cell *matHeaderCellDef> Payment / Receipt </th>
-              <td mat-cell *matCellDef="let p">
+      <app-table-card
+        class="fees-table-card"
+        [empty]="filteredPayments.length === 0"
+        [emptyIcon]="paymentFiltersActive ? 'search_off' : 'receipt_long'"
+        [emptyMessage]="paymentFiltersActive ? 'No payments match your filters' : 'No payments yet'"
+        [emptyHint]="paymentFiltersActive ? 'Try a different search, status, method or date.' : 'Record the first payment against a resident charge.'"
+        [clearable]="paymentFiltersActive"
+        (clear)="clearPaymentFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <table mat-table [dataSource]="page(filteredPayments)" class="saas-table fees-table">
+          <ng-container matColumnDef="payment">
+            <th mat-header-cell *matHeaderCellDef> Payment / Receipt </th>
+            <td mat-cell *matCellDef="let p">
+              <span class="list-entity__text">
+                <span class="list-entity__name mono">{{ p.id }}</span>
+                <span class="list-entity__sub">{{ p.receiptId || 'No receipt' }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="resident">
+            <th mat-header-cell *matHeaderCellDef> Resident </th>
+            <td mat-cell *matCellDef="let p">
+              <div class="list-entity">
+                <span class="list-entity__avatar list-avatar--{{ tone(p.residentId) }}">{{ initials(p.residentName) }}</span>
                 <span class="list-entity__text">
-                  <span class="list-entity__name mono">{{ p.id }}</span>
-                  <span class="list-entity__sub">{{ p.receiptId || 'No receipt' }}</span>
+                  <span class="list-entity__name">{{ p.residentName }}</span>
+                  <span class="list-entity__sub">{{ p.residentId }}</span>
                 </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="resident">
-              <th mat-header-cell *matHeaderCellDef> Resident </th>
-              <td mat-cell *matCellDef="let p">
-                <div class="list-entity">
-                  <span class="list-entity__avatar list-avatar--{{ tone(p.residentId) }}">{{ initials(p.residentName) }}</span>
-                  <span class="list-entity__text">
-                    <span class="list-entity__name">{{ p.residentName }}</span>
-                    <span class="list-entity__sub">{{ p.residentId }}</span>
-                  </span>
-                </div>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="charge">
-              <th mat-header-cell *matHeaderCellDef> Charge / Invoice </th>
-              <td mat-cell *matCellDef="let p">
-                <span class="list-entity__text">
-                  <span>{{ p.chargeDescription }}</span>
-                  <span class="list-entity__sub">{{ p.chargeId }}</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="amount">
-              <th mat-header-cell *matHeaderCellDef class="num"> Due / Paid </th>
-              <td mat-cell *matCellDef="let p" class="num">
-                <span class="list-entity__text list-entity__text--end">
-                  <span class="list-entity__name" [class.is-void]="p.status !== 'Successful'">₹{{ p.amount | number: '1.0-2' }}</span>
-                  <span class="list-entity__sub">of ₹{{ p.amountDue | number: '1.0-2' }} due</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="method">
-              <th mat-header-cell *matHeaderCellDef> Method </th>
-              <td mat-cell *matCellDef="let p">
-                <span class="list-entity__text">
-                  <span>{{ p.method === 'Online' ? 'Online (' + gateway + ')' : p.method }}</span>
-                  <span class="list-entity__sub mono">{{ p.transactionRef || '—' }}</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef> Date / Collected By </th>
-              <td mat-cell *matCellDef="let p" class="date-cell">
-                <span class="list-entity__text">
-                  <span>{{ fmt.date(p.paidAt, 'datetime') }}</span>
-                  <span class="list-entity__sub">{{ p.collectedBy }}</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef> Status </th>
-              <td mat-cell *matCellDef="let p"><span class="status-badge status-badge--{{ paymentTone(p) }}">{{ p.status }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-              <td mat-cell *matCellDef="let p" class="actions-cell">
-                <button type="button" class="row-action" [attr.aria-label]="'View ' + p.id" (click)="openPayment(p)">
-                  <mat-icon>visibility</mat-icon>View
-                </button>
-                @if (p.receiptId) {
-                  <button type="button" class="row-edit-btn" [attr.aria-label]="'Download receipt ' + p.receiptId" matTooltip="Download receipt" (click)="downloadReceipt(p)">
-                    <mat-icon>download</mat-icon>
-                  </button>
-                }
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: paymentColumns" class="table-row"></tr>
-          </table>
-        </div>
-        @if (filteredPayments.length === 0) {
-          <app-empty-state
-            [icon]="paymentFiltersActive ? 'search_off' : 'receipt_long'"
-            [message]="paymentFiltersActive ? 'No payments match your filters' : 'No payments yet'"
-            [hint]="paymentFiltersActive ? 'Try a different search, status, method or date.' : 'Record the first payment against a resident charge.'"
-            [clearable]="paymentFiltersActive"
-            (clear)="clearPaymentFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination [page]="safePage" [totalPages]="totalPages" [pageSize]="pageSize"
-            (pageChange)="currentPage = $event" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
-        }
-      </div>
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="charge">
+            <th mat-header-cell *matHeaderCellDef> Charge / Invoice </th>
+            <td mat-cell *matCellDef="let p">
+              <span class="list-entity__text">
+                <span>{{ p.chargeDescription }}</span>
+                <span class="list-entity__sub">{{ p.chargeId }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef class="num"> Due / Paid </th>
+            <td mat-cell *matCellDef="let p" class="num">
+              <span class="list-entity__text list-entity__text--end">
+                <span class="list-entity__name" [class.is-void]="p.status !== 'Successful'">₹{{ p.amount | number: '1.0-2' }}</span>
+                <span class="list-entity__sub">of ₹{{ p.amountDue | number: '1.0-2' }} due</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="method">
+            <th mat-header-cell *matHeaderCellDef> Method </th>
+            <td mat-cell *matCellDef="let p">
+              <span class="list-entity__text">
+                <span>{{ p.method === 'Online' ? 'Online (' + gateway + ')' : p.method }}</span>
+                <span class="list-entity__sub mono">{{ p.transactionRef || '—' }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef> Date / Collected By </th>
+            <td mat-cell *matCellDef="let p" class="date-cell">
+              <span class="list-entity__text">
+                <span>{{ fmt.date(p.paidAt, 'datetime') }}</span>
+                <span class="list-entity__sub">{{ p.collectedBy }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let p"><span class="status-badge status-badge--{{ paymentTone(p) }}">{{ p.status }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+            <td mat-cell *matCellDef="let p" class="actions-cell">
+              <app-button variant="outline" size="sm" icon="visibility" [ariaLabel]="'View ' + p.id" (clicked)="openPayment(p)">View</app-button>
+              @if (p.receiptId) {
+                <app-button variant="icon-outline" size="sm" icon="download" [ariaLabel]="'Download receipt ' + p.receiptId" matTooltip="Download receipt" (clicked)="downloadReceipt(p)"></app-button>
+              }
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: paymentColumns" class="table-row"></tr>
+        </table>
+      </app-table-card>
     }
 
     <!-- ===================== CHARGES ===================== -->
@@ -232,118 +225,107 @@
           </span>
         </label>
         @if (chargeFiltersActive) {
-          <button type="button" class="filter-card__reset" (click)="clearChargeFilters()"><mat-icon>filter_alt_off</mat-icon>Reset</button>
+          <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearChargeFilters()">Reset</app-button>
         }
         <div class="filter-card__actions">
-          <button type="button" class="secondary-btn" [disabled]="remindable.length === 0" (click)="remind(remindable)"
-            [matTooltip]="remindable.length ? 'Remind every overdue charge in this list' : 'No overdue charges in this list'">
-            <mat-icon>notifications_active</mat-icon><span>Remind overdue ({{ remindable.length }})</span>
-          </button>
-          <button type="button" class="primary-green-btn" (click)="openOneTimeCharge()">
-            <mat-icon>add</mat-icon><span>One-time Charge</span>
-          </button>
+          <app-button variant="secondary" icon="notifications_active" [disabled]="remindable.length === 0" (clicked)="remind(remindable)"
+            [matTooltip]="remindable.length ? 'Remind every overdue charge in this list' : 'No overdue charges in this list'">Remind overdue ({{ remindable.length }})</app-button>
+          <app-button icon="add" (clicked)="openOneTimeCharge()">One-time Charge</app-button>
         </div>
       </div>
 
-      <div class="saas-card fees-table-card">
-        <div class="table-responsive">
-          <table mat-table [dataSource]="page(filteredCharges)" class="saas-table fees-table">
-            <ng-container matColumnDef="invoice">
-              <th mat-header-cell *matHeaderCellDef> Invoice </th>
-              <td mat-cell *matCellDef="let c">
+      <app-table-card
+        class="fees-table-card"
+        [empty]="filteredCharges.length === 0"
+        [emptyIcon]="chargeFiltersActive ? 'search_off' : 'task_alt'"
+        [emptyMessage]="chargeFiltersActive ? 'No charges match your filters' : 'No open charges — everything is settled'"
+        [emptyHint]="chargeFiltersActive ? 'Try a different search, status or fee.' : 'Generate charges from Fee Setup, or add a one-time charge.'"
+        [clearable]="chargeFiltersActive"
+        (clear)="clearChargeFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <table mat-table [dataSource]="page(filteredCharges)" class="saas-table fees-table">
+          <ng-container matColumnDef="invoice">
+            <th mat-header-cell *matHeaderCellDef> Invoice </th>
+            <td mat-cell *matCellDef="let c">
+              <span class="list-entity__text">
+                <span class="list-entity__name mono">{{ c.id }}</span>
+                <span class="list-entity__sub">Issued {{ fmt.date(c.issueDate) }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="resident">
+            <th mat-header-cell *matHeaderCellDef> Resident </th>
+            <td mat-cell *matCellDef="let c">
+              <div class="list-entity">
+                <span class="list-entity__avatar list-avatar--{{ tone(c.residentId) }}">{{ initials(c.residentName) }}</span>
                 <span class="list-entity__text">
-                  <span class="list-entity__name mono">{{ c.id }}</span>
-                  <span class="list-entity__sub">Issued {{ fmt.date(c.issueDate) }}</span>
+                  <span class="list-entity__name">{{ c.residentName }}</span>
+                  <span class="list-entity__sub">{{ c.residentId }}</span>
                 </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="resident">
-              <th mat-header-cell *matHeaderCellDef> Resident </th>
-              <td mat-cell *matCellDef="let c">
-                <div class="list-entity">
-                  <span class="list-entity__avatar list-avatar--{{ tone(c.residentId) }}">{{ initials(c.residentName) }}</span>
-                  <span class="list-entity__text">
-                    <span class="list-entity__name">{{ c.residentName }}</span>
-                    <span class="list-entity__sub">{{ c.residentId }}</span>
-                  </span>
-                </div>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef> Description </th>
-              <td mat-cell *matCellDef="let c">
-                <span class="list-entity__text">
-                  <span>{{ c.description }}</span>
-                  <span class="list-entity__sub">
-                    {{ c.feeId ? c.feeId : 'One-time' }}@if (c.taxAmount) { · tax ₹{{ c.taxAmount | number: '1.0-2' }} }@if (c.lateFeeAmount) { · <span class="late">late fee ₹{{ c.lateFeeAmount | number: '1.0-2' }}</span> }
-                  </span>
-                  @if (c.cancelReason) { <span class="list-entity__sub">Cancelled: {{ c.cancelReason }}</span> }
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef> Description </th>
+            <td mat-cell *matCellDef="let c">
+              <span class="list-entity__text">
+                <span>{{ c.description }}</span>
+                <span class="list-entity__sub">
+                  {{ c.feeId ? c.feeId : 'One-time' }}@if (c.taxAmount) { · tax ₹{{ c.taxAmount | number: '1.0-2' }} }@if (c.lateFeeAmount) { · <span class="late">late fee ₹{{ c.lateFeeAmount | number: '1.0-2' }}</span> }
                 </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="total">
-              <th mat-header-cell *matHeaderCellDef class="num"> Total / Paid </th>
-              <td mat-cell *matCellDef="let c" class="num">
-                <span class="list-entity__text list-entity__text--end">
-                  <span class="list-entity__name">₹{{ c.total | number: '1.0-2' }}</span>
-                  <span class="list-entity__sub">₹{{ fees.paidFor(c.id) | number: '1.0-2' }} paid</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="balance">
-              <th mat-header-cell *matHeaderCellDef class="num"> Balance </th>
-              <td mat-cell *matCellDef="let c" class="num" [class.is-due]="fees.balance(c) > 0">
-                {{ fees.balance(c) > 0 ? '₹' + (fees.balance(c) | number: '1.0-2') : '—' }}
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="due">
-              <th mat-header-cell *matHeaderCellDef> Due Date </th>
-              <td mat-cell *matCellDef="let c" class="date-cell">
-                <span class="list-entity__text">
-                  <span>{{ fmt.date(c.dueDate) }}</span>
-                  @if (c.lastReminderAt) { <span class="list-entity__sub">Reminded {{ c.reminderCount }}× · {{ fmt.date(c.lastReminderAt) }}</span> }
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef> Status </th>
-              <td mat-cell *matCellDef="let c"><span class="status-badge status-badge--{{ chargeTone(c) }}">{{ fees.chargeStatus(c) }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-              <td mat-cell *matCellDef="let c" class="actions-cell">
-                @if (fees.balance(c) > 0) {
-                  <button type="button" class="row-action" [attr.aria-label]="'Collect payment for ' + c.id" (click)="openRecordPayment(c.id)">
-                    <mat-icon>point_of_sale</mat-icon>Collect
-                  </button>
-                  <button type="button" class="row-edit-btn" [attr.aria-label]="'Send reminder for ' + c.id" matTooltip="Send reminder" (click)="remind([c])">
-                    <mat-icon>notifications</mat-icon>
-                  </button>
-                }
-                @if (canCancel(c)) {
-                  <button type="button" class="row-edit-btn row-edit-btn--danger" [attr.aria-label]="'Cancel ' + c.id" matTooltip="Cancel charge (adjustment)" (click)="cancelCharge(c)">
-                    <mat-icon>block</mat-icon>
-                  </button>
-                }
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="chargeColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: chargeColumns" class="table-row" [class.is-cancelled]="row.cancelledAt"></tr>
-          </table>
-        </div>
-        @if (filteredCharges.length === 0) {
-          <app-empty-state
-            [icon]="chargeFiltersActive ? 'search_off' : 'task_alt'"
-            [message]="chargeFiltersActive ? 'No charges match your filters' : 'No open charges — everything is settled'"
-            [hint]="chargeFiltersActive ? 'Try a different search, status or fee.' : 'Generate charges from Fee Setup, or add a one-time charge.'"
-            [clearable]="chargeFiltersActive"
-            (clear)="clearChargeFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination [page]="safePage" [totalPages]="totalPages" [pageSize]="pageSize"
-            (pageChange)="currentPage = $event" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
-        }
-      </div>
+                @if (c.cancelReason) { <span class="list-entity__sub">Cancelled: {{ c.cancelReason }}</span> }
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef class="num"> Total / Paid </th>
+            <td mat-cell *matCellDef="let c" class="num">
+              <span class="list-entity__text list-entity__text--end">
+                <span class="list-entity__name">₹{{ c.total | number: '1.0-2' }}</span>
+                <span class="list-entity__sub">₹{{ fees.paidFor(c.id) | number: '1.0-2' }} paid</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="balance">
+            <th mat-header-cell *matHeaderCellDef class="num"> Balance </th>
+            <td mat-cell *matCellDef="let c" class="num" [class.is-due]="fees.balance(c) > 0">
+              {{ fees.balance(c) > 0 ? '₹' + (fees.balance(c) | number: '1.0-2') : '—' }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="due">
+            <th mat-header-cell *matHeaderCellDef> Due Date </th>
+            <td mat-cell *matCellDef="let c" class="date-cell">
+              <span class="list-entity__text">
+                <span>{{ fmt.date(c.dueDate) }}</span>
+                @if (c.lastReminderAt) { <span class="list-entity__sub">Reminded {{ c.reminderCount }}× · {{ fmt.date(c.lastReminderAt) }}</span> }
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let c"><span class="status-badge status-badge--{{ chargeTone(c) }}">{{ fees.chargeStatus(c) }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+            <td mat-cell *matCellDef="let c" class="actions-cell">
+              @if (fees.balance(c) > 0) {
+                <app-button variant="outline" size="sm" icon="point_of_sale" [ariaLabel]="'Collect payment for ' + c.id" (clicked)="openRecordPayment(c.id)">Collect</app-button>
+                <app-button variant="icon-outline" size="sm" icon="notifications" [ariaLabel]="'Send reminder for ' + c.id" matTooltip="Send reminder" (clicked)="remind([c])"></app-button>
+              }
+              @if (canCancel(c)) {
+                <app-button variant="icon-danger" size="sm" icon="block" [ariaLabel]="'Cancel ' + c.id" matTooltip="Cancel charge (adjustment)" (clicked)="cancelCharge(c)"></app-button>
+              }
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="chargeColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: chargeColumns" class="table-row" [class.is-cancelled]="row.cancelledAt"></tr>
+        </table>
+      </app-table-card>
     }
 
     <!-- ===================== FEE SETUP ===================== -->
@@ -366,96 +348,87 @@
           </span>
         </label>
         @if (feeFiltersActive) {
-          <button type="button" class="filter-card__reset" (click)="clearFeeFilters()"><mat-icon>filter_alt_off</mat-icon>Reset</button>
+          <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFeeFilters()">Reset</app-button>
         }
-        <button type="button" class="primary-green-btn filter-card__add" (click)="openFee()">
-          <mat-icon>add</mat-icon><span>New Fee</span>
-        </button>
+        <app-button class="filter-card__add" icon="add" (clicked)="openFee()">New Fee</app-button>
       </div>
 
-      <div class="saas-card fees-table-card">
-        <div class="table-responsive">
-          <table mat-table [dataSource]="page(filteredFees)" class="saas-table fees-table">
-            <ng-container matColumnDef="fee">
-              <th mat-header-cell *matHeaderCellDef> Fee </th>
-              <td mat-cell *matCellDef="let f">
-                <span class="list-entity__text">
-                  <span class="list-entity__name">{{ feeDisplayName(f) }}</span>
-                  <span class="list-entity__sub">{{ f.id }} · {{ f.category }}</span>
+      <app-table-card
+        class="fees-table-card"
+        [empty]="filteredFees.length === 0"
+        [emptyIcon]="feeFiltersActive ? 'search_off' : 'tune'"
+        [emptyMessage]="feeFiltersActive ? 'No fees match your filters' : 'No fees configured yet'"
+        [emptyHint]="feeFiltersActive ? 'Try a different search or status.' : 'Create your first fee, e.g. monthly Hostel Fee/Rent.'"
+        [clearable]="feeFiltersActive"
+        (clear)="clearFeeFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <table mat-table [dataSource]="page(filteredFees)" class="saas-table fees-table">
+          <ng-container matColumnDef="fee">
+            <th mat-header-cell *matHeaderCellDef> Fee </th>
+            <td mat-cell *matCellDef="let f">
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ feeDisplayName(f) }}</span>
+                <span class="list-entity__sub">{{ f.id }} · {{ f.category }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef> Amount </th>
+            <td mat-cell *matCellDef="let f">
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ f.amountSource === 'Bed rent' ? "Each bed's rent" : '₹' + (f.amount | number: '1.0-2') }}</span>
+                <span class="list-entity__sub">{{ f.taxRate ? '+ GST ' + f.taxRate + '%' : 'No tax' }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="frequency">
+            <th mat-header-cell *matHeaderCellDef> Frequency </th>
+            <td mat-cell *matCellDef="let f">
+              <span class="list-entity__text">
+                <span>{{ describeFrequency(f) }}</span>
+                <span class="list-entity__sub">
+                  {{ f.effectiveFrom ? 'From ' + fmt.date(f.effectiveFrom) : 'No start date' }}{{ f.effectiveTo ? ' to ' + fmt.date(f.effectiveTo) : '' }}
                 </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="amount">
-              <th mat-header-cell *matHeaderCellDef> Amount </th>
-              <td mat-cell *matCellDef="let f">
-                <span class="list-entity__text">
-                  <span class="list-entity__name">{{ f.amountSource === 'Bed rent' ? "Each bed's rent" : '₹' + (f.amount | number: '1.0-2') }}</span>
-                  <span class="list-entity__sub">{{ f.taxRate ? '+ GST ' + f.taxRate + '%' : 'No tax' }}</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="frequency">
-              <th mat-header-cell *matHeaderCellDef> Frequency </th>
-              <td mat-cell *matCellDef="let f">
-                <span class="list-entity__text">
-                  <span>{{ describeFrequency(f) }}</span>
-                  <span class="list-entity__sub">
-                    {{ f.effectiveFrom ? 'From ' + fmt.date(f.effectiveFrom) : 'No start date' }}{{ f.effectiveTo ? ' to ' + fmt.date(f.effectiveTo) : '' }}
-                  </span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="due">
-              <th mat-header-cell *matHeaderCellDef> Due / Late Fee </th>
-              <td mat-cell *matCellDef="let f">
-                <span class="list-entity__text">
-                  <span>{{ describeDueRule(f.dueRule) }}</span>
-                  <span class="list-entity__sub">Late fee: {{ describeLateFee(f.lateFee) }}</span>
-                </span>
-              </td>
-            </ng-container>
-            <ng-container matColumnDef="appliesTo">
-              <th mat-header-cell *matHeaderCellDef> Applies To </th>
-              <td mat-cell *matCellDef="let f">{{ appliesTo(f) }}</td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef> Status </th>
-              <td mat-cell *matCellDef="let f"><span class="status-badge status-badge--{{ feeTone(f) }}">{{ f.status }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-              <td mat-cell *matCellDef="let f" class="actions-cell">
-                <button type="button" class="row-action" [attr.aria-label]="'Edit ' + feeDisplayName(f)" (click)="openFee(f)">
-                  <mat-icon>edit</mat-icon>Edit
-                </button>
-                @if (f.status === 'Active') {
-                  <button type="button" class="row-action" [attr.aria-label]="'Generate charges for ' + feeDisplayName(f)" (click)="generate(f)">
-                    <mat-icon>receipt_long</mat-icon>Generate
-                  </button>
-                } @else {
-                  <button type="button" class="row-action" [attr.aria-label]="'Activate ' + feeDisplayName(f)" (click)="activate(f)">
-                    <mat-icon>play_circle</mat-icon>Activate
-                  </button>
-                }
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="feeColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: feeColumns" class="table-row"></tr>
-          </table>
-        </div>
-        @if (filteredFees.length === 0) {
-          <app-empty-state
-            [icon]="feeFiltersActive ? 'search_off' : 'tune'"
-            [message]="feeFiltersActive ? 'No fees match your filters' : 'No fees configured yet'"
-            [hint]="feeFiltersActive ? 'Try a different search or status.' : 'Create your first fee, e.g. monthly Hostel Fee/Rent.'"
-            [clearable]="feeFiltersActive"
-            (clear)="clearFeeFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination [page]="safePage" [totalPages]="totalPages" [pageSize]="pageSize"
-            (pageChange)="currentPage = $event" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
-        }
-      </div>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="due">
+            <th mat-header-cell *matHeaderCellDef> Due / Late Fee </th>
+            <td mat-cell *matCellDef="let f">
+              <span class="list-entity__text">
+                <span>{{ describeDueRule(f.dueRule) }}</span>
+                <span class="list-entity__sub">Late fee: {{ describeLateFee(f.lateFee) }}</span>
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="appliesTo">
+            <th mat-header-cell *matHeaderCellDef> Applies To </th>
+            <td mat-cell *matCellDef="let f">{{ appliesTo(f) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let f"><span class="status-badge status-badge--{{ feeTone(f) }}">{{ f.status }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+            <td mat-cell *matCellDef="let f" class="actions-cell">
+              <app-button variant="outline" size="sm" icon="edit" [ariaLabel]="'Edit ' + feeDisplayName(f)" (clicked)="openFee(f)">Edit</app-button>
+              @if (f.status === 'Active') {
+                <app-button variant="outline" size="sm" icon="receipt_long" [ariaLabel]="'Generate charges for ' + feeDisplayName(f)" (clicked)="generate(f)">Generate</app-button>
+              } @else {
+                <app-button variant="outline" size="sm" icon="play_circle" [ariaLabel]="'Activate ' + feeDisplayName(f)" (clicked)="activate(f)">Activate</app-button>
+              }
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="feeColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: feeColumns" class="table-row"></tr>
+        </table>
+      </app-table-card>
     }
   }
 </div>

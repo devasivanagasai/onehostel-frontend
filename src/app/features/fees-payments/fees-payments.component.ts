@@ -2,7 +2,6 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -11,8 +10,8 @@ import { MatTableModule } from '@angular/material/table';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { FeeInput, FeesService, OneTimeChargeInput, RecordPaymentInput } from './fees.service';
 import {
   Charge,
@@ -62,14 +61,13 @@ const FEE_TONES: Record<string, string> = { Active: 'success', Draft: 'warning',
   imports: [
     CommonModule,
     FormsModule,
-    MatButtonModule,
     MatIconModule,
     MatDialogModule,
     MatTooltipModule,
     MatSnackBarModule,
     MatTableModule,
-    AppEmptyStateComponent,
-    AppPaginationComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   templateUrl: './fees-payments.component.html',
   styleUrl: './fees-payments.component.scss',
@@ -131,17 +129,6 @@ export class FeesPaymentsComponent {
     this.tab = tab;
     this.currentPage = 0;
     this.router.navigate([], { queryParams: { tab }, queryParamsHandling: 'merge', replaceUrl: true });
-  }
-
-  /** KPI shortcuts. */
-  showOverdue(): void {
-    this.chargeFilters = { search: '', status: 'Overdue', fee: 'All' };
-    this.setTab('charges');
-  }
-
-  showPending(): void {
-    this.paymentFilters = { search: '', status: 'Pending', method: 'All', period: 'All' };
-    this.setTab('payments');
   }
 
   // ---- Payments tab -----------------------------------------------------------

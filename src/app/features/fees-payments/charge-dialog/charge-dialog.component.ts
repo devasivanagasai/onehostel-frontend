@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { ResidentsService } from '../../residents/residents.service';
 import { residentFullName } from '../../residents/residents.models';
 import { OneTimeChargeInput } from '../fees.service';
@@ -16,73 +17,60 @@ import { TAX_OPTIONS } from '../fees.models';
 @Component({
   selector: 'app-charge-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, AppDialogComponent, AppButtonComponent],
   template: `
-    <div class="cd">
-      <header class="cd__header">
-        <div class="cd__title">
-          <span><mat-icon>post_add</mat-icon></span>
-          <div>
-            <h2>One-time Charge</h2>
-            <p>Creates a separate invoice for each selected resident.</p>
-          </div>
-        </div>
-        <button mat-icon-button type="button" (click)="cancel()" aria-label="Close dialog"><mat-icon>close</mat-icon></button>
-      </header>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <app-dialog title="One-time Charge" subtitle="Creates a separate invoice for each selected resident." icon="post_add" tone="teal">
+        <mat-form-field appearance="outline" class="cd__full">
+          <mat-label>Residents</mat-label>
+          <mat-select formControlName="residentIds" multiple required>
+            @for (r of residents; track r.id) { <mat-option [value]="r.id">{{ r.label }}</mat-option> }
+          </mat-select>
+          @if (form.controls.residentIds.touched && form.controls.residentIds.invalid) { <mat-error>Select at least one resident</mat-error> }
+        </mat-form-field>
 
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <mat-dialog-content class="cd__content">
-          <mat-form-field appearance="outline" class="cd__full">
-            <mat-label>Residents</mat-label>
-            <mat-select formControlName="residentIds" multiple required>
-              @for (r of residents; track r.id) { <mat-option [value]="r.id">{{ r.label }}</mat-option> }
+        <mat-form-field appearance="outline" class="cd__full">
+          <mat-label>Description</mat-label>
+          <input matInput formControlName="description" maxlength="80" placeholder="e.g. Room key replacement" required />
+          @if (form.controls.description.touched && form.controls.description.invalid) { <mat-error>Description is required</mat-error> }
+        </mat-form-field>
+
+        <div class="cd__grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Amount</mat-label>
+            <span matTextPrefix>₹&nbsp;</span>
+            <input matInput type="number" min="0.01" step="0.01" formControlName="amount" required />
+            @if (form.controls.amount.touched && form.controls.amount.invalid) { <mat-error>Amount must be greater than zero</mat-error> }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tax</mat-label>
+            <mat-select formControlName="taxRate">
+              @for (t of taxOptions; track t.rate) { <mat-option [value]="t.rate">{{ t.label }}</mat-option> }
             </mat-select>
-            @if (form.controls.residentIds.touched && form.controls.residentIds.invalid) { <mat-error>Select at least one resident</mat-error> }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="cd__full">
-            <mat-label>Description</mat-label>
-            <input matInput formControlName="description" maxlength="80" placeholder="e.g. Room key replacement" required />
-            @if (form.controls.description.touched && form.controls.description.invalid) { <mat-error>Description is required</mat-error> }
+          <mat-form-field appearance="outline">
+            <mat-label>Due date</mat-label>
+            <input matInput type="date" formControlName="dueDate" [min]="today" required />
+            @if (form.controls.dueDate.touched && form.controls.dueDate.invalid) { <mat-error>Pick a due date</mat-error> }
           </mat-form-field>
+        </div>
 
-          <div class="cd__grid">
-            <mat-form-field appearance="outline">
-              <mat-label>Amount</mat-label>
-              <span matTextPrefix>₹&nbsp;</span>
-              <input matInput type="number" min="0.01" step="0.01" formControlName="amount" required />
-              @if (form.controls.amount.touched && form.controls.amount.invalid) { <mat-error>Amount must be greater than zero</mat-error> }
-            </mat-form-field>
+        @if (form.value.residentIds?.length && (form.value.amount ?? 0) > 0) {
+          <p class="cd__info">
+            <mat-icon>receipt_long</mat-icon>
+            <span>{{ form.value.residentIds!.length }} invoice{{ form.value.residentIds!.length === 1 ? '' : 's' }} of
+              <strong>₹{{ total | number: '1.0-2' }}</strong> each{{ form.value.taxRate ? ' (incl. tax)' : '' }}.</span>
+          </p>
+        }
 
-            <mat-form-field appearance="outline">
-              <mat-label>Tax</mat-label>
-              <mat-select formControlName="taxRate">
-                @for (t of taxOptions; track t.rate) { <mat-option [value]="t.rate">{{ t.label }}</mat-option> }
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline">
-              <mat-label>Due date</mat-label>
-              <input matInput type="date" formControlName="dueDate" [min]="today" required />
-              @if (form.controls.dueDate.touched && form.controls.dueDate.invalid) { <mat-error>Pick a due date</mat-error> }
-            </mat-form-field>
-          </div>
-
-          @if (form.value.residentIds?.length && (form.value.amount ?? 0) > 0) {
-            <p class="cd__info">
-              <mat-icon>receipt_long</mat-icon>
-              <span>{{ form.value.residentIds!.length }} invoice{{ form.value.residentIds!.length === 1 ? '' : 's' }} of
-                <strong>₹{{ total | number: '1.0-2' }}</strong> each{{ form.value.taxRate ? ' (incl. tax)' : '' }}.</span>
-            </p>
-          }
-        </mat-dialog-content>
-
-        <footer class="cd__footer">
-          <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
-          <button mat-flat-button color="primary" type="submit">Create charge</button>
-        </footer>
-      </form>
-    </div>
+        <ng-container dialogFooter>
+          <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+          <app-button type="submit">Create charge</app-button>
+        </ng-container>
+      </app-dialog>
+    </form>
   `,
   styleUrl: './charge-dialog.component.scss',
 })

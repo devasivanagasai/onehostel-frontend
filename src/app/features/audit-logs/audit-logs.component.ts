@@ -23,8 +23,8 @@ import {
 } from '../../core/models/audit.models';
 import { AuditLogDetailPanelComponent } from './audit-log-detail-panel.component';
 import { ReportExportService } from '../reports/report-export.service';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 
 const ALL = 'All';
@@ -48,8 +48,8 @@ const toIsoDate = (d: Date): string =>
     MatTableModule,
     MatTooltipModule,
     AuditLogDetailPanelComponent,
-    AppPaginationComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   providers: [provideNativeDateAdapter()],
   template: `
@@ -72,9 +72,21 @@ const toIsoDate = (d: Date): string =>
         }
       </div>
 
-      <div class="saas-card">
+      <app-table-card
+        [empty]="filteredLogs.length === 0"
+        emptyIcon="manage_search"
+        [emptyMessage]="hasFilters ? 'No audit entries match your filters' : 'No Data Found'"
+        [emptyHint]="hasFilters ? 'Try a different search, date range or filter, or clear the filters.' : ''"
+        [clearable]="hasFilters"
+        (clear)="resetFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="setPage($event)"
+        (pageSizeChange)="pageSize = $event; setPage(0)"
+      >
         <!-- Filters · Export -->
-        <div class="filter-bar">
+        <div class="filter-bar" tableToolbar>
           <mat-form-field appearance="outline" class="filter-field filter-field--search">
             <mat-icon matPrefix>search</mat-icon>
             <input matInput type="text" placeholder="Search log ID, user, IP..." [(ngModel)]="searchTerm" (ngModelChange)="currentPage = 0" />
@@ -126,19 +138,20 @@ const toIsoDate = (d: Date): string =>
           </mat-form-field>
 
           @if (hasFilters) {
-            <button type="button" class="filter-reset" (click)="resetFilters()">
-              <mat-icon>restart_alt</mat-icon> Reset
-            </button>
+            <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetFilters()">Reset</app-button>
           }
 
-          <button type="button" class="btn-export" [disabled]="filteredLogs.length === 0" (click)="exportExcel()">
-            <mat-icon fontSet="material-icons-outlined">description</mat-icon>
-            <span>Export Excel</span>
-          </button>
+          <app-button
+            class="filter-bar__export"
+            variant="success"
+            icon="description"
+            [iconOutlined]="true"
+            [disabled]="filteredLogs.length === 0"
+            (clicked)="exportExcel()"
+          >Export Excel</app-button>
         </div>
 
-        <!-- Table -->
-        <div class="table-responsive" *ngIf="filteredLogs.length > 0">
+        <!-- Table (header always shown, so columns stay put when nothing matches) -->
           <table mat-table [dataSource]="pagedLogs" class="saas-table">
             <ng-container matColumnDef="logId">
               <th mat-header-cell *matHeaderCellDef> Log ID </th>
@@ -208,9 +221,14 @@ const toIsoDate = (d: Date): string =>
                     <mat-icon>difference</mat-icon>{{ el.changes.length }}
                   </span>
                 }
-                <button type="button" class="view-btn" [attr.aria-label]="'View ' + el.logId" matTooltip="View details" (click)="openLog(el)">
-                  <mat-icon>visibility</mat-icon>
-                </button>
+                <app-button
+                  variant="icon-outline"
+                  size="sm"
+                  icon="visibility"
+                  [ariaLabel]="'View ' + el.logId"
+                  matTooltip="View details"
+                  (clicked)="openLog(el)"
+                ></app-button>
               </td>
             </ng-container>
 
@@ -222,28 +240,7 @@ const toIsoDate = (d: Date): string =>
               [class.table-row--failed]="row.status === 'Failed'"
             ></tr>
           </table>
-        </div>
-
-        <!-- Empty State -->
-        @if (filteredLogs.length === 0) {
-          <app-empty-state
-            icon="manage_search"
-            [headers]="['Log ID', 'Date & Time', 'User', 'Module', 'Action', 'Entity', 'IP Address', 'Status', 'View']"
-            [message]="hasFilters ? 'No audit entries match your filters' : 'No Data Found'"
-            [hint]="hasFilters ? 'Try a different search, date range or filter, or clear the filters.' : ''"
-            [clearable]="hasFilters"
-            (clear)="resetFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination
-            [page]="safePage"
-            [totalPages]="totalPages"
-            [pageSize]="pageSize"
-            (pageChange)="setPage($event)"
-            (pageSizeChange)="pageSize = $event; setPage(0)"
-          ></app-pagination>
-        }
-      </div>
+      </app-table-card>
     </div>
 
     <app-audit-log-detail-panel
@@ -392,39 +389,9 @@ const toIsoDate = (d: Date): string =>
       color: #64748b;
     }
 
-    .btn-export {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .filter-bar__export {
       flex-shrink: 0;
       margin-left: auto;
-      height: var(--btn-height);
-      padding: 0 var(--btn-padding-x);
-      border: none;
-      border-radius: var(--btn-radius);
-      background: #16a34a;
-      color: #ffffff;
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
-    }
-
-    .btn-export mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-
-    .btn-export:hover:not(:disabled) {
-      background: #15803d;
-    }
-
-    .btn-export:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      box-shadow: none;
     }
 
     /* ---- Table cells ---- */
@@ -489,33 +456,6 @@ const toIsoDate = (d: Date): string =>
       font-size: 15px;
       width: 15px;
       height: 15px;
-    }
-
-    .view-btn {
-      width: 34px;
-      height: 34px;
-      padding: 0;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      background: #ffffff;
-      color: #334155;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      vertical-align: middle;
-    }
-
-    .view-btn mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
-
-    .view-btn:hover {
-      border-color: #93c5fd;
-      background: #eff6ff;
-      color: #2563eb;
     }
   `],
 })

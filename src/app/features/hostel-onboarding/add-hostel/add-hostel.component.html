@@ -3,34 +3,21 @@
     <div class="wizard-layout" #wizardCard>
       <!-- ===== Actions (top right) ===== -->
       <div class="wizard-topbar">
-        <button type="button" class="wizard-back-link" (click)="onBackToList()">
-          <mat-icon>arrow_back</mat-icon>
-          Back to List
-        </button>
+        <app-button variant="text" icon="arrow_back" (clicked)="onBackToList()">Back to List</app-button>
 
         <div class="wizard-actions">
           @if (selectedIndex > 0) {
-            <button type="button" class="wizard-btn wizard-btn--stroked" (click)="onBack()">
-              <mat-icon>arrow_back</mat-icon>
-              Back
-            </button>
+            <app-button variant="secondary" icon="arrow_back" (clicked)="onBack()">Back</app-button>
           }
           @if (!isEditMode) {
-            <button type="button" class="wizard-btn wizard-btn--outline-blue" (click)="onSaveDraft()">
-              <mat-icon fontSet="material-icons-outlined">description</mat-icon>
-              Save Draft
-            </button>
+            <app-button variant="secondary" icon="description" [iconOutlined]="true" (clicked)="onSaveDraft()">Save Draft</app-button>
           }
           @if (isLastStep) {
-            <button type="button" class="wizard-btn wizard-btn--primary" [disabled]="submitting" (click)="onCreateHostel()">
-              <mat-icon>{{ isEditMode ? 'save' : 'check' }}</mat-icon>
+            <app-button [icon]="isEditMode ? 'save' : 'check'" [loading]="submitting" (clicked)="onCreateHostel()">
               {{ submitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update' : 'Submit') }}
-            </button>
+            </app-button>
           } @else {
-            <button type="button" class="wizard-btn wizard-btn--primary" (click)="onToolbarNext()">
-              Next
-              <mat-icon>arrow_forward</mat-icon>
-            </button>
+            <app-button icon="arrow_forward" iconPosition="right" (clicked)="onToolbarNext()">Next</app-button>
           }
         </div>
       </div>
@@ -131,10 +118,8 @@
       </div>
 
       <div class="wizard-success__actions">
-        <button type="button" class="wizard-btn wizard-btn--stroked" (click)="onSendCredentials()">
-          Send Credentials
-        </button>
-        <button type="button" class="wizard-btn wizard-btn--primary" (click)="onBackToList()">Back to List</button>
+        <app-button variant="secondary" (clicked)="onSendCredentials()">Send Credentials</app-button>
+        <app-button (clicked)="onBackToList()">Back to List</app-button>
       </div>
     </div>
   }

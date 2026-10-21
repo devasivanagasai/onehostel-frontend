@@ -2,14 +2,13 @@ import { Component, DestroyRef, ElementRef, HostListener, ViewChild, inject } fr
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AccountService } from '../../../core/services/account.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -18,6 +17,7 @@ import { UnsavedChangesAware } from '../../../core/guards/unsaved-changes.guard'
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { CustomValidators } from '../../../shared/validators/custom-validators';
 import { AppDatePipe } from '../../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 
 const MAX_PHOTO_BYTES = 1024 * 1024;
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -27,15 +27,14 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
   standalone: true,
   imports: [
     AppDatePipe,
+    AppButtonComponent,
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatIconModule,
     MatTooltipModule,
-    MatProgressSpinnerModule,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -49,6 +48,7 @@ export class ProfileComponent implements UnsavedChangesAware {
   private readonly snackBar = inject(MatSnackBar);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   readonly mobileCodes = MOBILE_CODES;
 
@@ -159,6 +159,10 @@ export class ProfileComponent implements UnsavedChangesAware {
     const reader = new FileReader();
     reader.onload = () => this.applyPhoto(String(reader.result));
     reader.readAsDataURL(file);
+  }
+
+  goToChangePassword(): void {
+    this.router.navigateByUrl('/change-password');
   }
 
   removePhoto(): void {

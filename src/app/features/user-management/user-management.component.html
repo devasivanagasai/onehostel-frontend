@@ -57,9 +57,7 @@
       </mat-form-field>
 
       @if (hasFilters) {
-        <button type="button" class="filter-reset" (click)="resetFilters()">
-          <mat-icon>restart_alt</mat-icon> Reset
-        </button>
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetFilters()">Reset</app-button>
       }
     </div>
   </div>
@@ -68,8 +66,8 @@
   @if (groups.length) {
     <div class="groups">
       @for (g of groups; track g.hostel) {
-        <section class="group-card" [class.group-card--open]="!isCollapsed(g.hostel)">
-          <button type="button" class="group-card__head" [attr.aria-expanded]="!isCollapsed(g.hostel)" (click)="toggleGroup(g.hostel)">
+        <app-table-card class="group-card" [class.group-card--open]="!isCollapsed(g.hostel)" [paginate]="false">
+          <button tableToolbar type="button" class="group-card__head" [attr.aria-expanded]="!isCollapsed(g.hostel)" (click)="toggleGroup(g.hostel)">
             <mat-icon class="group-card__toggle">{{ isCollapsed(g.hostel) ? 'chevron_right' : 'expand_less' }}</mat-icon>
             <span class="group-card__icon"><mat-icon fontSet="material-icons-outlined">apartment</mat-icon></span>
             <span class="group-card__text">
@@ -125,30 +123,25 @@
                       <td class="actions-cell">
                         <span class="row-icons">
                           @if (u.role === 'Hostel Owner') {
-                            <button type="button" class="row-edit-btn" matTooltip="Edit" [attr.aria-label]="'Edit ' + u.name" (click)="edit(u)">
-                              <mat-icon>edit</mat-icon>
-                            </button>
+                            <app-button variant="icon-outline" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + u.name" (clicked)="edit(u)"></app-button>
                           } @else {
                             <span class="row-icons__spacer" aria-hidden="true"></span>
                           }
 
                           @if (lockAction(u); as lock) {
-                            <button
-                              type="button"
-                              class="row-edit-btn row-edit-btn--purple"
+                            <app-button
+                              variant="icon-outline"
+                              size="sm"
+                              [icon]="lock.icon"
                               [matTooltip]="lock.label"
-                              [attr.aria-label]="lock.label + ' ' + u.name"
-                              (click)="toggleLock(u)"
-                            >
-                              <mat-icon>{{ lock.icon }}</mat-icon>
-                            </button>
+                              [ariaLabel]="lock.label + ' ' + u.name"
+                              (clicked)="toggleLock(u)"
+                            ></app-button>
                           } @else {
                             <span class="row-icons__spacer" aria-hidden="true"></span>
                           }
 
-                          <button type="button" class="row-edit-btn" matTooltip="View" [attr.aria-label]="'View ' + u.name" (click)="view(u)">
-                            <mat-icon>visibility</mat-icon>
-                          </button>
+                          <app-button variant="icon-outline" size="sm" icon="visibility" matTooltip="View" [ariaLabel]="'View ' + u.name" (clicked)="view(u)"></app-button>
                         </span>
                       </td>
                     </tr>
@@ -157,19 +150,34 @@
               </table>
             </div>
           }
-        </section>
+        </app-table-card>
       }
     </div>
   } @else {
-    <div class="saas-card">
-      <app-empty-state
-        [icon]="hasFilters ? 'search_off' : 'group'"
-        [message]="hasFilters ? 'No users match your filters' : 'No users yet'"
-        [hint]="hasFilters ? 'Try a different search, hostel, role or status, or clear the filters.' : 'Hostel owners and tenants of onboarded hostels appear here.'"
-        [clearable]="hasFilters"
-        (clear)="resetFilters()"
-      ></app-empty-state>
-    </div>
+    <!-- Nothing to group: same card as other lists, column headers kept -->
+    <app-table-card
+      [empty]="true"
+      [paginate]="false"
+      [emptyIcon]="hasFilters ? 'search_off' : 'group'"
+      [emptyMessage]="hasFilters ? 'No users match your filters' : 'No users yet'"
+      [emptyHint]="hasFilters ? 'Try a different search, hostel, role or status, or clear the filters.' : 'Hostel owners and tenants of onboarded hostels appear here.'"
+      [clearable]="hasFilters"
+      (clear)="resetFilters()"
+    >
+      <table class="saas-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Room / Bed</th>
+            <th>Last Login</th>
+            <th>Status</th>
+            <th class="actions-header">Actions</th>
+          </tr>
+        </thead>
+      </table>
+    </app-table-card>
   }
 </div>
 

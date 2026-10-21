@@ -11,14 +11,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { Room } from '../../rooms-management/rooms.models';
 import { ResidentsService } from '../residents.service';
 import {
@@ -65,14 +61,10 @@ const notInFuture: ValidatorFn = (c: AbstractControl): ValidationErrors | null =
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
     MatIconModule,
-    MatCheckboxModule,
-    MatExpansionModule,
     MatTooltipModule,
+    AppDialogComponent,
+    AppButtonComponent,
   ],
   templateUrl: './resident-form-dialog.component.html',
   styleUrl: './resident-form-dialog.component.scss',
@@ -97,9 +89,18 @@ export class ResidentFormDialogComponent {
 
   photoUrl?: string = this.data.resident?.photoUrl;
   photoError = '';
+  /** Guardian section starts open when one is already recorded. */
+  guardianOpen = !!this.data.resident?.guardian;
   submitError = '';
 
   readonly form: FormGroup = this.buildForm(this.data.resident);
+
+  get subtitle(): string {
+    const r = this.data.resident;
+    return r
+      ? `${r.residentId} · created ${new Date(r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+      : 'A Resident ID is generated on save. The resident is invited to activate their account.';
+  }
 
   get documents(): FormArray<FormGroup> {
     return this.form.get('documents') as FormArray<FormGroup>;

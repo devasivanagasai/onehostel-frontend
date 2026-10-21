@@ -4,9 +4,9 @@ import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { SubscriptionPlanRow } from './subscription-plans.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 export interface FeatureItem {
   id: string;
@@ -50,8 +50,8 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
     CommonModule,
     ReactiveFormsModule,
     MatIconModule,
-    MatButtonModule,
     MatSlideToggleModule,
+    AppButtonComponent,
   ],
   template: `
     @if (isOpen) {
@@ -69,9 +69,7 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
               {{ mode === 'edit' && plan ? plan.planId + ' · ' + plan.planName : 'Set pricing, limits and the modules this plan includes' }}
             </p>
           </div>
-          <button mat-icon-button type="button" class="plan-modal__close" (click)="onCancel()" aria-label="Close">
-            <mat-icon>close</mat-icon>
-          </button>
+          <app-button class="plan-modal__close" variant="icon" icon="close" ariaLabel="Close" (clicked)="onCancel()"></app-button>
         </header>
 
         <!-- Body -->
@@ -180,10 +178,8 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
 
         <!-- Footer -->
         <footer class="plan-modal__footer">
-          <button type="button" class="btn-secondary" (click)="onCancel()">Cancel</button>
-          <button type="submit" form="sidePlanForm" class="btn-primary">
-            {{ mode === 'edit' ? 'Update' : 'Submit' }}
-          </button>
+          <app-button variant="secondary" (clicked)="onCancel()">Cancel</app-button>
+          <app-button type="submit" form="sidePlanForm">{{ mode === 'edit' ? 'Update' : 'Submit' }}</app-button>
         </footer>
       </div>
     }
@@ -275,7 +271,6 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
 
     .plan-modal__close {
       align-self: flex-start;
-      color: #64748b;
     }
 
     /* ---- Body ---- */
@@ -642,42 +637,6 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
       justify-content: flex-end;
       gap: 12px;
       padding: 14px 24px 18px;
-    }
-
-    .btn-secondary,
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 120px;
-      height: var(--btn-height);
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn-secondary {
-      border: 1px solid #dbe3ef;
-      background: #ffffff;
-      color: #334155;
-
-      &:hover {
-        background: #f8fafc;
-      }
-    }
-
-    .btn-primary {
-      border: none;
-      background: #2563eb;
-      color: #ffffff;
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
-
-      &:hover {
-        background: #1d4ed8;
-      }
     }
   `],
 })

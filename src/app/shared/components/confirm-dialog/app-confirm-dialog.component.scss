@@ -32,38 +32,11 @@
 }
 
 // ---- Close ---------------------------------------------------------------
+// Shared icon button, positioned top-right
 .confirm__close {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--tone);
-    outline-offset: 2px;
-  }
+  top: 10px;
+  right: 10px;
 }
 
 // ---- Header --------------------------------------------------------------
@@ -217,54 +190,6 @@
   margin-top: 24px;
 }
 
-.confirm__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  border-radius: var(--btn-radius);
-  font-size: var(--btn-font-size);
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-
-  &:focus-visible {
-    outline: 2px solid var(--tone);
-    outline-offset: 2px;
-  }
-
-  &:active {
-    transform: translateY(1px);
-  }
-}
-
-.confirm__btn--cancel {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-
-  &:hover {
-    background: #f8fafc;
-    border-color: #94a3b8;
-    color: #0f172a;
-  }
-}
-
-.confirm__btn--confirm {
-  background: var(--tone);
-  border: 1px solid var(--tone);
-  color: #ffffff;
-  box-shadow: 0 6px 16px -6px var(--tone);
-
-  &:hover {
-    background: var(--tone-hover);
-    border-color: var(--tone-hover);
-    box-shadow: 0 8px 20px -6px var(--tone);
-  }
-}
-
 @media (max-width: 420px) {
   .confirm {
     padding: 22px 18px 18px;
@@ -274,7 +199,7 @@
     grid-template-columns: 1fr;
 
     // Primary action on top on narrow screens.
-    .confirm__btn--confirm {
+    .confirm__confirm {
       order: -1;
     }
   }

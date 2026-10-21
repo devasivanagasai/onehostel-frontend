@@ -2,7 +2,6 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, On
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   HostelSubscription,
@@ -19,13 +18,14 @@ import { SystemSettingsService } from '../../core/services/system-settings.servi
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-subscription-detail-panel',
   standalone: true,
-  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, MatTooltipModule, AppButtonComponent],
   template: `
     @if (isOpen && subscription; as sub) {
       <div class="sd-backdrop" (click)="closePanel.emit()"></div>
@@ -34,9 +34,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
         <!-- Header -->
         <header class="sd-header">
           <h2 class="sd-title" id="sd-title">Subscription Details — {{ sub.subscriptionId }}</h2>
-          <button type="button" class="sd-close" (click)="closePanel.emit()" aria-label="Close">
-            <mat-icon>close</mat-icon>
-          </button>
+          <app-button variant="icon" icon="close" ariaLabel="Close" (clicked)="closePanel.emit()"></app-button>
         </header>
 
         <div class="sd-body" #panelBody>
@@ -219,7 +217,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
         </div>
 
         <footer class="sd-footer">
-          <button type="button" class="btn-secondary" (click)="closePanel.emit()">Close</button>
+          <app-button variant="secondary" (clicked)="closePanel.emit()">Close</app-button>
         </footer>
       </div>
     }
@@ -282,29 +280,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
       color: #0f172a;
     }
 
-    .sd-close {
-      width: 40px;
-      height: 40px;
-      padding: 0;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #ffffff;
-      color: #334155;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-
-      &:hover {
-        background: #f8fafc;
-      }
-
-      &:focus-visible {
-        outline: 2px solid #2563eb;
-        outline-offset: 2px;
-      }
-    }
-
     .sd-body {
       flex: 1;
       overflow-y: auto;
@@ -319,24 +294,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
       border-top: 1px solid #eef2f7;
       background: #ffffff;
       flex-shrink: 0;
-    }
-
-    .btn-secondary {
-      height: var(--btn-height);
-      min-width: 96px;
-      padding: 0 var(--btn-padding-x);
-      border: 1px solid #cbd5e1;
-      border-radius: var(--btn-radius);
-      background: #ffffff;
-      color: #0f172a;
-      font: inherit;
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #f1f5f9;
-      }
     }
 
     /* ---- Hero: hostel + period ---- */

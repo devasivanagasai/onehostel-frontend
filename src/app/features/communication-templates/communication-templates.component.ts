@@ -13,8 +13,8 @@ import {
   CommunicationTemplateRow,
 } from './communication-template.models';
 import { CommunicationTemplateService } from './communication-template.service';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 
 type ChannelFilter = CommunicationChannel | 'All';
@@ -38,8 +38,8 @@ const CHANNEL_TONE: Record<CommunicationChannel, string> = {
     MatIconModule,
     MatButtonModule,
     MatTableModule,
-    AppPaginationComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   template: `
     <div class="onboarding-page templates-page">
@@ -108,15 +108,24 @@ const CHANNEL_TONE: Record<CommunicationChannel, string> = {
           }
         </div>
 
-        <button class="primary-green-btn" (click)="onAddTemplate()">
-          <mat-icon>add</mat-icon>
-          <span>New</span>
-        </button>
+        <app-button class="list-toolbar__add" icon="add" (clicked)="onAddTemplate()">New</app-button>
       </div>
 
-      <div class="saas-card templates-table-card">
-        <!-- Table (header always shown, so columns stay put when nothing matches) -->
-        <div class="table-responsive">
+      <!-- Table (header always shown, so columns stay put when nothing matches) -->
+      <app-table-card
+        class="templates-table-card"
+        [empty]="filteredRows.length === 0"
+        [emptyIcon]="isFiltering ? 'search_off' : 'forum'"
+        [emptyMessage]="isFiltering ? 'No templates match your filters' : 'No templates yet'"
+        [emptyHint]="isFiltering ? 'Try a different name, ID or trigger, or clear the filters.' : 'Create your first template to see it here.'"
+        [clearable]="isFiltering"
+        (clear)="clearFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="pageSize = $event; currentPage = 0"
+      >
           <table mat-table [dataSource]="pagedRows" class="saas-table templates-table">
             <ng-container matColumnDef="template">
               <th mat-header-cell *matHeaderCellDef> Template </th>
@@ -160,42 +169,16 @@ const CHANNEL_TONE: Record<CommunicationChannel, string> = {
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
               <td mat-cell *matCellDef="let element" class="actions-cell">
-                <button
-                  type="button"
-                  class="row-action"
-                  [attr.aria-label]="'Edit ' + element.templateName"
-                  (click)="onEditTemplate(element)"
-                >
-                  <mat-icon>edit</mat-icon>
+                <app-button variant="outline" size="sm" icon="edit" [ariaLabel]="'Edit ' + element.templateName" (clicked)="onEditTemplate(element)">
                   Edit
-                </button>
+                </app-button>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
           </table>
-        </div>
-
-        <!-- Empty state (below the real header) -->
-        @if (filteredRows.length === 0) {
-          <app-empty-state
-            [icon]="isFiltering ? 'search_off' : 'forum'"
-            [message]="isFiltering ? 'No templates match your filters' : 'No templates yet'"
-            [hint]="isFiltering ? 'Try a different name, ID or trigger, or clear the filters.' : 'Create your first template to see it here.'"
-            [clearable]="isFiltering"
-            (clear)="clearFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination
-            [page]="safePage"
-            [totalPages]="totalPages"
-            [pageSize]="pageSize"
-            (pageChange)="currentPage = $event"
-            (pageSizeChange)="pageSize = $event; currentPage = 0"
-          ></app-pagination>
-        }
-      </div>
+      </app-table-card>
     </div>
   `,
   styles: [
@@ -299,7 +282,7 @@ const CHANNEL_TONE: Record<CommunicationChannel, string> = {
           max-width: 100%;
         }
 
-        .primary-green-btn {
+        .list-toolbar__add {
           margin-left: auto;
         }
       }

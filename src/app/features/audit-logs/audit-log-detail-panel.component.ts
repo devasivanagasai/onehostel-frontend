@@ -5,12 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { AuditLog, auditAction, auditEventLabel, auditModule } from '../../core/models/audit.models';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 /** Centred "Audit Log Details" dialog, opened from the Audit Logs list. */
 @Component({
   selector: 'app-audit-log-detail-panel',
   standalone: true,
-  imports: [AppDatePipe, CommonModule, MatIconModule],
+  imports: [AppDatePipe, CommonModule, MatIconModule, AppButtonComponent],
   template: `
     @if (isOpen && log; as l) {
       <div class="al-backdrop" (click)="closePanel.emit()"></div>
@@ -18,9 +19,7 @@ import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
       <div class="al-modal" role="dialog" aria-modal="true" aria-labelledby="al-title">
         <header class="al-header">
           <h2 class="al-title" id="al-title">Audit Log Details — {{ l.logId }}</h2>
-          <button type="button" class="al-close" (click)="closePanel.emit()" aria-label="Close">
-            <mat-icon>close</mat-icon>
-          </button>
+          <app-button variant="icon" icon="close" ariaLabel="Close" (clicked)="closePanel.emit()"></app-button>
         </header>
 
         <div class="al-body">
@@ -130,11 +129,8 @@ import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
         </div>
 
         <footer class="al-footer">
-          <button type="button" class="btn-outline" (click)="downloadLog(l)">
-            <mat-icon>download</mat-icon>
-            Download Log
-          </button>
-          <button type="button" class="btn-primary" (click)="closePanel.emit()">Close</button>
+          <app-button variant="secondary" icon="download" (clicked)="downloadLog(l)">Download Log</app-button>
+          <app-button (clicked)="closePanel.emit()">Close</app-button>
         </footer>
       </div>
     }
@@ -194,24 +190,6 @@ import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
       font-size: 22px;
       font-weight: 700;
       color: #1e293b;
-    }
-
-    .al-close {
-      width: 40px;
-      height: 40px;
-      padding: 0;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      background: #ffffff;
-      color: #334155;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .al-close:hover {
-      background: #f8fafc;
     }
 
     .al-body {
@@ -521,44 +499,6 @@ import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
       font-size: 17px;
       width: 17px;
       height: 17px;
-    }
-
-    /* ---- Buttons ---- */
-    .btn-outline,
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      height: var(--btn-height-lg);
-      min-width: 140px;
-      padding: 0 22px;
-      border-radius: 10px;
-      font: inherit;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .btn-outline {
-      border: 1.5px solid #2563eb;
-      background: #ffffff;
-      color: #2563eb;
-    }
-
-    .btn-outline:hover {
-      background: #eff6ff;
-    }
-
-    .btn-primary {
-      border: none;
-      background: #2563eb;
-      color: #ffffff;
-      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
-    }
-
-    .btn-primary:hover {
-      background: #1d4ed8;
     }
 
     @media (max-width: 760px) {

@@ -8,7 +8,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -22,6 +21,7 @@ import {
 import { CommunicationTemplateService } from './communication-template.service';
 import { UnsavedChangesAware } from '../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const SMS_SEGMENT_LENGTH = 160;
 const BODY_MAX_LENGTH = 5000;
@@ -46,9 +46,9 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
     MatInputModule,
     MatSelectModule,
     MatIconModule,
-    MatButtonModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    AppButtonComponent,
   ],
   template: `
     <div class="editor-page">
@@ -67,18 +67,11 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
 
           <span class="topbar-divider" aria-hidden="true"></span>
 
-          <button type="button" class="btn-secondary" (click)="onCancel()">
-            {{ isView ? 'Close' : 'Cancel' }}
-          </button>
+          <app-button variant="secondary" (clicked)="onCancel()">{{ isView ? 'Close' : 'Cancel' }}</app-button>
           @if (isView) {
-            <button type="button" class="btn-primary" (click)="onSwitchToEdit()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit Template</span>
-            </button>
+            <app-button icon="edit" (clicked)="onSwitchToEdit()">Edit Template</app-button>
           } @else {
-            <button type="submit" form="templateEditorForm" class="btn-primary" [disabled]="templateForm.invalid">
-              <span>{{ mode === 'edit' ? 'Update' : 'Submit' }}</span>
-            </button>
+            <app-button type="submit" form="templateEditorForm" [disabled]="templateForm.invalid">{{ mode === 'edit' ? 'Update' : 'Submit' }}</app-button>
           }
         </div>
       </div>
@@ -825,60 +818,6 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
       width: 1px;
       height: 24px;
       background: #e2e8f0;
-    }
-
-    .btn-secondary {
-      height: var(--btn-height);
-      min-width: 100px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #0f172a;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #f1f5f9;
-      }
-    }
-
-    .btn-primary {
-      height: var(--btn-height);
-      min-width: 110px;
-      background: #2563eb;
-      color: #ffffff;
-      border: none;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #1d4ed8;
-      }
-
-      &:disabled {
-        background: #94a3b8;
-        cursor: not-allowed;
-        box-shadow: none;
-      }
     }
   `],
 })

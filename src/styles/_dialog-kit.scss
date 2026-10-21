@@ -148,3 +148,136 @@
     &--rejected { background: #fef2f2; color: #b91c1c; }
   }
 }
+
+// Labelled form fields for dialogs: label above, plain bordered control, optional leading icon / ₹ prefix.
+//   <div class="fk-field">
+//     <label class="fk-label" for="x">Floor<span class="req">*</span></label>
+//     <span class="fk-control fk-control--lead"> <mat-icon class="fk-lead">…</mat-icon> <select id="x">…</select> <mat-icon class="fk-caret">expand_more</mat-icon> </span>
+//     <span class="fk-error">…</span>
+//   </div>
+@mixin form-fields($accent: #0d9488) {
+  .fk-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .fk-label {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+
+    .req {
+      color: #dc2626;
+    }
+
+    .opt {
+      font-weight: 400;
+      color: #64748b;
+    }
+  }
+
+  .fk-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    border: 1px solid #dbe3ec;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus-within {
+      border-color: $accent;
+      box-shadow: 0 0 0 3px rgba($accent, 0.12);
+    }
+
+    &.is-invalid {
+      border-color: #f87171;
+    }
+
+    select,
+    input,
+    textarea {
+      flex: 1;
+      min-width: 0;
+      height: 38px;
+      padding: 0 12px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      font-size: 14px;
+      color: #1e293b;
+    }
+
+    select {
+      appearance: none;
+      padding-right: 34px;
+      cursor: pointer;
+
+      &.is-placeholder {
+        color: #94a3b8;
+      }
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    textarea {
+      height: auto;
+      min-height: 64px;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+
+    &--lead select,
+    &--lead input {
+      padding-left: 38px;
+    }
+  }
+
+  .fk-lead {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  // Text prefix such as "₹"
+  span.fk-lead {
+    font-size: 14px;
+    width: auto;
+    height: auto;
+  }
+
+  .fk-caret {
+    position: absolute;
+    right: 10px;
+    pointer-events: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #475569;
+  }
+
+  .fk-hint,
+  .fk-error {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  .fk-hint {
+    color: #64748b;
+  }
+
+  .fk-error {
+    color: #dc2626;
+  }
+}

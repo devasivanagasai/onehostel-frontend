@@ -18,7 +18,6 @@ import {
   CURRENCY_OPTIONS,
   DATE_FORMAT_OPTIONS,
   PASSWORD_EXPIRY_OPTIONS,
-  OTP_LENGTH_OPTIONS,
   PAYMENT_GATEWAYS,
   SettingsSection,
   SystemSettings,
@@ -27,6 +26,7 @@ import {
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { UnsavedChangesAware } from '../../core/guards/unsaved-changes.guard';
 import { applyTax, lateFeeFor } from '../subscription-payments/subscription-payment.models';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 export interface PolicyStrength {
   score: number;
@@ -59,6 +59,7 @@ interface SectionNavItem {
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
+    AppButtonComponent,
   ],
   templateUrl: './system-defaults.component.html',
   styleUrl: './system-defaults.component.scss',
@@ -76,7 +77,6 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
   readonly timeZones = TIME_ZONE_OPTIONS;
   readonly dateFormats = DATE_FORMAT_OPTIONS;
   readonly passwordExpiryOptions = PASSWORD_EXPIRY_OPTIONS;
-  readonly otpLengthOptions = OTP_LENGTH_OPTIONS;
   readonly paymentGateways = PAYMENT_GATEWAYS;
 
   readonly today = new Date();
@@ -158,7 +158,7 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
     return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
   }
 
-  /** Scores the password and OTP policy together (admins may use either method). */
+  /** Scores the password, lockout and session policy. */
   private strengthOf(p: {
     minPasswordLength: number;
     requireUppercase?: boolean;
@@ -168,7 +168,6 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
     passwordExpiryDays: number;
     maxLoginAttempts: number;
     sessionTimeoutMinutes: number;
-    otpExpiryMinutes: number;
   }): PolicyStrength {
     const tips: string[] = [];
     let score = 0;
@@ -190,14 +189,6 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
     const expiry = Number(p.passwordExpiryDays);
     if (expiry > 0 && expiry <= 90) score += 1;
     else tips.push(expiry === 0 ? 'Passwords never expire.' : 'Expire passwords within 90 days.');
-
-    max += 2;
-    const otp = Number(p.otpExpiryMinutes);
-    if (otp <= 5) score += 2;
-    else if (otp <= 10) {
-      score += 1;
-      tips.push('OTPs valid for 5 minutes or less are hardest to misuse.');
-    } else tips.push('OTPs valid for more than 10 minutes are easier to misuse.');
 
     max += 2;
     if (Number(p.maxLoginAttempts) <= 5) score += 1;
@@ -247,8 +238,6 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
         passwordExpiryDays: [s.security.passwordExpiryDays, Validators.required],
         maxLoginAttempts: [s.security.maxLoginAttempts, this.intRange(3, 10)],
         sessionTimeoutMinutes: [s.security.sessionTimeoutMinutes, this.intRange(5, 480)],
-        otpExpiryMinutes: [s.security.otpExpiryMinutes, this.intRange(1, 30)],
-        otpLength: [s.security.otpLength, Validators.required],
       }),
       payment: this.fb.group({
         paymentGateway: [s.payment.paymentGateway, Validators.required],
@@ -371,7 +360,7 @@ export class SystemDefaultsComponent implements OnDestroy, UnsavedChangesAware {
   private normalize(section: SettingsSection, raw: any): any {
     const numericKeys: Record<SettingsSection, string[]> = {
       general: [],
-      security: ['minPasswordLength', 'passwordExpiryDays', 'maxLoginAttempts', 'sessionTimeoutMinutes', 'otpExpiryMinutes', 'otpLength'],
+      security: ['minPasswordLength', 'passwordExpiryDays', 'maxLoginAttempts', 'sessionTimeoutMinutes'],
       communication: ['smtpPort'],
       payment: [],
       fees: ['gstRate', 'lateFeeValue', 'lateFeeGraceDays'],

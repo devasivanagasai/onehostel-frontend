@@ -1,0 +1,230 @@
+// Table, KPI cards and filter controls come from styles/_table.scss and styles/_page-kit.scss.
+
+$teal: #0d9488;
+$muted: #64748b;
+$line: #e2e8f0;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.hrpt-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 16px;
+}
+
+/* ---- Report picker ---- */
+.hrpt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hrpt-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #475569;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  mat-icon {
+    @include icon(19px);
+  }
+
+  &:hover {
+    border-color: $teal;
+    color: $teal;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $teal;
+    outline-offset: 2px;
+  }
+
+  &--active,
+  &--active:hover {
+    background: $teal;
+    border-color: $teal;
+    color: #ffffff;
+  }
+}
+
+/* ---- Filters ---- */
+.hrpt-dates {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: $muted;
+
+  input {
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13px;
+    color: #334155;
+    outline: none;
+
+    &:focus {
+      border-color: $teal;
+    }
+  }
+}
+
+.hrpt-export {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* ---- Context strip ---- */
+.hrpt-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  font-size: 13px;
+  color: #334155;
+
+  mat-icon {
+    @include icon(18px);
+  }
+
+  &__hostel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #0f766e;
+  }
+
+  &__id {
+    padding: 1px 8px;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 12px;
+    color: $muted;
+  }
+
+  &__time {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    font-size: 12.5px;
+    color: $muted;
+    white-space: nowrap;
+  }
+}
+
+.hrpt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hrpt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px 3px 10px;
+  border: 1px solid #99f6e4;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+
+  button {
+    display: flex;
+    padding: 1px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: $muted;
+    cursor: pointer;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #dc2626;
+    }
+
+    mat-icon {
+      @include icon(14px);
+    }
+  }
+
+  &--none {
+    padding-right: 10px;
+    border-style: dashed;
+    color: $muted;
+  }
+}
+
+/* ---- Summary + table ---- */
+.hrpt-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.hrpt-card {
+  padding: 16px 20px !important;
+}
+
+.hrpt-table {
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell,
+  td.mat-mdc-footer-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .num {
+    text-align: right;
+
+    .list-entity__text {
+      align-items: flex-end;
+    }
+  }
+
+  .hrpt-sub {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Totals row: all filtered rows, not just the visible page
+  .hrpt-total[hidden] {
+    display: none;
+  }
+
+  .hrpt-total td {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    border-top: 2px solid #cbd5e1;
+    background: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+}

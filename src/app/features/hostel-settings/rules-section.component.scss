@@ -1,0 +1,79 @@
+@use '../../../styles/dialog-kit' as *;
+@use 'hs-kit' as hs;
+
+@include form-fields;
+
+.rs-subhead {
+  @include hs.subhead;
+  margin-top: 24px;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.rs-grid {
+  @include hs.grid(3);
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.rs-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin-bottom: 14px;
+}
+
+.rs-muted {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.rs-count {
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  color: #475569;
+}
+
+.rs-rules {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rs-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.rs-rule__num {
+  flex-shrink: 0;
+  width: 26px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.rs-rule__field {
+  flex: 1;
+}
+
+.rs-add-hint {
+  display: block;
+}

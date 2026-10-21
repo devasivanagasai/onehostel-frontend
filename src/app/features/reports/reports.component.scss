@@ -107,48 +107,9 @@
   flex-wrap: wrap;
 }
 
-%btn-base {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 8px;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.btn-primary {
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  border-radius: var(--btn-radius);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  @extend %btn-base;
+/* The "unapplied changes" dot sits on the Search button's corner. */
+.search-btn {
   position: relative;
-  background: #0057e7;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 87, 231, 0.25);
-
-  &:hover {
-    background: #0045b5;
-  }
 }
 
 .pending-dot {
@@ -160,51 +121,6 @@
   border-radius: 50%;
   background: #f59e0b;
   border: 2px solid #ffffff;
-}
-
-.btn-secondary {
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  border-radius: var(--btn-radius);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  @extend %btn-base;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-
-  &:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-}
-
-.btn-export {
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  border-radius: var(--btn-radius);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  @extend %btn-base;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-
-  &:hover:not(:disabled) {
-    background: #f8fafc;
-  }
-}
-
-.btn-export--excel mat-icon {
-  color: #15803d;
-}
-
-.btn-export--pdf mat-icon {
-  color: #dc2626;
 }
 
 .applied-summary {
@@ -374,13 +290,6 @@
   .cell-sub {
     font-size: 12px;
     color: #94a3b8;
-  }
-
-  .empty-cell {
-    text-align: center;
-    padding: 40px 14px;
-    color: #64748b;
-    font-weight: 600;
   }
 }
 

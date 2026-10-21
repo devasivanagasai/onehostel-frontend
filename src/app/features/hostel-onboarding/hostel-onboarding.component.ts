@@ -8,8 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { HostelOnboardingRow, ONBOARDED_HOSTELS } from './onboarded-hostels';
 import { MOCK_HOSTEL_RECORDS } from './add-hostel/mock-hostel-records';
@@ -33,8 +33,8 @@ const TONES = ['blue', 'purple', 'green', 'amber'] as const;
     MatButtonModule,
     MatTableModule,
     MatTooltipModule,
-    AppPaginationComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
     AppDatePipe,
   ],
   template: `
@@ -92,100 +92,83 @@ const TONES = ['blue', 'purple', 'green', 'amber'] as const;
           }
         </div>
 
-        <button class="primary-green-btn" (click)="onAddHostel()">
-          <mat-icon>add</mat-icon>
-          <span>New</span>
-        </button>
+        <app-button class="list-toolbar__add" icon="add" (clicked)="onAddHostel()">New</app-button>
       </div>
 
-      <div class="saas-card hostel-table-card">
-        <!-- Table (header always shown, so columns stay put when nothing matches) -->
-        <div class="table-responsive">
-          <table mat-table [dataSource]="pagedRows" class="saas-table hostel-table">
-            <ng-container matColumnDef="hostel">
-              <th mat-header-cell *matHeaderCellDef> Hostel </th>
-              <td mat-cell *matCellDef="let element">
-                <div class="list-entity">
-                  <span class="list-entity__avatar list-avatar--{{ tone(element) }}">{{ initials(element.hostelName) }}</span>
-                  <span class="list-entity__text">
-                    <span class="list-entity__name">{{ element.hostelName }}</span>
-                    <span class="list-entity__sub">{{ element.hostelId }}</span>
-                  </span>
-                </div>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="city">
-              <th mat-header-cell *matHeaderCellDef> City/Branch </th>
-              <td mat-cell *matCellDef="let element">
-                <span class="with-icon">
-                  <mat-icon class="list-icon--{{ tone(element) }}">place</mat-icon>{{ element.city }}
-                </span>
-              </td>
-            </ng-container>
-
-            <ng-container matColumnDef="contact">
-              <th mat-header-cell *matHeaderCellDef> Contact Person </th>
-              <td mat-cell *matCellDef="let element">
+      <!-- Table (header always shown, so columns stay put when nothing matches) -->
+      <app-table-card
+        class="hostel-table-card"
+        [empty]="filteredRows.length === 0"
+        [emptyIcon]="isFiltering ? 'search_off' : 'apartment'"
+        [emptyMessage]="emptyMessage"
+        [emptyHint]="isFiltering ? 'Try a different name, ID, city or contact, or clear the filters.' : 'Onboard your first hostel to see it here.'"
+        [clearable]="isFiltering"
+        (clear)="clearFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="pageSize = $event; currentPage = 0"
+      >
+        <table mat-table [dataSource]="pagedRows" class="saas-table hostel-table">
+          <ng-container matColumnDef="hostel">
+            <th mat-header-cell *matHeaderCellDef> Hostel </th>
+            <td mat-cell *matCellDef="let element">
+              <div class="list-entity">
+                <span class="list-entity__avatar list-avatar--{{ tone(element) }}">{{ initials(element.hostelName) }}</span>
                 <span class="list-entity__text">
-                  <span class="list-entity__name">{{ element.contactPerson }}</span>
-                  <span class="list-entity__sub">{{ phone(element) }}</span>
+                  <span class="list-entity__name">{{ element.hostelName }}</span>
+                  <span class="list-entity__sub">{{ element.hostelId }}</span>
                 </span>
-              </td>
-            </ng-container>
+              </div>
+            </td>
+          </ng-container>
 
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef> Status </th>
-              <td mat-cell *matCellDef="let element">
-                <span class="status-badge status-badge--{{ element.status === 'Active' ? 'success' : 'warning' }}">{{ element.status }}</span>
-              </td>
-            </ng-container>
+          <ng-container matColumnDef="city">
+            <th mat-header-cell *matHeaderCellDef> City/Branch </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="with-icon">
+                <mat-icon class="list-icon--{{ tone(element) }}">place</mat-icon>{{ element.city }}
+              </span>
+            </td>
+          </ng-container>
 
-            <ng-container matColumnDef="createdDate">
-              <th mat-header-cell *matHeaderCellDef> Onboarded On </th>
-              <td mat-cell *matCellDef="let element" class="date-cell"> {{ element.createdDate | appDate }} </td>
-            </ng-container>
+          <ng-container matColumnDef="contact">
+            <th mat-header-cell *matHeaderCellDef> Contact Person </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ element.contactPerson }}</span>
+                <span class="list-entity__sub">{{ phone(element) }}</span>
+              </span>
+            </td>
+          </ng-container>
 
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-              <td mat-cell *matCellDef="let element" class="actions-cell">
-                <button
-                  type="button"
-                  class="row-action"
-                  [attr.aria-label]="'Edit ' + element.hostelName"
-                  (click)="onEditHostel(element)"
-                >
-                  <mat-icon>edit</mat-icon>
-                  Edit
-                </button>
-              </td>
-            </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let element">
+              <span class="status-badge status-badge--{{ element.status === 'Active' ? 'success' : 'warning' }}">{{ element.status }}</span>
+            </td>
+          </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <!-- Rows are not clickable; only the Edit button opens a hostel. -->
-            <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
-          </table>
-        </div>
+          <ng-container matColumnDef="createdDate">
+            <th mat-header-cell *matHeaderCellDef> Onboarded On </th>
+            <td mat-cell *matCellDef="let element" class="date-cell"> {{ element.createdDate | appDate }} </td>
+          </ng-container>
 
-        <!-- Empty state (below the real header) -->
-        @if (filteredRows.length === 0) {
-          <app-empty-state
-            [icon]="isFiltering ? 'search_off' : 'apartment'"
-            [message]="emptyMessage"
-            [hint]="isFiltering ? 'Try a different name, ID, city or contact, or clear the filters.' : 'Onboard your first hostel to see it here.'"
-            [clearable]="isFiltering"
-            (clear)="clearFilters()"
-          ></app-empty-state>
-        } @else {
-          <app-pagination
-            [page]="safePage"
-            [totalPages]="totalPages"
-            [pageSize]="pageSize"
-            (pageChange)="currentPage = $event"
-            (pageSizeChange)="pageSize = $event; currentPage = 0"
-          ></app-pagination>
-        }
-      </div>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+            <td mat-cell *matCellDef="let element" class="actions-cell">
+              <app-button variant="outline" size="sm" icon="edit" [ariaLabel]="'Edit ' + element.hostelName" (clicked)="onEditHostel(element)">
+                Edit
+              </app-button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <!-- Rows are not clickable; only the Edit button opens a hostel. -->
+          <tr mat-row *matRowDef="let row; columns: displayedColumns" class="table-row"></tr>
+        </table>
+      </app-table-card>
     </div>
   `,
   styles: [
@@ -272,7 +255,7 @@ const TONES = ['blue', 'purple', 'green', 'amber'] as const;
           max-width: 100%;
         }
 
-        .primary-green-btn {
+        .list-toolbar__add {
           margin-left: auto;
         }
       }

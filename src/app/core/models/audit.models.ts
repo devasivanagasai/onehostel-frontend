@@ -6,6 +6,7 @@ export type AuditModule =
   | 'Subscription Plan'
   | 'Subscription & Payment'
   | 'Fees & Payments'
+  | 'Complaints'
   | 'Communication Template'
   | 'System Defaults';
 
@@ -54,6 +55,12 @@ export const AUDIT_EVENTS = {
   'Reverse Payment': { module: 'Fees & Payments', action: 'Reverse' },
   'Refund Payment': { module: 'Fees & Payments', action: 'Refund' },
   'Send Reminder': { module: 'Fees & Payments', action: 'Send Reminder' },
+  'Create Complaint': { module: 'Complaints', action: 'Create' },
+  'Assign Complaint': { module: 'Complaints', action: 'Assign' },
+  'Update Complaint': { module: 'Complaints', action: 'Update Status' },
+  'Resolve Complaint': { module: 'Complaints', action: 'Resolve' },
+  'Close Complaint': { module: 'Complaints', action: 'Close' },
+  'Reopen Complaint': { module: 'Complaints', action: 'Reopen' },
   'Create Room': { module: 'Hostel', action: 'Create' },
   'Update Room': { module: 'Hostel', action: 'Update' },
   'Delete Room': { module: 'Hostel', action: 'Delete' },
@@ -72,6 +79,7 @@ export const AUDIT_MODULES: AuditModule[] = [
   'Subscription Plan',
   'Subscription & Payment',
   'Fees & Payments',
+  'Complaints',
   'Communication Template',
   'System Defaults',
 ];

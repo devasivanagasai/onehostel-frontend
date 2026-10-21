@@ -21,18 +21,15 @@
           <div class="panel-subtitle">{{ r.residentId }} <span class="sep">·</span> Tenant</div>
         </div>
       </div>
-      <button mat-icon-button type="button" class="close-btn" (click)="closePanel.emit()" aria-label="Close panel">
-        <mat-icon>close</mat-icon>
-      </button>
+      <app-button variant="icon" icon="close" class="close-btn" ariaLabel="Close panel" (clicked)="closePanel.emit()"></app-button>
     </div>
 
     <!-- Account actions (above the tabs) -->
     <div class="action-bar">
       @for (action of actions(r.status); track action) {
-        <button type="button" class="btn-action btn-action--{{ actionStyle(action) }}" (click)="run(r, action)">
-          <mat-icon>{{ meta[action].icon }}</mat-icon>
-          <span>{{ action === 'unblock' ? 'Unblock Account' : meta[action].label }}</span>
-        </button>
+        <app-button [variant]="actionStyle(action)" [icon]="meta[action].icon" (clicked)="run(r, action)">
+          {{ action === 'unblock' ? 'Unblock Account' : meta[action].label }}
+        </app-button>
       }
     </div>
 

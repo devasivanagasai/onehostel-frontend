@@ -129,10 +129,11 @@
   gap: 14px;
 }
 
-.group-card {
+// Each hostel group is a shared <app-table-card>; its collapsible header runs edge to edge,
+// so drop the card's default inner padding (styles/_table.scss) for this screen.
+.group-card.saas-card {
+  padding: 0;
   border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 8px 24px rgba(15, 34, 74, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
@@ -251,7 +252,7 @@
   align-items: center;
   gap: 8px;
 
-  .row-edit-btn + .row-edit-btn {
+  app-button + app-button {
     margin-left: 0;
   }
 }
@@ -260,15 +261,6 @@
   display: inline-block;
   width: var(--btn-height-sm);
   height: var(--btn-height-sm);
-}
-
-.saas-table .row-edit-btn--purple {
-  color: #7c3aed;
-
-  &:hover:not(:disabled) {
-    border-color: #c4b5fd;
-    background: #f5f3ff;
-  }
 }
 
 @media (max-width: 720px) {

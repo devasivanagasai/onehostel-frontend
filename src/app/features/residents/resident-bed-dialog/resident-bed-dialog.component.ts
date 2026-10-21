@@ -2,11 +2,9 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { Bed, Room } from '../../rooms-management/rooms.models';
 import { AppFormatService } from '../../../core/services/app-format.service';
 import { ResidentAllocation, ResidentsService } from '../residents.service';
@@ -40,11 +38,9 @@ const MODE_META: Record<ResidentBedMode, { title: string; icon: string; submit: 
     CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatButtonModule,
     MatIconModule,
+    AppDialogComponent,
+    AppButtonComponent,
   ],
   templateUrl: './resident-bed-dialog.component.html',
   styleUrl: './resident-bed-dialog.component.scss',
@@ -83,11 +79,6 @@ export class ResidentBedDialogComponent {
   get dateTooEarly(): boolean {
     const d = this.form.value.date;
     return !!d && d < this.minDate;
-  }
-
-  get restrictionNote(): string {
-    const r = this.data.resident;
-    return `Showing beds that allow ${r.gender} residents${r.collegeOrCompany ? ' from ' + r.collegeOrCompany : ''}. Rooms under maintenance or inactive are hidden.`;
   }
 
   onRoomPicked(): void {

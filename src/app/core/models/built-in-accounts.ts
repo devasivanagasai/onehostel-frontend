@@ -29,12 +29,11 @@ export const BUILT_IN_ACCOUNTS: BuiltInAccount[] = [
   { id: 'builtin-tenant', email: 'tenant@gmail.com', firstName: 'Tenant', lastName: 'User', role: 'Tenant' },
 ];
 
-/** The Hostel Owner sign-in: a regular hostel owner login, so lockout, OTP rules and Change Password all apply. */
+/** The Hostel Owner sign-in: a regular hostel owner login, so lockout, password rules and Change Password all apply. */
 export const BUILT_IN_HOSTEL_OWNER: HostelAdminAccount = {
   hostelId: 'HST-OWNER-01',
   hostelName: 'Grand Stay Hostel',
   name: 'Hostel Owner',
-  loginMethod: 'Password',
   email: 'hostelowner@gmail.com',
   mobileNumber: '9000000001',
   username: 'hostelowner',

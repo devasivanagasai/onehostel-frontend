@@ -81,8 +81,7 @@
     <ng-container *ngTemplateOutlet="sectionHead; context: { $implicit: nav('security') }"></ng-container>
     <div class="settings-section__body">
       <div formGroupName="security" class="security-layout">
-        <!-- Each hostel admin's login method (Password / OTP) is set during hostel onboarding;
-             these policies apply to whichever method an admin uses. -->
+        <!-- Everyone signs in with a password, so these policies apply to all users. -->
         <div class="security-main">
           <!-- Password policy -->
           <section class="policy-card">
@@ -90,7 +89,7 @@
               <span class="policy-card__icon policy-card__icon--blue"><mat-icon fontSet="material-icons-outlined">password</mat-icon></span>
               <div>
                 <h3 class="policy-card__title">Password Policy</h3>
-                <p class="policy-card__desc">Applies to hostel owners who log in with a password.</p>
+                <p class="policy-card__desc">Applies to every user's password.</p>
               </div>
             </header>
 
@@ -140,48 +139,13 @@
             <div class="field-hint">New passwords must include each item that's switched on. Spaces are never allowed.</div>
           </section>
 
-          <!-- OTP policy -->
-          <section class="policy-card">
-            <header class="policy-card__head">
-              <span class="policy-card__icon policy-card__icon--purple"><mat-icon fontSet="material-icons-outlined">sms</mat-icon></span>
-              <div>
-                <h3 class="policy-card__title">One-Time Password (OTP)</h3>
-                <p class="policy-card__desc">Applies to hostel owners who log in with OTP.</p>
-              </div>
-            </header>
-
-            <div class="field-grid">
-              <div class="field-group">
-                <label class="field-label">OTP Length <span class="required-star">*</span></label>
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-select formControlName="otpLength">
-                    @for (n of otpLengthOptions; track n) {
-                      <mat-option [value]="n">{{ n }} digits</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-                <div class="field-hint">Number of digits in each one-time code.</div>
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">OTP Expiry <span class="required-star">*</span></label>
-                <mat-form-field appearance="outline" class="full-width">
-                  <input matInput type="number" formControlName="otpExpiryMinutes" min="1" max="30" />
-                  <span matTextSuffix class="unit">minutes</span>
-                  <mat-error>Between 1 and 30</mat-error>
-                </mat-form-field>
-                <div class="field-hint">How long a one-time code stays valid. 5 minutes or less is recommended.</div>
-              </div>
-            </div>
-          </section>
-
           <!-- Login & session -->
           <section class="policy-card">
             <header class="policy-card__head">
               <span class="policy-card__icon policy-card__icon--amber"><mat-icon fontSet="material-icons-outlined">lock_clock</mat-icon></span>
               <div>
                 <h3 class="policy-card__title">Login &amp; Session</h3>
-                <p class="policy-card__desc">Applies to all users, whichever way they log in.</p>
+                <p class="policy-card__desc">Applies to all users.</p>
               </div>
             </header>
 
@@ -264,10 +228,6 @@
                     Passwords <strong>never expire</strong>.
                   }
                 </span>
-              </li>
-              <li>
-                <mat-icon fontSet="material-icons-outlined">sms</mat-icon>
-                <span>OTPs are <strong>{{ value('security', 'otpLength') }} digits</strong>, valid for <strong>{{ value('security', 'otpExpiryMinutes') }} min</strong>.</span>
               </li>
               <li>
                 <mat-icon fontSet="material-icons-outlined">lock</mat-icon>
@@ -533,10 +493,7 @@
         } @else if (unsavedSummary) {
           <span class="footer-status">Unsaved changes in {{ unsavedSummary }}</span>
         }
-        <!-- Same global button style as the list pages' "New" button -->
-        <button type="button" class="primary-green-btn" (click)="save()">
-          <span>Submit</span>
-        </button>
+        <app-button (clicked)="save()">Submit</app-button>
       </div>
     }
   </header>

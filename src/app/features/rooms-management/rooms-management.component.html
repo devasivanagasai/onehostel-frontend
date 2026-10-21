@@ -32,23 +32,23 @@
         </div>
       </div>
 
-      <button type="button" class="kpi-card kpi-card--action" (click)="quickFilterStatus('Available')" matTooltip="Show rooms with available beds">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">event_available</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Available Beds</span>
           <span class="kpi-card__value">{{ stats.availableBeds }}</span>
           <span class="kpi-card__sub">Ready to allocate</span>
         </div>
-      </button>
+      </div>
 
-      <button type="button" class="kpi-card kpi-card--action" (click)="quickFilterStatus('Maintenance')" matTooltip="Show rooms under maintenance">
+      <div class="kpi-card">
         <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">handyman</mat-icon></span>
         <div class="kpi-card__body">
           <span class="kpi-card__label">Maintenance</span>
           <span class="kpi-card__value">{{ stats.maintenanceBeds }}</span>
           <span class="kpi-card__sub">Beds blocked</span>
         </div>
-      </button>
+      </div>
     </section>
   }
 
@@ -131,48 +131,41 @@
     </div>
 
     @if (hasActiveFilters) {
-      <button type="button" class="filter-card__reset" (click)="clearFilters()">
-        <mat-icon>filter_alt_off</mat-icon>
-        Reset
-      </button>
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
     }
 
-    <button type="button" class="primary-green-btn filter-card__add" (click)="openAddRoomModal()">
-      <mat-icon>add</mat-icon>
-      <span>Add Room</span>
-    </button>
+    <app-button class="filter-card__add" icon="add" (clicked)="openAddRoomModal()">Add Room</app-button>
   </div>
 
   <!-- Shared 3-dot action menu (View, Edit, Add Beds, Allocate, Mark Maintenance, Deactivate) -->
-  <mat-menu #roomMenu="matMenu">
+  <mat-menu #roomMenu="matMenu" class="room-actions-menu" xPosition="before">
     <ng-template matMenuContent let-room="room">
       <button mat-menu-item (click)="openEditRoomModal(room)">
-        <mat-icon>visibility</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">visibility</mat-icon>
         <span>View Details</span>
       </button>
       <button mat-menu-item (click)="openEditRoomModal(room)">
-        <mat-icon>edit</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">edit</mat-icon>
         <span>Edit Room</span>
       </button>
       <button mat-menu-item (click)="onAddBeds(room)">
-        <mat-icon>add_circle_outline</mat-icon>
+        <mat-icon>add</mat-icon>
         <span>Add Beds</span>
       </button>
       <button mat-menu-item [disabled]="!canAllocate(room)" (click)="onAllocate(room)">
-        <mat-icon>person_add_alt</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">person</mat-icon>
         <span>Allocate Bed</span>
       </button>
       <button mat-menu-item (click)="onToggleMaintenance(room)">
-        <mat-icon>{{ room.status === 'Maintenance' ? 'check_circle' : 'build' }}</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">{{ room.status === 'Maintenance' ? 'check_circle' : 'build' }}</mat-icon>
         <span>{{ room.status === 'Maintenance' ? 'Complete Maintenance' : 'Mark Maintenance' }}</span>
       </button>
       <button mat-menu-item (click)="onToggleDeactivate(room)">
-        <mat-icon>{{ room.status === 'Inactive' ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+        <mat-icon>{{ room.status === 'Inactive' ? 'restart_alt' : 'autorenew' }}</mat-icon>
         <span>{{ room.status === 'Inactive' ? 'Activate Room' : 'Deactivate Room' }}</span>
       </button>
-      <mat-divider></mat-divider>
       <button mat-menu-item class="menu-item--danger" (click)="deleteRoom(room)">
-        <mat-icon>delete_outline</mat-icon>
+        <mat-icon fontSet="material-icons-outlined">delete</mat-icon>
         <span>Delete Room</span>
       </button>
     </ng-template>
@@ -198,15 +191,15 @@
 
             <span class="room-status" [ngClass]="'tone--' + statusKey(room.status)">{{ statusLabel(room.status) }}</span>
 
-            <button
-              mat-icon-button
+            <app-button
+              variant="icon"
+              size="sm"
+              icon="more_vert"
               class="room-card__menu"
               [matMenuTriggerFor]="roomMenu"
               [matMenuTriggerData]="{ room: room }"
-              [attr.aria-label]="'Actions for room ' + room.roomNumber"
-            >
-              <mat-icon>more_vert</mat-icon>
-            </button>
+              [ariaLabel]="'Actions for room ' + room.roomNumber"
+            ></app-button>
           </header>
 
           <!-- Scope tags -->
@@ -282,15 +275,9 @@
         (clear)="clearFilters()"
       ></app-empty-state>
       @if (hasActiveFilters) {
-        <button type="button" class="rooms-empty__action" (click)="clearFilters()">
-          <mat-icon>filter_alt_off</mat-icon>
-          Clear filters
-        </button>
+        <app-button icon="filter_alt_off" (clicked)="clearFilters()">Clear filters</app-button>
       } @else {
-        <button type="button" class="rooms-empty__action" (click)="openAddRoomModal()">
-          <mat-icon>add</mat-icon>
-          Create your first room
-        </button>
+        <app-button icon="add" (clicked)="openAddRoomModal()">Create your first room</app-button>
       }
     </div>
   }

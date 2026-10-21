@@ -18,6 +18,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { AppNotification, NotificationService, relativeTime } from '../../core/services/notification.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const ALL = 'All';
 const DAY_MS = 86_400_000;
@@ -128,6 +129,7 @@ const toIsoDate = (d: Date): string =>
   imports: [
     AppDatePipe,
     AppCurrencyPipe,
+    AppButtonComponent,
     CommonModule,
     FormsModule,
     RouterLink,

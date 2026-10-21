@@ -49,18 +49,6 @@ img.resident-photo {
   object-fit: cover;
 }
 
-// "+ Allocate" in the Room / Bed column: same button, teal to read as an add action
-.row-action--add {
-  color: #0d9488;
-  border-style: dashed;
-  border-color: #99e0d8;
-
-  &:hover {
-    background: #f0fdfa;
-    border-color: #5eead4;
-  }
-}
-
 .muted {
   color: #94a3b8;
 }

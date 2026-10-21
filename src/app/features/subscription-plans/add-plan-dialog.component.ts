@@ -2,14 +2,15 @@ import { Component, Inject, OnInit, inject } from '@angular/core';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { SubscriptionPlanRow } from './subscription-plans.component';
+import { AppDialogComponent } from '../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 export interface PlanDialogData {
   mode: 'add' | 'edit';
@@ -45,38 +46,23 @@ export const FEATURE_CONFIG_ITEMS: FeatureItem[] = [
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatIconModule,
-    MatButtonModule,
     MatSlideToggleModule,
+    AppDialogComponent,
+    AppButtonComponent,
   ],
   template: `
-    <div class="plan-dialog-container">
-      <!-- Header -->
-      <div class="dialog-header">
-        <div class="dialog-title-box">
-          <div class="icon-circle">
-            <mat-icon>{{ data.mode === 'edit' ? 'edit_note' : 'workspace_premium' }}</mat-icon>
-          </div>
-          <div>
-            <h2 mat-dialog-title class="dialog-title">
-              {{ data.mode === 'edit' ? 'Edit Subscription Plan' : 'Add New Subscription Plan' }}
-            </h2>
-            <p class="dialog-subtitle">Configure pricing details and feature module permissions</p>
-          </div>
-        </div>
-        <button mat-icon-button type="button" class="close-btn" (click)="onCancel()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-
-      <!-- Form Body -->
-      <mat-dialog-content class="dialog-content">
-        <form [formGroup]="planForm" (ngSubmit)="onSubmit()" id="planForm">
-          
+    <form [formGroup]="planForm" (ngSubmit)="onSubmit()" novalidate>
+      <app-dialog
+        [title]="data.mode === 'edit' ? 'Edit Subscription Plan' : 'Add New Subscription Plan'"
+        subtitle="Configure pricing details and feature module permissions"
+        [icon]="data.mode === 'edit' ? 'edit_note' : 'workspace_premium'"
+        [iconOutlined]="false"
+        (closed)="onCancel()"
+      >
           <!-- Basic Fields Grid -->
           <div class="fields-grid">
             
@@ -203,93 +189,16 @@ export const FEATURE_CONFIG_ITEMS: FeatureItem[] = [
             </div>
           </div>
 
-        </form>
-      </mat-dialog-content>
-
-      <!-- Footer Actions -->
-      <mat-dialog-actions class="dialog-actions">
-        <button type="button" class="btn-secondary" (click)="onCancel()">
-          Cancel
-        </button>
-        <button type="submit" form="planForm" class="btn-primary" [disabled]="planForm.invalid">
-          <mat-icon>{{ data.mode === 'edit' ? 'check' : 'add' }}</mat-icon>
-          <span>{{ data.mode === 'edit' ? 'Update' : 'Submit' }}</span>
-        </button>
-      </mat-dialog-actions>
-
-    </div>
+        <ng-container dialogFooter>
+          <app-button variant="secondary" (clicked)="onCancel()">Cancel</app-button>
+          <app-button type="submit" [icon]="data.mode === 'edit' ? 'check' : 'add'" [disabled]="planForm.invalid">
+            {{ data.mode === 'edit' ? 'Update' : 'Submit' }}
+          </app-button>
+        </ng-container>
+      </app-dialog>
+    </form>
   `,
   styles: [`
-    .plan-dialog-container {
-      padding: 0;
-      width: 100%;
-      max-width: 780px;
-      font-family: inherit;
-    }
-
-    .dialog-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 24px;
-      border-bottom: 1px solid #e2e8f0;
-      background: #f8fafc;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-    }
-
-    .dialog-title-box {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .icon-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #0057e7;
-
-      mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
-    }
-
-    .dialog-title {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      color: #0f172a;
-      line-height: 1.2;
-    }
-
-    .dialog-subtitle {
-      margin: 2px 0 0 0;
-      font-size: 13px;
-      color: #64748b;
-    }
-
-    .close-btn {
-      color: #64748b;
-      &:hover {
-        color: #0f172a;
-        background: #e2e8f0;
-      }
-    }
-
-    .dialog-content {
-      padding: 24px !important;
-      max-height: 72vh;
-      overflow-y: auto;
-    }
-
     .fields-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -532,74 +441,6 @@ export const FEATURE_CONFIG_ITEMS: FeatureItem[] = [
       font-size: 13px;
       font-weight: 600;
       color: #1e293b;
-    }
-
-    /* Footer Actions */
-    .dialog-actions {
-      padding: 16px 24px;
-      border-top: 1px solid #e2e8f0;
-      background: #f8fafc;
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin: 0;
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-    }
-
-    .btn-secondary {
-      height: var(--btn-height);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-
-      &:hover {
-        background: #f1f5f9;
-        color: #0f172a;
-      }
-    }
-
-    .btn-primary {
-      height: var(--btn-height);
-      background: #0057e7;
-      color: #ffffff;
-      border: none;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(0, 87, 231, 0.25);
-      transition: all 0.15s;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #0045b5;
-        box-shadow: 0 6px 16px rgba(0, 87, 231, 0.35);
-      }
-
-      &:disabled {
-        background: #94a3b8;
-        cursor: not-allowed;
-        box-shadow: none;
-      }
     }
   `],
 })

@@ -1,103 +1,92 @@
 @let pay = p;
-<div class="pv">
-  <header class="pv__header">
-    <div class="pv__title">
-      <span><mat-icon>receipt_long</mat-icon></span>
+<app-dialog [title]="pay.id" icon="receipt_long" tone="teal">
+  <ng-container dialogMeta>
+    <span class="status-badge status-badge--{{ statusTone(pay.status) }}">{{ pay.status }}</span>
+    @if (pay.receiptId) { <span class="pv__receipt-id">Receipt {{ pay.receiptId }}</span> }
+  </ng-container>
+
+  <div class="pv__amount" [class.pv__amount--void]="pay.status !== 'Successful'">
+    <span>{{ pay.status === 'Pending' ? 'Awaiting confirmation' : pay.status === 'Successful' ? 'Amount received' : 'Amount (not counted)' }}</span>
+    <strong>₹{{ pay.amount | number: '1.0-2' }}</strong>
+  </div>
+
+  @if (pay.status === 'Pending') {
+    <div class="pv__notice pv__notice--warn">
+      <mat-icon>hourglass_top</mat-icon>
       <div>
-        <h2>{{ pay.id }}</h2>
-        <p>
-          <span class="status-badge status-badge--{{ statusTone(pay.status) }}">{{ pay.status }}</span>
-          @if (pay.receiptId) { <span class="pv__receipt-id">Receipt {{ pay.receiptId }}</span> }
-        </p>
-      </div>
-    </div>
-    <button mat-icon-button type="button" (click)="close()" aria-label="Close dialog"><mat-icon>close</mat-icon></button>
-  </header>
-
-  <mat-dialog-content class="pv__content">
-    <div class="pv__amount" [class.pv__amount--void]="pay.status !== 'Successful'">
-      <span>{{ pay.status === 'Pending' ? 'Awaiting confirmation' : pay.status === 'Successful' ? 'Amount received' : 'Amount (not counted)' }}</span>
-      <strong>₹{{ pay.amount | number: '1.0-2' }}</strong>
-    </div>
-
-    @if (pay.status === 'Pending') {
-      <div class="pv__notice pv__notice--warn">
-        <mat-icon>hourglass_top</mat-icon>
-        <div>
-          <strong>Pending online payment</strong>
-          <span>Not counted as collected until {{ gateway }} confirms it. Apply the provider's result:</span>
-          <div class="pv__notice-actions">
-            <button mat-flat-button color="primary" type="button" (click)="confirm(true)"><mat-icon>check</mat-icon>Mark successful</button>
-            <button mat-stroked-button type="button" (click)="confirm(false)"><mat-icon>close</mat-icon>Mark failed</button>
-          </div>
+        <strong>Pending online payment</strong>
+        <span>Not counted as collected until {{ gateway }} confirms it. Apply the provider's result:</span>
+        <div class="pv__notice-actions">
+          <app-button icon="check" (clicked)="confirm(true)">Mark successful</app-button>
+          <app-button variant="secondary" icon="close" (clicked)="confirm(false)">Mark failed</app-button>
         </div>
       </div>
-    }
+    </div>
+  }
 
-    @if (pay.reason) {
-      <div class="pv__notice">
-        <mat-icon>{{ pay.status === 'Refunded' ? 'currency_exchange' : 'undo' }}</mat-icon>
-        <div><strong>{{ pay.status === 'Refunded' ? 'Refund reason' : 'Reversal reason' }}</strong><span>{{ pay.reason }}</span></div>
+  @if (pay.reason) {
+    <div class="pv__notice">
+      <mat-icon>{{ pay.status === 'Refunded' ? 'currency_exchange' : 'undo' }}</mat-icon>
+      <div><strong>{{ pay.status === 'Refunded' ? 'Refund reason' : 'Reversal reason' }}</strong><span>{{ pay.reason }}</span></div>
+    </div>
+  }
+
+  <dl class="pv__dl">
+    <dt>Resident</dt><dd>{{ pay.residentName }} <small>{{ pay.residentId }}</small></dd>
+    <dt>Charge / invoice</dt><dd>{{ pay.chargeId }} · {{ pay.chargeDescription }}</dd>
+    <dt>Balance before payment</dt><dd>₹{{ pay.amountDue | number: '1.0-2' }}</dd>
+    <dt>Charge balance now</dt><dd>₹{{ balanceNow | number: '1.0-2' }}</dd>
+    <dt>Payment method</dt><dd>{{ pay.method === 'Online' ? 'Online (' + gateway + ')' : pay.method }}</dd>
+    <dt>Transaction reference</dt><dd class="mono">{{ pay.transactionRef || '—' }}</dd>
+    <dt>Payment date</dt><dd>{{ fmt.date(pay.paidAt, 'datetime') }}</dd>
+    <dt>Collected by</dt><dd>{{ pay.collectedBy }}</dd>
+    @if (pay.notes) { <dt>Notes</dt><dd>{{ pay.notes }}</dd> }
+  </dl>
+
+  @if (action) {
+    <div class="pv__reverse">
+      <h3>{{ action === 'Reversed' ? 'Reverse payment' : 'Refund payment' }}</h3>
+      <p>
+        {{ action === 'Reversed' ? 'Use when the payment was recorded in error or bounced.' : 'Use when money is returned to the resident.' }}
+        The original record stays visible and ₹{{ pay.amount | number: '1.0-2' }} goes back onto {{ pay.chargeId }}.
+      </p>
+      <mat-form-field appearance="outline" class="pv__full">
+        <mat-label>Reason</mat-label>
+        <textarea matInput [(ngModel)]="reason" rows="2" maxlength="250" required></textarea>
+        <mat-hint>Required · recorded in the audit log</mat-hint>
+      </mat-form-field>
+      <div class="pv__reverse-actions">
+        <app-button variant="secondary" (clicked)="action = null">Cancel</app-button>
+        <app-button variant="danger" [disabled]="reason.trim().length < 5" (clicked)="submitAction()">
+          Confirm {{ action === 'Reversed' ? 'reversal' : 'refund' }}
+        </app-button>
       </div>
+    </div>
+  }
+
+  @if (error) {
+    <p class="pv__error"><mat-icon>error_outline</mat-icon>{{ error }}</p>
+  }
+
+  <h3 class="pv__heading">History</h3>
+  <ol class="pv__timeline">
+    @for (e of pay.history; track $index) {
+      <li>
+        <strong>{{ e.action }}</strong>
+        <span>{{ fmt.date(e.at, 'datetime') }} · {{ e.by }}</span>
+        @if (e.reason) { <em>{{ e.reason }}</em> }
+      </li>
     }
+  </ol>
 
-    <dl class="pv__dl">
-      <dt>Resident</dt><dd>{{ pay.residentName }} <small>{{ pay.residentId }}</small></dd>
-      <dt>Charge / invoice</dt><dd>{{ pay.chargeId }} · {{ pay.chargeDescription }}</dd>
-      <dt>Balance before payment</dt><dd>₹{{ pay.amountDue | number: '1.0-2' }}</dd>
-      <dt>Charge balance now</dt><dd>₹{{ balanceNow | number: '1.0-2' }}</dd>
-      <dt>Payment method</dt><dd>{{ pay.method === 'Online' ? 'Online (' + gateway + ')' : pay.method }}</dd>
-      <dt>Transaction reference</dt><dd class="mono">{{ pay.transactionRef || '—' }}</dd>
-      <dt>Payment date</dt><dd>{{ fmt.date(pay.paidAt, 'datetime') }}</dd>
-      <dt>Collected by</dt><dd>{{ pay.collectedBy }}</dd>
-      @if (pay.notes) { <dt>Notes</dt><dd>{{ pay.notes }}</dd> }
-    </dl>
-
-    @if (action) {
-      <div class="pv__reverse">
-        <h3>{{ action === 'Reversed' ? 'Reverse payment' : 'Refund payment' }}</h3>
-        <p>
-          {{ action === 'Reversed' ? 'Use when the payment was recorded in error or bounced.' : 'Use when money is returned to the resident.' }}
-          The original record stays visible and ₹{{ pay.amount | number: '1.0-2' }} goes back onto {{ pay.chargeId }}.
-        </p>
-        <mat-form-field appearance="outline" class="pv__full">
-          <mat-label>Reason</mat-label>
-          <textarea matInput [(ngModel)]="reason" rows="2" maxlength="250" required></textarea>
-          <mat-hint>Required · recorded in the audit log</mat-hint>
-        </mat-form-field>
-        <div class="pv__reverse-actions">
-          <button mat-stroked-button type="button" (click)="action = null">Cancel</button>
-          <button mat-flat-button color="warn" type="button" [disabled]="reason.trim().length < 5" (click)="submitAction()">
-            Confirm {{ action === 'Reversed' ? 'reversal' : 'refund' }}
-          </button>
-        </div>
-      </div>
-    }
-
-    @if (error) {
-      <p class="pv__error"><mat-icon>error_outline</mat-icon>{{ error }}</p>
-    }
-
-    <h3 class="pv__heading">History</h3>
-    <ol class="pv__timeline">
-      @for (e of pay.history; track $index) {
-        <li>
-          <strong>{{ e.action }}</strong>
-          <span>{{ fmt.date(e.at, 'datetime') }} · {{ e.by }}</span>
-          @if (e.reason) { <em>{{ e.reason }}</em> }
-        </li>
-      }
-    </ol>
-  </mat-dialog-content>
-
-  <footer class="pv__footer">
+  <ng-container dialogFooter>
     @if (pay.status === 'Successful' && fees.canReverse && !action) {
-      <button mat-stroked-button type="button" class="pv__danger" (click)="startAction('Reversed')"><mat-icon>undo</mat-icon>Reverse</button>
-      <button mat-stroked-button type="button" class="pv__danger" (click)="startAction('Refunded')"><mat-icon>currency_exchange</mat-icon>Refund</button>
+      <app-button variant="danger-outline" icon="undo" (clicked)="startAction('Reversed')">Reverse</app-button>
+      <app-button variant="danger-outline" icon="currency_exchange" (clicked)="startAction('Refunded')">Refund</app-button>
     }
-    <span class="pv__spacer"></span>
+    <span class="app-dialog__spacer"></span>
     @if (pay.receiptId) {
-      <button mat-flat-button color="primary" type="button" (click)="download()"><mat-icon>download</mat-icon>Download receipt</button>
+      <app-button icon="download" (clicked)="download()">Download receipt</app-button>
     }
-  </footer>
-</div>
+  </ng-container>
+</app-dialog>

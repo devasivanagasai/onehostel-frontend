@@ -42,6 +42,27 @@ export const routes: Routes = [
           import('./features/fees-payments/fees-payments.component').then((m) => m.FeesPaymentsComponent),
       },
       {
+        path: 'complaints',
+        loadComponent: () =>
+          import('./features/complaints/complaints.component').then((m) => m.ComplaintsComponent),
+      },
+      {
+        path: 'announcements',
+        loadComponent: () =>
+          import('./features/announcements/announcements.component').then((m) => m.AnnouncementsComponent),
+      },
+      {
+        path: 'hostel-reports',
+        loadComponent: () =>
+          import('./features/hostel-reports/hostel-reports.component').then((m) => m.HostelReportsComponent),
+      },
+      {
+        path: 'hostel-settings',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/hostel-settings/hostel-settings.component').then((m) => m.HostelSettingsComponent),
+      },
+      {
         path: 'hostel-onboarding',
         loadComponent: () =>
           import('./features/hostel-onboarding/hostel-onboarding.component').then(

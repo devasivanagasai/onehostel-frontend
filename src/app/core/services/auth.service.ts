@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject, Observable, delay, of, switchMap, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthUser, LoginErrorCode, LoginRequest, LoginResponse, OtpChallenge } from '../models/auth.models';
+import { AuthUser, LoginErrorCode, LoginRequest, LoginResponse } from '../models/auth.models';
 import { AuditLogService } from './audit-log.service';
 import { HostelAdminAccount, HostelAdminAccountService } from './hostel-admin-account.service';
 import { builtInPassword, findBuiltInAccount } from '../models/built-in-accounts';
@@ -25,19 +25,30 @@ export const ADMIN_ONLY_ROUTES = [
   '/institution',
   '/hostels',
 ];
+/**
+ * Hostel Owner modules: shown only to users with the Hostel Owner role.
+ * Hidden from Admins (Super Admin) and Tenants, in the menu, global search and by URL (adminGuard).
+ */
+export const HOSTEL_OWNER_ROUTES = [
+  '/rooms',
+  '/residents',
+  '/fees',
+  '/complaints',
+  '/announcements',
+  '/hostel-reports',
+  '/hostel-settings',
+];
+
+/** True when `route` is `base` or a page under it ("/fees", "/fees/123", "/fees?tab=charges"). */
+export function matchesRoute(route: string, base: string): boolean {
+  const path = route.split(/[?#]/)[0];
+  return path === base || path.startsWith(base + '/');
+}
+
 /** When this browser last signed in (ISO). Kept after sign-out so My Profile can show it. */
 const LAST_LOGIN_KEY = 'onehostel_last_login';
-/** Used if Security Settings has no valid OTP Expiry. */
-const DEFAULT_OTP_EXPIRY_MINUTES = 5;
 /** Used if Security Settings has no valid Maximum Login Attempts. */
 const DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
-const OTP_RESEND_SECONDS = 30;
-
-/** "rakesh.verma@x.com" → "ra••••••@x.com" */
-function maskEmail(email: string): string {
-  const [name, domain] = email.split('@');
-  return `${name.slice(0, 2)}••••••@${domain ?? ''}`;
-}
 
 /**
  * Single source of truth for auth state. Persists the session to
@@ -51,9 +62,6 @@ export class AuthService {
 
   private readonly currentUserSubject = new BehaviorSubject<AuthUser | null>(this.readUser());
   readonly currentUser$: Observable<AuthUser | null> = this.currentUserSubject.asObservable();
-
-  /** The last OTP issued (mock only — a real backend keeps this server-side). */
-  private pendingOtp: { hostelId: string; code: string; expiresAt: number } | null = null;
 
   constructor(
     private http: HttpClient,
@@ -78,10 +86,6 @@ export class AuthService {
 
     if (account) {
       if (account.lockedAt) return this.lockedError();
-      // Hostel admins must use the Login Method chosen at onboarding.
-      if (account.loginMethod === 'OTP') {
-        return this.fail('This account signs in with OTP.', 401, 'USE_OTP');
-      }
       if (request.password !== account.password) {
         return this.failedAttempt(account, 'Incorrect password.');
       }
@@ -117,54 +121,7 @@ export class AuthService {
     );
   }
 
-  /** Sends a one-time code to an OTP-method hostel admin (mocked: the code is returned for display). */
-  requestOtp(identifier: string): Observable<OtpChallenge> {
-    const account = this.hostelAdmins.findByIdentifier(identifier);
-    if (!account) {
-      return this.fail('No account found for this mobile number or email.', 404);
-    }
-    if (account.lockedAt) return this.lockedError();
-    if (account.loginMethod !== 'OTP') {
-      return this.fail('This account signs in with a password.', 401, 'USE_PASSWORD');
-    }
-
-    const security = this.systemSettings.settings.security;
-    const length = Number(security.otpLength) === 4 ? 4 : 6;
-    const code = String(Math.floor(10 ** (length - 1) + Math.random() * 9 * 10 ** (length - 1)));
-    const ttlMinutes = Number(security.otpExpiryMinutes) || DEFAULT_OTP_EXPIRY_MINUTES;
-    this.pendingOtp = { hostelId: account.hostelId, code, expiresAt: Date.now() + ttlMinutes * 60_000 };
-
-    // Codes go to the email when the admin typed their email, otherwise to their mobile.
-    const typedEmail = identifier.includes('@');
-    const sentTo = typedEmail ? maskEmail(account.email) : `••••••${account.mobileNumber.slice(-4)}`;
-    return of({ sentTo, length, resendAfter: OTP_RESEND_SECONDS, demoCode: code }).pipe(delay(600));
-  }
-
-  verifyOtp(identifier: string, code: string, rememberMe = true): Observable<LoginResponse> {
-    const account = this.hostelAdmins.findByIdentifier(identifier);
-    const pending = this.pendingOtp;
-
-    if (account?.lockedAt) {
-      this.pendingOtp = null;
-      return this.lockedError();
-    }
-    if (!account || !pending || pending.hostelId !== account.hostelId) {
-      return this.fail('Please request a new OTP.');
-    }
-    if (Date.now() > pending.expiresAt) {
-      this.pendingOtp = null;
-      return this.fail('This OTP has expired. Please request a new one.');
-    }
-    if (code.trim() !== pending.code) {
-      return this.failedAttempt(account, 'Incorrect OTP.');
-    }
-
-    this.pendingOtp = null;
-    this.hostelAdmins.resetFailedAttempts(account.hostelId);
-    return this.completeLogin(this.hostelAdminResponse(account), rememberMe);
-  }
-
-  /** Counts a wrong password/OTP against Settings → Security → Maximum Login Attempts. */
+  /** Counts a wrong password against Settings → Security → Maximum Login Attempts. */
   private failedAttempt(account: HostelAdminAccount, message: string): Observable<never> {
     const max = Number(this.systemSettings.settings.security.maxLoginAttempts) || DEFAULT_MAX_LOGIN_ATTEMPTS;
     const { locked, remaining } = this.hostelAdmins.recordFailedAttempt(account.hostelId, max);
@@ -172,10 +129,7 @@ export class AuthService {
       status: 'Failed',
       details: locked ? `Account locked after ${max} failed attempts.` : message,
     });
-    if (locked) {
-      this.pendingOtp = null;
-      return this.lockedError();
-    }
+    if (locked) return this.lockedError();
     return this.fail(`${message} ${remaining} attempt${remaining === 1 ? '' : 's'} left before the account is locked.`);
   }
 
@@ -219,13 +173,17 @@ export class AuthService {
     return !!roles && roles.includes('Tenant');
   }
 
-  /** Whether the signed-in user may open this route (the Admin modules are Admin-only). */
+  /**
+   * Whether the signed-in user may open this route. The single source for role-based visibility:
+   * the sidebar, global search, dashboard shortcuts, notifications and adminGuard all use it.
+   *  - Hostel Owner modules (HOSTEL_OWNER_ROUTES): Hostel Owners only.
+   *  - Admin modules (ADMIN_ONLY_ROUTES): Admins only.
+   *  - Everything else (Dashboard, Profile, Change Password): every signed-in user.
+   */
   canAccess(route: string): boolean {
-    // Hostel-owner-only routes (rooms, residents, fees) are closed to Tenants
-    if (['/rooms', '/residents', '/fees'].some((r) => route.startsWith(r)) && this.isTenant) {
-      return false;
-    }
-    return this.isAdmin || !ADMIN_ONLY_ROUTES.some((r) => route === r || route.startsWith(r + '/'));
+    if (HOSTEL_OWNER_ROUTES.some((r) => matchesRoute(route, r))) return this.isHostelOwner;
+    if (ADMIN_ONLY_ROUTES.some((r) => matchesRoute(route, r))) return this.isAdmin;
+    return true;
   }
 
   isAuthenticated(): boolean {

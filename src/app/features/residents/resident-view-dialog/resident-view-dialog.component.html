@@ -1,111 +1,134 @@
 @let r = resident;
 @let alloc = allocation;
-<div class="rv">
-  <header class="rv__header">
-    <div class="rv__identity">
-      <span class="rv__avatar">
-        @if (r.photoUrl) {
-          <img [src]="r.photoUrl" [alt]="name" />
-        } @else {
-          {{ initials }}
-        }
-      </span>
-      <div>
-        <h2>{{ name }}</h2>
-        <p>
-          <span class="rv__id">{{ r.residentId }}</span>
-          <span class="res-status" [ngClass]="'res-status--' + statusKey(r.status)">{{ r.status }}</span>
-          @if (r.deactivatedAt) {
-            <span class="res-status res-status--deactivated">Deactivated</span>
-          }
-        </p>
-      </div>
-    </div>
-    <button mat-icon-button type="button" (click)="close()" aria-label="Close dialog">
-      <mat-icon>close</mat-icon>
-    </button>
-  </header>
+<app-dialog [title]="name" [eyebrow]="r.residentId" tone="teal" [hideFooter]="true" (closed)="close()">
+  <span dialogLead class="rv__avatar">
+    @if (r.photoUrl) {
+      <img [src]="r.photoUrl" [alt]="name" />
+    } @else {
+      {{ initials }}
+    }
+    <span class="rv__avatar-badge" aria-hidden="true"><mat-icon>person</mat-icon></span>
+  </span>
 
-  @if (r.deactivatedAt) {
-    <div class="rv__actions">
-      <button mat-stroked-button type="button" (click)="run('reactivate')"><mat-icon>person</mat-icon>Reactivate</button>
-    </div>
-  } @else {
-    <div class="rv__actions">
-      <button mat-stroked-button type="button" (click)="run('edit')"><mat-icon>edit</mat-icon>Edit</button>
+  <ng-container dialogMeta>
+    <span class="res-status" [ngClass]="'res-status--' + statusKey(r.status)">{{ r.status }}</span>
+    @if (r.deactivatedAt) {
+      <span class="res-status res-status--deactivated">Deactivated</span>
+    }
+  </ng-container>
+
+  <!-- Quick actions -->
+  <div class="rv__actions">
+    @if (r.deactivatedAt) {
+      <app-button variant="outline" icon="person" (clicked)="run('reactivate')">Reactivate</app-button>
+    } @else {
+      <app-button variant="outline" icon="edit" (clicked)="run('edit')">Edit</app-button>
       @if (canHoldBed) {
         @if (alloc) {
-          <button mat-stroked-button type="button" (click)="run('transfer')"><mat-icon>swap_horiz</mat-icon>Transfer bed</button>
+          <app-button variant="outline" icon="swap_horiz" (clicked)="run('transfer')">Transfer bed</app-button>
         } @else {
-          <button mat-stroked-button type="button" (click)="run('allocate')"><mat-icon>bed</mat-icon>Allocate bed</button>
+          <app-button variant="outline" icon="bed" (clicked)="run('allocate')">Allocate bed</app-button>
         }
       }
       @if (r.status === 'Invited') {
-        <button mat-stroked-button type="button" (click)="run('invite')"><mat-icon>send</mat-icon>{{ r.inviteSentAt ? 'Resend invite' : 'Send invite' }}</button>
+        <app-button variant="outline" icon="send" (clicked)="run('invite')">{{ r.inviteSentAt ? 'Resend invite' : 'Send invite' }}</app-button>
       }
       @if (r.status !== 'Checked Out') {
-        <button mat-stroked-button type="button" class="rv__danger" (click)="run('checkout')"><mat-icon>logout</mat-icon>Check out</button>
+        <app-button variant="danger-outline" icon="logout" (clicked)="run('checkout')">Check out</app-button>
       }
-      <button mat-stroked-button type="button" class="rv__danger" (click)="run('deactivate')"><mat-icon>person_off</mat-icon>Deactivate</button>
-    </div>
-  }
+      <app-button variant="danger" icon="close" (clicked)="run('deactivate')">Deactivate</app-button>
+    }
+  </div>
 
-  <mat-dialog-content class="rv__content">
-    <mat-tab-group animationDuration="0ms" mat-stretch-tabs="false" mat-align-tabs="start">
-      <mat-tab label="Profile">
-        <div class="rv__summary">
-          <div class="rv__tile">
-            <span class="rv__tile-label">Room / Bed</span>
-            <strong>{{ alloc ? 'Room ' + alloc.room.roomNumber + ' · Bed ' + alloc.bed.bedNumber : 'Not allocated' }}</strong>
-            <span>{{ alloc ? alloc.room.building + ' · ' + alloc.room.floor : (r.status === 'Checked Out' ? 'Checked out ' + fmt.date(r.checkOutDate) : '—') }}</span>
+  <!-- Tabs -->
+  <nav class="rv__tabs" role="tablist">
+    <button type="button" role="tab" class="rv__tab" [class.is-active]="tab === 'profile'" [attr.aria-selected]="tab === 'profile'" (click)="tab = 'profile'">Profile</button>
+    <button type="button" role="tab" class="rv__tab" [class.is-active]="tab === 'activity'" [attr.aria-selected]="tab === 'activity'" (click)="tab = 'activity'">
+      Activity ({{ r.activity.length }})
+    </button>
+  </nav>
+
+  @if (tab === 'profile') {
+    <!-- Summary tiles -->
+    <div class="rv__summary">
+      <div class="rv__tile rv__tile--teal">
+        <span class="rv__tile-icon"><mat-icon fontSet="material-icons-outlined">home</mat-icon></span>
+        <div>
+          <span class="rv__tile-label">Room / Bed</span>
+          <strong>{{ alloc ? 'Room ' + alloc.room.roomNumber + ' · Bed ' + alloc.bed.bedNumber : 'Not allocated' }}</strong>
+          <small>{{ alloc ? alloc.room.building + ' · ' + alloc.room.floor : (r.status === 'Checked Out' ? 'Checked out ' + fmt.date(r.checkOutDate) : '') }}</small>
+        </div>
+      </div>
+      <div class="rv__tile rv__tile--blue">
+        <span class="rv__tile-icon"><mat-icon fontSet="material-icons-outlined">calendar_today</mat-icon></span>
+        <div>
+          <span class="rv__tile-label">Joining date</span>
+          <strong>{{ fmt.date(r.joiningDate) }}</strong>
+          <small>{{ r.expectedCheckoutDate ? 'Until ' + fmt.date(r.expectedCheckoutDate) : '' }}</small>
+        </div>
+      </div>
+      @if (data.canViewBalance) {
+        <div class="rv__tile" [class.rv__tile--green]="r.outstandingBalance <= 0" [class.rv__tile--red]="r.outstandingBalance > 0">
+          <span class="rv__tile-icon"><mat-icon>currency_rupee</mat-icon></span>
+          <div>
+            <span class="rv__tile-label">Outstanding</span>
+            <strong class="rv__tile-value">₹{{ r.outstandingBalance | number }} - {{ r.outstandingBalance > 0 ? 'Due' : 'All settled' }}</strong>
           </div>
-          <div class="rv__tile">
-            <span class="rv__tile-label">Joining date</span>
-            <strong>{{ fmt.date(r.joiningDate) }}</strong>
-            <span>{{ r.expectedCheckoutDate ? 'Until ' + fmt.date(r.expectedCheckoutDate) : 'No end date' }}</span>
+        </div>
+      }
+    </div>
+
+    <!-- Detail cards -->
+    <div class="rv__cards">
+      <section class="rv__card">
+        <h3 class="rv__card-title"><mat-icon fontSet="material-icons-outlined">call</mat-icon>Contact</h3>
+        <dl class="rv__dl">
+          <div><dt>Mobile</dt><dd>{{ formatMobile(r.mobileCode, r.mobile) }}</dd></div>
+          <div><dt>Email</dt><dd>{{ r.email || '—' }}</dd></div>
+          <div><dt>Address</dt><dd>{{ r.permanentAddress || '—' }}</dd></div>
+          <div>
+            <dt>Emergency</dt>
+            <dd>
+              {{ r.emergencyContactName || '—' }}
+              @if (r.emergencyContactMobile) { <br /><small>{{ formatMobile('+91', r.emergencyContactMobile) }}</small> }
+            </dd>
           </div>
-          @if (data.canViewBalance) {
-            <div class="rv__tile" [class.rv__tile--due]="r.outstandingBalance > 0">
-              <span class="rv__tile-label">Outstanding</span>
-              <strong>₹{{ r.outstandingBalance | number }}</strong>
-              <span>{{ r.outstandingBalance > 0 ? 'Unpaid charges' : 'All settled' }}</span>
+          @if (r.guardian) {
+            <div>
+              <dt>Guardian</dt>
+              <dd>
+                {{ r.guardian.name }} ({{ r.guardian.relationship || '—' }})
+                @if (r.guardian.mobile) { <br /><small>{{ formatMobile('+91', r.guardian.mobile) }}</small> }
+              </dd>
             </div>
           }
-        </div>
-
-        <h3 class="rv__heading">Contact</h3>
-        <dl class="rv__dl">
-          <dt>Mobile</dt><dd>{{ formatMobile(r.mobileCode, r.mobile) }}</dd>
-          <dt>Email</dt><dd>{{ r.email || '—' }}</dd>
-          <dt>Address</dt><dd>{{ r.permanentAddress || '—' }}</dd>
-          <dt>Emergency</dt>
-          <dd>
-            {{ r.emergencyContactName || '—' }}
-            @if (r.emergencyContactMobile) { · {{ formatMobile('+91', r.emergencyContactMobile) }} }
-          </dd>
         </dl>
+      </section>
 
-        <h3 class="rv__heading">Stay</h3>
+      <section class="rv__card">
+        <h3 class="rv__card-title"><mat-icon fontSet="material-icons-outlined">person</mat-icon>Stay</h3>
         <dl class="rv__dl">
-          <dt>Resident type</dt><dd>{{ r.residentType }}</dd>
-          <dt>College / company</dt><dd>{{ r.collegeOrCompany || '—' }}</dd>
-          <dt>Gender</dt><dd>{{ r.gender }}</dd>
-          <dt>Date of birth</dt><dd>{{ r.dateOfBirth ? fmt.date(r.dateOfBirth) : '—' }}</dd>
+          <div><dt>Resident Type</dt><dd>{{ r.residentType }}</dd></div>
+          <div><dt>College/Company</dt><dd>{{ r.collegeOrCompany || '—' }}</dd></div>
+          <div><dt>Gender</dt><dd>{{ r.gender }}</dd></div>
+          <div><dt>Date of Birth</dt><dd>{{ r.dateOfBirth ? fmt.date(r.dateOfBirth) : '—' }}</dd></div>
           @if (r.status === 'Invited') {
-            <dt>Invite</dt><dd>{{ r.inviteSentAt ? 'Sent ' + fmt.date(r.inviteSentAt, 'datetime') : 'Not sent yet' }}</dd>
+            <div>
+              <dt>Invite status</dt>
+              <dd>
+                @if (r.inviteSentAt) {
+                  <span class="rv__chip rv__chip--sent">Sent {{ fmt.date(r.inviteSentAt) }}</span>
+                } @else {
+                  <span class="rv__chip rv__chip--pending">Not sent yet</span>
+                }
+              </dd>
+            </div>
           }
         </dl>
+      </section>
 
-        @if (r.guardian) {
-          <h3 class="rv__heading">Parent / guardian</h3>
-          <dl class="rv__dl">
-            <dt>Name</dt><dd>{{ r.guardian.name }} ({{ r.guardian.relationship || '—' }})</dd>
-            <dt>Mobile</dt><dd>{{ r.guardian.mobile ? formatMobile('+91', r.guardian.mobile) : '—' }}</dd>
-            <dt>Consent</dt><dd>{{ r.guardian.consent ? 'Given' : 'Not recorded' }}</dd>
-          </dl>
-        }
-
-        <h3 class="rv__heading">Documents</h3>
+      <section class="rv__card">
+        <h3 class="rv__card-title"><mat-icon fontSet="material-icons-outlined">description</mat-icon>Documents</h3>
         @if (r.documents.length) {
           <ul class="rv__docs">
             @for (d of r.documents; track d.id) {
@@ -117,29 +140,34 @@
             }
           </ul>
         } @else {
-          <p class="rv__empty">No documents uploaded.</p>
+          <div class="rv__empty">
+            <mat-icon fontSet="material-icons-outlined">description</mat-icon>
+            <span>No documents uploaded.</span>
+          </div>
         }
+      </section>
+    </div>
 
-        @if (r.notes) {
-          <h3 class="rv__heading">Notes</h3>
-          <p class="rv__notes">{{ r.notes }}</p>
-        }
-      </mat-tab>
-
-      <mat-tab [label]="'Activity (' + r.activity.length + ')'">
-        <ol class="rv__timeline">
-          @for (a of r.activity; track $index) {
-            <li>
-              <span class="rv__dot"><mat-icon fontSet="material-icons-outlined">{{ a.icon }}</mat-icon></span>
-              <div>
-                <strong>{{ a.action }}</strong>
-                @if (a.details) { <span class="rv__detail">{{ a.details }}</span> }
-                <time>{{ fmt.date(a.at, 'datetime') }}</time>
-              </div>
-            </li>
-          }
-        </ol>
-      </mat-tab>
-    </mat-tab-group>
-  </mat-dialog-content>
-</div>
+    @if (r.notes) {
+      <section class="rv__card rv__notes">
+        <h3 class="rv__card-title"><mat-icon fontSet="material-icons-outlined">edit_note</mat-icon>Notes</h3>
+        <p>{{ r.notes }}</p>
+      </section>
+    }
+  } @else {
+    <ol class="rv__timeline">
+      @for (a of r.activity; track $index; let first = $first) {
+        <li>
+          <span class="rv__dot" [class.is-latest]="first"><mat-icon fontSet="material-icons-outlined">{{ a.icon }}</mat-icon></span>
+          <div class="rv__event">
+            <strong>{{ a.action }}</strong>
+            @if (a.details) { <span class="rv__detail">{{ a.details }}</span> }
+          </div>
+          <time><mat-icon fontSet="material-icons-outlined">schedule</mat-icon>{{ fmt.date(a.at, 'datetime') }}</time>
+        </li>
+      } @empty {
+        <li class="rv__timeline-empty">No activity recorded yet.</li>
+      }
+    </ol>
+  }
+</app-dialog>

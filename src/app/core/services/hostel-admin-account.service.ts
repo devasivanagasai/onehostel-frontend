@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import { LoginMethod } from '../models/auth.models';
 import { BUILT_IN_HOSTEL_OWNER } from '../models/built-in-accounts';
 
 const STORAGE_KEY = 'onehostel_hostel_admins';
@@ -9,15 +8,14 @@ export interface HostelAdminAccount {
   hostelId: string;
   hostelName: string;
   name: string;
-  loginMethod: LoginMethod;
   email: string;
   mobileNumber: string;
   username: string;
-  /** Temporary password issued at onboarding; empty for OTP accounts. */
+  /** Temporary password issued at onboarding, until the admin changes it. */
   password: string;
   /** When the password was last set (drives Password Expiry). */
   passwordChangedAt?: string;
-  /** Failed logins in a row (password or OTP); reset on a successful login. */
+  /** Failed logins in a row; reset on a successful login. */
   failedAttempts?: number;
   /** Set while the account is locked; login is refused until a Admin unlocks it. */
   lockedAt?: string;
@@ -142,7 +140,8 @@ export class HostelAdminAccountService {
     let accounts: HostelAdminAccount[] = [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      accounts = raw ? (JSON.parse(raw) as HostelAdminAccount[]) : [];
+      // Older builds stored a `loginMethod` (Password / OTP); sign-in is password-only now.
+      accounts = raw ? (JSON.parse(raw) as (HostelAdminAccount & { loginMethod?: string })[]).map(({ loginMethod, ...a }) => a) : [];
     } catch {
       accounts = [];
     }

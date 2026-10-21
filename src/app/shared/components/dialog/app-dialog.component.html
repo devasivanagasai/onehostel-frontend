@@ -1,0 +1,33 @@
+<div class="app-dialog app-dialog--{{ tone }}">
+  <header class="app-dialog__header">
+    <div class="app-dialog__heading">
+      <ng-content select="[dialogLead]"></ng-content>
+      @if (icon) {
+        <span class="app-dialog__icon" aria-hidden="true">
+          <mat-icon [fontSet]="iconOutlined ? 'material-icons-outlined' : ''">{{ icon }}</mat-icon>
+        </span>
+      }
+      <div class="app-dialog__titles">
+        @if (eyebrow) { <span class="app-dialog__eyebrow">{{ eyebrow }}</span> }
+        <div class="app-dialog__title-row">
+          <h2 class="app-dialog__title" mat-dialog-title>{{ title }}</h2>
+          <ng-content select="[dialogMeta]"></ng-content>
+        </div>
+        @if (subtitle) { <p class="app-dialog__subtitle">{{ subtitle }}</p> }
+      </div>
+    </div>
+    @if (!hideClose) {
+      <app-button variant="icon" icon="close" ariaLabel="Close dialog" (clicked)="close()"></app-button>
+    }
+  </header>
+
+  <mat-dialog-content class="app-dialog__body">
+    <ng-content></ng-content>
+  </mat-dialog-content>
+
+  @if (!hideFooter) {
+    <footer class="app-dialog__footer">
+      <ng-content select="[dialogFooter]"></ng-content>
+    </footer>
+  }
+</div>

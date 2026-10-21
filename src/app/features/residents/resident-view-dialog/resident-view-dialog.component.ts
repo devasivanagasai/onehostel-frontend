@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
 import { ResidentsService } from '../residents.service';
 import { HostelResident, formatMobile, residentFullName } from '../residents.models';
@@ -19,7 +19,7 @@ export type ResidentViewAction = 'edit' | 'allocate' | 'transfer' | 'invite' | '
 @Component({
   selector: 'app-resident-view-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, MatTabsModule],
+  imports: [CommonModule, MatDialogModule, MatIconModule, AppDialogComponent, AppButtonComponent],
   templateUrl: './resident-view-dialog.component.html',
   styleUrl: './resident-view-dialog.component.scss',
 })
@@ -30,6 +30,8 @@ export class ResidentViewDialogComponent {
   readonly data = inject<ResidentViewDialogData>(MAT_DIALOG_DATA);
 
   readonly formatMobile = formatMobile;
+
+  tab: 'profile' | 'activity' = 'profile';
 
   get resident(): HostelResident {
     return this.residents.byId(this.data.residentId)!;

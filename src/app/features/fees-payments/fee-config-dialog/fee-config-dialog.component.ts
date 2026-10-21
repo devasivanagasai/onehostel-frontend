@@ -1,14 +1,15 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { SystemSettingsService } from '../../../core/services/system-settings.service';
 import { ResidentsService } from '../../residents/residents.service';
 import { RESIDENT_TYPES, residentFullName } from '../../residents/residents.models';
@@ -40,14 +41,14 @@ const dateRange: ValidatorFn = (g: AbstractControl): ValidationErrors | null => 
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatButtonModule,
     MatIconModule,
     MatButtonToggleModule,
     MatSlideToggleModule,
+    AppDialogComponent,
+    AppButtonComponent,
   ],
   templateUrl: './fee-config-dialog.component.html',
   styleUrl: './fee-config-dialog.component.scss',
@@ -70,6 +71,12 @@ export class FeeConfigDialogComponent {
     .map((r) => ({ id: r.residentId, label: `${residentFullName(r)} · ${r.residentId}` }));
 
   readonly form = this.build(this.data.fee);
+
+  get subtitle(): string {
+    return this.isEdit
+      ? this.data.fee!.id + ' · charges already generated are not changed'
+      : 'Configure a resident charge. Save as Draft until it is ready.';
+  }
 
   /** Suggested category per fee name (only applied while the user hasn't picked one by hand). */
   private readonly defaultCategory: Record<string, string> = {

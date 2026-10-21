@@ -1,0 +1,140 @@
+@use '../../../styles/dialog-kit' as *;
+@use 'hs-kit' as hs;
+
+@include form-fields;
+
+.pf-subhead {
+  @include hs.subhead;
+  margin-top: 22px;
+}
+
+.pf-subhead:first-of-type {
+  margin-top: 0;
+}
+
+.pf-grid {
+  @include hs.grid(2);
+}
+
+.pf-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.pf-grid--inner {
+  gap: 0 14px;
+}
+
+.pf-span {
+  grid-column: 1 / -1;
+}
+
+/* Read-only / not-permitted controls */
+.fk-control.is-locked {
+  background: #f8fafc;
+  border-style: dashed;
+
+  input,
+  select {
+    color: #475569;
+    cursor: default;
+  }
+}
+
+.pf-lock {
+  margin-right: 10px;
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+  color: #94a3b8;
+}
+
+.pf-warn {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.pf-readonly-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 12px;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.pf-notice {
+  @include hs.notice(#fffbeb, #fde68a, #92400e);
+  margin-bottom: 20px;
+}
+
+.pf-notice__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong {
+    color: #78350f;
+  }
+}
+
+/* Logo */
+.pf-logo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pf-logo__preview {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  background: #e6f7f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0d9488;
+
+  &.has-logo {
+    border-style: solid;
+    border-color: #e8edf3;
+    background: #ffffff;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.pf-logo__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pf-logo__actions {
+  display: flex;
+  gap: 8px;
+}
+
+// "+91" lead is wider than a single icon
+#hs-phone {
+  padding-left: 48px;
+}
