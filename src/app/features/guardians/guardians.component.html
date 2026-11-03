@@ -1,0 +1,192 @@
+<div class="onboarding-page guardians-page">
+  <!-- KPI Summary -->
+  @let s = stats;
+  <section class="kpi-row gd-kpis" aria-label="Guardian summary">
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">family_restroom</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Guardians</span>
+        <span class="kpi-card__value">{{ s.total }}</span>
+        <span class="kpi-card__sub">Linked to residents</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">verified_user</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Verified</span>
+        <span class="kpi-card__value">{{ s.verified }}</span>
+        <span class="kpi-card__sub">Can receive alerts</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">pending_actions</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Awaiting Verification</span>
+        <span class="kpi-card__value">{{ s.awaiting }}</span>
+        <span class="kpi-card__sub">Unverified or code sent</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">gpp_bad</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Access Revoked</span>
+        <span class="kpi-card__value">{{ s.revoked }}</span>
+        <span class="kpi-card__sub">Checked out or revoked</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter card -->
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Search ID, guardian, resident or mobile" aria-label="Search guardians"
+        [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Verification status" [(ngModel)]="filters.verification" (ngModelChange)="currentPage = 0">
+          <option value="All">All Verification</option>
+          @for (v of verificationStatuses; track v) { <option [value]="v">{{ v }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Relationship" [(ngModel)]="filters.relationship" (ngModelChange)="currentPage = 0">
+          <option value="All">All Relationships</option>
+          @for (r of relationships; track r) { <option [value]="r">{{ r }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Access state" [(ngModel)]="filters.access" (ngModelChange)="currentPage = 0">
+          <option value="All">All Access</option>
+          @for (a of accessStates; track a) { <option [value]="a">{{ a }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    <span class="filter-card__add">
+      <app-button icon="add" (clicked)="openAdd()">Add Guardian</app-button>
+    </span>
+  </div>
+
+  @if (loading) {
+    <div class="saas-card gd-loading" role="status" aria-live="polite"><mat-icon class="gd-spin">autorenew</mat-icon>Loading guardians…</div>
+  } @else {
+    <app-table-card
+      class="guardians-table-card"
+      [empty]="filtered.length === 0"
+      [emptyIcon]="hasFilters ? 'search_off' : 'family_restroom'"
+      [emptyMessage]="hasFilters ? 'No guardians match your filters' : 'No guardians added yet'"
+      [emptyHint]="hasFilters ? 'Try a different search, verification status, relationship or access state.' : 'Add a parent or guardian and link them to a resident.'"
+      [clearable]="hasFilters"
+      (clear)="clearFilters()"
+      [page]="safePage"
+      [totalPages]="totalPages"
+      [pageSize]="pageSize"
+      (pageChange)="currentPage = $event"
+      (pageSizeChange)="onPageSizeChange($event)"
+    >
+      <table mat-table [dataSource]="paged" class="saas-table guardians-table">
+        <ng-container matColumnDef="guardian">
+          <th mat-header-cell *matHeaderCellDef> Guardian </th>
+          <td mat-cell *matCellDef="let g">
+            <span class="with-icon gd-person">
+              <span class="gd-avatar" aria-hidden="true">{{ initials(g.name) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ g.name }}@if (g.primary) { <span class="gd-primary" matTooltip="Primary contact" aria-label="Primary contact"><mat-icon>star</mat-icon></span> }</span>
+                <span class="list-entity__sub">{{ g.id }} · {{ g.relationship }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="resident">
+          <th mat-header-cell *matHeaderCellDef> Resident </th>
+          <td mat-cell *matCellDef="let g">
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ service.residentName(g.residentId) }}</span>
+              <span class="list-entity__sub">{{ g.residentId }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="contact">
+          <th mat-header-cell *matHeaderCellDef> Contact </th>
+          <td mat-cell *matCellDef="let g">
+            <span class="list-entity__text">
+              <span>{{ g.mobile ? '+91 ' + g.mobile : '—' }}</span>
+              <span class="list-entity__sub gd-clip" [title]="g.email || ''">{{ g.email || 'No email' }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="verification">
+          <th mat-header-cell *matHeaderCellDef> Verification </th>
+          <td mat-cell *matCellDef="let g">
+            <span class="status-badge status-badge--{{ tone(g) }}">{{ g.verification }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="consent">
+          <th mat-header-cell *matHeaderCellDef> Consent · Scope </th>
+          <td mat-cell *matCellDef="let g">
+            <span class="list-entity__text">
+              <span>{{ g.consent }}</span>
+              <span class="list-entity__sub">{{ g.scope.length }} of 5 items</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="access">
+          <th mat-header-cell *matHeaderCellDef> Access </th>
+          <td mat-cell *matCellDef="let g">
+            @let a = access(g);
+            <span class="list-entity__text">
+              <span class="status-badge status-badge--{{ a.state === 'Active' ? 'success' : 'danger' }}">{{ a.state }}</span>
+              @if (a.reason) { <span class="list-entity__sub gd-reason" [title]="a.reason">{{ a.reason }}</span> }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let g" class="actions-cell">
+            <span class="gd-actions">
+              <app-button class="gd-act" variant="icon" size="sm" icon="visibility" matTooltip="View" [ariaLabel]="'View ' + g.id" (clicked)="openView(g)"></app-button>
+              <app-button class="gd-act" variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + g.id" (clicked)="openEdit(g)"></app-button>
+              @if (g.verification !== 'Verified' && access(g).state === 'Active') {
+                <app-button class="gd-act gd-act--ok" variant="icon" size="sm" icon="verified_user" [matTooltip]="g.verification === 'Pending' ? 'Enter code' : 'Send verification'"
+                  [ariaLabel]="(g.verification === 'Pending' ? 'Enter verification code for ' : 'Send verification to ') + g.id" (clicked)="openVerify(g)"></app-button>
+              }
+              @if (access(g).state === 'Active') {
+                <app-button class="gd-act gd-act--danger" variant="icon" size="sm" icon="block" matTooltip="Revoke access" [ariaLabel]="'Revoke access for ' + g.id" (clicked)="openAccess(g, 'revoke')"></app-button>
+              } @else if (!access(g).automatic) {
+                <app-button class="gd-act gd-act--ok" variant="icon" size="sm" icon="settings_backup_restore" matTooltip="Restore access" [ariaLabel]="'Restore access for ' + g.id" (clicked)="openAccess(g, 'restore')"></app-button>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="access(row).state === 'Revoked'"></tr>
+      </table>
+    </app-table-card>
+  }
+</div>

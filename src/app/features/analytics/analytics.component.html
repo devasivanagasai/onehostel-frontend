@@ -1,0 +1,413 @@
+<div class="onboarding-page an-page">
+  <!-- Selected hostel + applied filters -->
+  <header class="an-head">
+    <div>
+      <h2 class="an-head__title">{{ service.hostel.name }} <small>({{ service.hostel.id }})</small></h2>
+      <ul class="an-chips" aria-label="Applied filters">
+        @for (c of chips; track c) { <li>{{ c }}</li> }
+      </ul>
+    </div>
+  </header>
+
+  <!-- Filters -->
+  <div class="filter-card an-filters">
+    <label class="an-date">
+      <span>From</span>
+      <input type="date" aria-label="Start date" [(ngModel)]="filters.from" [max]="filters.to || null" (ngModelChange)="onFilterChange()" />
+    </label>
+    <label class="an-date">
+      <span>To</span>
+      <input type="date" aria-label="End date" [(ngModel)]="filters.to" [min]="filters.from || null" (ngModelChange)="onFilterChange()" />
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Building" [(ngModel)]="filters.building" (ngModelChange)="onFilterChange()">
+          <option [value]="all">All Buildings</option>
+          @for (b of buildings; track b) { <option [value]="b">{{ b }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Room type" [(ngModel)]="filters.roomType" (ngModelChange)="onFilterChange()">
+          <option [value]="all">All Room Types</option>
+          @for (t of roomTypes; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Resident type" [(ngModel)]="filters.residentType" (ngModelChange)="onFilterChange()">
+          <option [value]="all">All Resident Types</option>
+          @for (t of residentTypes; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Resident status" [(ngModel)]="filters.residentStatus" (ngModelChange)="onFilterChange()">
+          <option [value]="all">All Statuses</option>
+          @for (s of residentStatuses; track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    @if (!isDefault) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="reset()">Reset</app-button>
+    }
+  </div>
+  @if (rangeError) { <p class="an-error" role="alert">{{ rangeError }} The numbers below still use the last valid range ({{ applied.from }} to {{ applied.to }}).</p> }
+
+  @if (error) {
+    <div class="an-fail" role="alert">
+      <mat-icon fontSet="material-icons-outlined">error</mat-icon>
+      <div><strong>The analytics could not be loaded.</strong><span>{{ error }}</span></div>
+      <app-button variant="secondary" size="sm" icon="refresh" (clicked)="retry()">Retry</app-button>
+    </div>
+  } @else if (loading || !report) {
+    <p class="an-loading" role="status">Loading analytics…</p>
+  } @else {
+    <!-- ================= Occupancy ================= -->
+    <section class="an-card" aria-labelledby="an-occ">
+      <div class="an-card__head">
+        <h3 id="an-occ">Occupancy Trends</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Occupancy Trends to Excel" (clicked)="export('occupancy', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Occupancy Trends to PDF" (clicked)="export('occupancy', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>{{ defs.occupancy }}</p>
+      @if (report.occupancy.latest; as l) {
+        <div class="an-kpis">
+          <div class="an-kpi"><span>Total beds</span><strong>{{ l.totalBeds }}</strong></div>
+          <div class="an-kpi"><span>Occupied ({{ l.snapshotDate }})</span><strong>{{ l.occupiedBeds }}</strong></div>
+          <div class="an-kpi"><span>Occupancy</span><strong>{{ l.occupancyPct }}%</strong></div>
+        </div>
+        <svg class="an-svg" [attr.viewBox]="'0 0 ' + chartW + ' ' + chartH" role="img" [attr.aria-label]="occupancyAlt" preserveAspectRatio="xMidYMid meet">
+          <line x1="0" [attr.x2]="chartW" [attr.y1]="chartH - 24" [attr.y2]="chartH - 24" class="an-axis" />
+          @for (b of bars; track b.label) {
+            <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.w" [attr.height]="b.h" rx="4" class="an-bar" />
+            <text [attr.x]="b.x + b.w / 2" [attr.y]="b.y - 6" text-anchor="middle" class="an-bar-val">{{ b.pct }}%</text>
+            <text [attr.x]="b.x + b.w / 2" [attr.y]="chartH - 8" text-anchor="middle" class="an-bar-lbl">{{ b.label }}</text>
+          }
+        </svg>
+        <div class="an-scroll">
+          <table class="an-table">
+            <caption class="sr-only">Occupancy by month</caption>
+            <thead><tr><th>Month</th><th>Snapshot</th><th class="num">Total beds</th><th class="num">Occupied</th><th class="num">Occupancy %</th></tr></thead>
+            <tbody>
+              @for (p of report.occupancy.points; track p.month) {
+                <tr><td>{{ p.label }}</td><td>{{ p.snapshotDate }} 23:59</td><td class="num">{{ p.totalBeds }}</td><td class="num">{{ p.occupiedBeds }}</td><td class="num">{{ p.occupancyPct }}%</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="an-empty">No occupancy data for these filters.</p>
+      }
+    </section>
+
+    <!-- ================= Movement ================= -->
+    <section class="an-card" aria-labelledby="an-mov">
+      <div class="an-card__head">
+        <h3 id="an-mov">Resident Movement</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Resident Movement to Excel" (clicked)="export('movement', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Resident Movement to PDF" (clicked)="export('movement', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>{{ defs.movement }}</p>
+      <div class="an-kpis">
+        @for (k of movementKinds; track k) { <div class="an-kpi"><span>{{ k }}</span><strong>{{ report.movement.totals[k] }}</strong></div> }
+      </div>
+      <p class="an-sub">Approved leave requests departing in this range (Leave &amp; Outpass): <strong>{{ report.movement.approvedLeaveRequests }}</strong></p>
+      @if (report.movement.events.length) {
+        <div class="an-scroll">
+          <table class="an-table">
+            <caption class="sr-only">Movement events by month</caption>
+            <thead><tr><th>Month</th>@for (k of movementKinds; track k) { <th class="num">{{ k }}</th> }</tr></thead>
+            <tbody>
+              @for (m of report.movement.months; track m.month) {
+                <tr><td>{{ m.label }}</td>@for (k of movementKinds; track k) { <td class="num">{{ m.counts[k] }}</td> }</tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <h4 class="an-h4">Events</h4>
+        <div class="an-scroll">
+          <table class="an-table">
+            <caption class="sr-only">Most recent movement events</caption>
+            <thead><tr><th>Date</th><th>Resident</th><th>Event</th><th>Detail</th></tr></thead>
+            <tbody>
+              @for (e of report.movement.events.slice(0, movementShown); track $index) {
+                <tr><td>{{ e.date }}</td><td>{{ e.residentName }} <small>({{ e.residentId }})</small></td><td>{{ e.kind }}</td><td>{{ e.detail || '—' }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (report.movement.events.length > movementShown) {
+          <app-button variant="text" size="sm" (clicked)="movementShown = movementShown + 20">Show more ({{ report.movement.events.length - movementShown }} remaining)</app-button>
+        }
+      } @else {
+        <p class="an-empty">No movement events in this range.</p>
+      }
+    </section>
+
+    <!-- ================= Revenue ================= -->
+    <section class="an-card" aria-labelledby="an-rev">
+      <div class="an-card__head">
+        <h3 id="an-rev">Revenue &amp; Dues</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Revenue and Dues to Excel" (clicked)="export('revenue', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Revenue and Dues to PDF" (clicked)="export('revenue', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>{{ defs.revenue }}</p>
+      @if (report.revenue.chargesCount || report.revenue.paymentsCount || report.revenue.outstandingCount || report.revenue.refunds.count || report.revenue.reversals.count) {
+        <div class="an-kpis">
+          <div class="an-kpi"><span>Charges raised ({{ report.revenue.chargesCount }})</span><strong>{{ fmt.money(report.revenue.chargesRaised) }}</strong></div>
+          <div class="an-kpi"><span>Collected ({{ report.revenue.paymentsCount }})</span><strong class="pos">{{ fmt.money(report.revenue.collected) }}</strong></div>
+          <div class="an-kpi"><span>Outstanding ({{ report.revenue.outstandingCount }}) as of {{ report.revenue.asOf }}</span><strong class="neg">{{ fmt.money(report.revenue.outstanding) }}</strong></div>
+        </div>
+
+        <div class="an-two">
+          <div>
+            <h4 class="an-h4">Collected by payment method</h4>
+            @if (report.revenue.byMethod.length) {
+              <ul class="an-bars" aria-label="Collected by payment method">
+                @for (m of report.revenue.byMethod; track m.method) {
+                  <li>
+                    <span class="an-bars__label">{{ m.method }} <small>({{ m.count }})</small></span>
+                    <span class="an-bars__track"><span class="an-bars__fill" [style.width.%]="width(m.amount, report.revenue.byMethod[0].amount)"></span></span>
+                    <span class="an-bars__val">{{ fmt.money(m.amount) }}</span>
+                  </li>
+                }
+              </ul>
+              <p class="an-sub">Total of methods: <strong>{{ fmt.money(report.revenue.collected) }}</strong> (successful payments only)</p>
+            } @else {
+              <p class="an-empty">No successful payments in this range.</p>
+            }
+          </div>
+          <div>
+            <h4 class="an-h4">Outstanding aging</h4>
+            <ul class="an-bars" aria-label="Outstanding by age">
+              @for (a of report.revenue.aging; track a.bucket) {
+                <li>
+                  <span class="an-bars__label">{{ a.bucket }} days <small>({{ a.count }})</small></span>
+                  <span class="an-bars__track"><span class="an-bars__fill an-bars__fill--warn" [style.width.%]="width(a.amount, max([report.revenue.aging[0].amount, report.revenue.aging[1].amount, report.revenue.aging[2].amount, report.revenue.aging[3].amount]))"></span></span>
+                  <span class="an-bars__val">{{ fmt.money(a.amount) }}</span>
+                </li>
+              }
+            </ul>
+            <p class="an-sub">Sum of buckets: <strong>{{ fmt.money(report.revenue.outstanding) }}</strong></p>
+          </div>
+        </div>
+
+        <h4 class="an-h4">Refunds &amp; reversals (shown separately, not counted as collected)</h4>
+        <div class="an-scroll">
+          <table class="an-table">
+            <caption class="sr-only">Refunds and reversals</caption>
+            <thead><tr><th>Type</th><th class="num">Payments</th><th class="num">Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Refunds</td><td class="num">{{ report.revenue.refunds.count }}</td><td class="num">{{ fmt.money(report.revenue.refunds.amount) }}</td></tr>
+              <tr><td>Reversals</td><td class="num">{{ report.revenue.reversals.count }}</td><td class="num">{{ fmt.money(report.revenue.reversals.amount) }}</td></tr>
+              @if (report.revenue.cancelledAmount) {
+                <tr><td>Waived charges (cancelled, not in charges raised)</td><td class="num">—</td><td class="num">{{ fmt.money(report.revenue.cancelledAmount) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="an-empty">No charges, payments or dues for these filters.</p>
+      }
+    </section>
+
+    <!-- ================= Complaints ================= -->
+    <section class="an-card" aria-labelledby="an-cmp">
+      <div class="an-card__head">
+        <h3 id="an-cmp">Complaint Performance</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Complaint Performance to Excel" (clicked)="export('complaints', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Complaint Performance to PDF" (clicked)="export('complaints', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Complaints raised in the range. Resolution time = raised to resolved. @if (report.complaints.hasFirstResponse) { First response = first assignment, status change or note after it was raised. } @else { No first-response data is recorded for these complaints, so that measure is left out. }</p>
+      @if (report.complaints.total) {
+        <div class="an-kpis">
+          <div class="an-kpi"><span>Complaints</span><strong>{{ report.complaints.total }}</strong></div>
+          <div class="an-kpi"><span>Resolved</span><strong>{{ report.complaints.resolved }}</strong></div>
+          <div class="an-kpi"><span>Avg resolution</span><strong>{{ hours(report.complaints.avgResolutionHours) }}</strong></div>
+          @if (report.complaints.hasFirstResponse) { <div class="an-kpi"><span>Avg first response</span><strong>{{ hours(report.complaints.avgFirstResponseHours) }}</strong></div> }
+          <div class="an-kpi"><span>Reopened</span><strong>{{ report.complaints.reopened }}</strong></div>
+        </div>
+        <ul class="an-bars" aria-label="Complaints by category">
+          @for (c of report.complaints.byCategory; track c.key) {
+            <li>
+              <span class="an-bars__label">{{ c.key }}</span>
+              <span class="an-bars__track"><span class="an-bars__fill" [style.width.%]="width(c.count, report.complaints.total)"></span></span>
+              <span class="an-bars__val">{{ c.count }}</span>
+            </li>
+          }
+        </ul>
+        @for (g of [{ t: 'Category', rows: report.complaints.byCategory }, { t: 'Priority', rows: report.complaints.byPriority }, { t: 'Assignee', rows: report.complaints.byAssignee }]; track g.t) {
+          <div class="an-scroll">
+            <table class="an-table">
+              <caption class="sr-only">Complaints by {{ g.t }}</caption>
+              <thead>
+                <tr>
+                  <th>{{ g.t }}</th><th class="num">Count</th>
+                  @if (report.complaints.hasFirstResponse) { <th class="num">Avg first response</th> }
+                  <th class="num">Avg resolution</th><th class="num">Reopened</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of g.rows; track r.key) {
+                  <tr>
+                    <td>{{ r.key }}</td><td class="num">{{ r.count }}</td>
+                    @if (report.complaints.hasFirstResponse) { <td class="num">{{ hours(r.avgFirstResponseHours) }}</td> }
+                    <td class="num">{{ hours(r.avgResolutionHours) }}</td><td class="num">{{ r.reopened }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      } @else {
+        <p class="an-empty">No complaints raised in this range for these filters.</p>
+      }
+    </section>
+
+    <!-- ================= Service utilization ================= -->
+    <section class="an-card" aria-labelledby="an-svc">
+      <div class="an-card__head">
+        <h3 id="an-svc">Service Utilization (Laundry)</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Service Utilization to Excel" (clicked)="export('service', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Service Utilization to PDF" (clicked)="export('service', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Bookings dated in the range. Hours used = completed bookings only. Peak slots count bookings by start hour, cancelled bookings excluded.</p>
+      @if (report.service.bookings) {
+        <div class="an-kpis">
+          <div class="an-kpi"><span>Bookings</span><strong>{{ report.service.bookings }}</strong></div>
+          <div class="an-kpi"><span>Completed</span><strong>{{ report.service.completed }}</strong></div>
+          <div class="an-kpi"><span>Cancelled</span><strong>{{ report.service.cancelled }}</strong></div>
+          <div class="an-kpi"><span>No-shows</span><strong>{{ report.service.noShows }}</strong></div>
+        </div>
+        <div class="an-two">
+          <div>
+            <h4 class="an-h4">Peak slots</h4>
+            <ul class="an-bars" aria-label="Peak booking slots">
+              @for (s of report.service.peakSlots; track s.slot) {
+                <li>
+                  <span class="an-bars__label">{{ s.slot }}</span>
+                  <span class="an-bars__track"><span class="an-bars__fill" [style.width.%]="width(s.bookings, report.service.peakSlots[0].bookings)"></span></span>
+                  <span class="an-bars__val">{{ s.bookings }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+          <div class="an-scroll">
+            <h4 class="an-h4">Machine usage</h4>
+            <table class="an-table">
+              <caption class="sr-only">Laundry usage by machine or service</caption>
+              <thead><tr><th>Machine / service</th><th class="num">Bookings</th><th class="num">Completed</th><th class="num">Cancelled</th><th class="num">No-shows</th><th class="num">Hours</th></tr></thead>
+              <tbody>
+                @for (u of report.service.byUnit; track u.unit) {
+                  <tr><td>{{ u.unit }}</td><td class="num">{{ u.bookings }}</td><td class="num">{{ u.completed }}</td><td class="num">{{ u.cancelled }}</td><td class="num">{{ u.noShows }}</td><td class="num">{{ u.hoursUsed }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      } @else {
+        <p class="an-empty">No laundry bookings in this range for these filters.</p>
+      }
+    </section>
+
+    <!-- ================= Mess ================= -->
+    <section class="an-card" aria-labelledby="an-mess">
+      <div class="an-card__head">
+        <h3 id="an-mess">Mess Utilization</h3>
+        @if (canExport) {
+          <span class="an-export">
+            <app-button variant="secondary" size="sm" icon="table_view" [iconOutlined]="true" ariaLabel="Export Mess Utilization to Excel" (clicked)="export('mess', 'excel')">Excel</app-button>
+            <app-button variant="secondary" size="sm" icon="picture_as_pdf" [iconOutlined]="true" ariaLabel="Export Mess Utilization to PDF" (clicked)="export('mess', 'pdf')">PDF</app-button>
+          </span>
+        }
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Participation = meals marked Present / (Present + Opted out) for meals with a recorded mark. Plan opt-ins are current residents by meal plan.</p>
+      @if (report.mess.totalPresent || report.mess.totalOptedOut) {
+        <div class="an-kpis">
+          <div class="an-kpi"><span>Present</span><strong>{{ report.mess.totalPresent }}</strong></div>
+          <div class="an-kpi"><span>Opted out</span><strong>{{ report.mess.totalOptedOut }}</strong></div>
+          <div class="an-kpi"><span>Participation</span><strong>{{ pct(report.mess.participationPct) }}</strong></div>
+        </div>
+        <ul class="an-bars" aria-label="Present marks by meal">
+          @for (m of report.mess.byMeal; track m.meal) {
+            <li>
+              <span class="an-bars__label">{{ m.meal }}</span>
+              <span class="an-bars__track"><span class="an-bars__fill" [style.width.%]="m.participationPct ?? 0"></span></span>
+              <span class="an-bars__val">{{ pct(m.participationPct) }}</span>
+            </li>
+          }
+        </ul>
+        <div class="an-scroll">
+          <table class="an-table">
+            <caption class="sr-only">Mess participation by meal</caption>
+            <thead><tr><th>Meal</th><th class="num">Present</th><th class="num">Opted out</th><th class="num">Participation</th></tr></thead>
+            <tbody>
+              @for (m of report.mess.byMeal; track m.meal) {
+                <tr><td>{{ m.meal }}</td><td class="num">{{ m.present }}</td><td class="num">{{ m.optedOut }}</td><td class="num">{{ pct(m.participationPct) }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="an-empty">No meal attendance recorded in this range for these filters.</p>
+      }
+      <h4 class="an-h4">Meal plan opt-ins (current residents)</h4>
+      <div class="an-scroll">
+        <table class="an-table">
+          <caption class="sr-only">Residents by meal plan</caption>
+          <thead><tr><th>Plan</th><th class="num">Residents</th></tr></thead>
+          <tbody>
+            @for (p of report.mess.plans; track p.plan) { <tr><td>{{ p.plan }}</td><td class="num">{{ p.residents }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= Staff tasks ================= -->
+    <section class="an-card" aria-labelledby="an-staff">
+      <div class="an-card__head">
+        <h3 id="an-staff">Staff Tasks</h3>
+      </div>
+      <p class="an-def"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Current task board, not limited to the date range. Overdue = open or in-progress tasks past their due date (hostel-local).</p>
+      @if (staffStats$ | async; as t) {
+        <table class="an-table">
+          <thead><tr><th>Open</th><th>In progress</th><th>Done</th><th>Overdue</th><th>Total</th></tr></thead>
+          <tbody><tr><td>{{ t.open }}</td><td>{{ t.inProgress }}</td><td>{{ t.done }}</td><td>{{ t.overdue }}</td><td>{{ t.open + t.inProgress + t.done }}</td></tr></tbody>
+        </table>
+      }
+    </section>
+  }
+</div>

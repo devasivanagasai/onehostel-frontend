@@ -1,0 +1,92 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.guardians-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.gd-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 1100px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.guardians-table-card { padding-top: 8px; }
+
+.gd-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: #64748b;
+  font-size: 14px;
+
+  mat-icon { @include icon(20px); }
+}
+
+.gd-spin { animation: gd-rot 1s linear infinite; }
+
+@keyframes gd-rot { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) { .gd-spin { animation: none; } }
+
+.guardians-table {
+  .gd-person { gap: 10px; }
+
+  .gd-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ccfbf1;
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .gd-primary {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 6px;
+    color: #d97706;
+
+    mat-icon { @include icon(16px); }
+  }
+
+  .gd-clip,
+  .gd-reason {
+    display: block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gd-act ::ng-deep button { color: #2563eb; }
+  .gd-act--ok ::ng-deep button { color: #16a34a; }
+  .gd-act--danger ::ng-deep button { color: #dc2626; }
+
+  .gd-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}

@@ -1,9 +1,11 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { passwordExpiryGuard } from './core/guards/password-expiry.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { AuthService } from './core/services/auth.service';
 
 export const routes: Routes = [
   {
@@ -19,6 +21,13 @@ export const routes: Routes = [
     canActivateChild: [passwordExpiryGuard, adminGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // Hostel Owners get their own hostel's dashboard; the platform-wide one is for everyone else.
+      {
+        path: 'dashboard',
+        canMatch: [() => inject(AuthService).isHostelOwner],
+        loadComponent: () =>
+          import('./features/dashboard/owner-dashboard.component').then((m) => m.OwnerDashboardComponent),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
@@ -79,6 +88,30 @@ export const routes: Routes = [
         path: 'hostel-reports',
         loadComponent: () =>
           import('./features/hostel-reports/hostel-reports.component').then((m) => m.HostelReportsComponent),
+      },
+      {
+        path: 'staff',
+        loadComponent: () => import('./features/staff/staff.component').then((m) => m.StaffComponent),
+      },
+      {
+        path: 'permissions',
+        loadComponent: () => import('./features/permissions/permissions.component').then((m) => m.PermissionsComponent),
+      },
+      {
+        path: 'guardians',
+        loadComponent: () => import('./features/guardians/guardians.component').then((m) => m.GuardiansComponent),
+      },
+      {
+        path: 'academic-years',
+        loadComponent: () => import('./features/academic-years/academic-years.component').then((m) => m.AcademicYearsComponent),
+      },
+      {
+        path: 'disciplinary',
+        loadComponent: () => import('./features/disciplinary/disciplinary.component').then((m) => m.DisciplinaryComponent),
+      },
+      {
+        path: 'analytics',
+        loadComponent: () => import('./features/analytics/analytics.component').then((m) => m.AnalyticsComponent),
       },
       {
         path: 'hostel-settings',

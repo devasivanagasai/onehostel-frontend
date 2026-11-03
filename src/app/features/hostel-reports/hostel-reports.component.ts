@@ -8,7 +8,8 @@ import { AppFormatService } from '../../core/services/app-format.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { ReportExportService } from '../reports/report-export.service';
+import { ReportExportService } from '../../core/services/report-export.service';
+import { PermissionsService } from '../../core/services/permissions.service';
 import { HostelReportsService } from './hostel-reports.service';
 import { downloadReportCsv } from './hostel-report-csv';
 import {
@@ -45,6 +46,7 @@ export class HostelReportsComponent {
   private readonly reports = inject(HostelReportsService);
   private readonly exporter = inject(ReportExportService);
   private readonly auth = inject(AuthService);
+  private readonly permissions = inject(PermissionsService);
 
   readonly hostel = OWNER_HOSTEL;
   readonly tabs = HOSTEL_REPORT_TABS;
@@ -140,6 +142,7 @@ export class HostelReportsComponent {
 
   exportExcel(): void {
     const r = this.result;
+    this.permissions.recordExport(`${this.tab.label} report (Excel) · ${r.rows.length} records`);
     downloadReportCsv(
       `${this.hostel.name} ${this.tab.label}`,
       [
@@ -159,6 +162,7 @@ export class HostelReportsComponent {
   /** Print-ready copy via the shared report exporter (browser "Save as PDF"). */
   exportPdf(): void {
     const r = this.result;
+    this.permissions.recordExport(`${this.tab.label} report (PDF) · ${r.rows.length} records`);
     const money = (v: string | number) => (typeof v === 'number' ? this.fmt.money(v) : v);
     this.exporter.exportPdf({
       title: `${this.tab.label} — ${this.hostel.name}`,

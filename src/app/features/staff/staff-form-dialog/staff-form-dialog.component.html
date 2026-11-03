@@ -1,0 +1,127 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog [title]="editing ? 'Edit Staff' : 'Add Staff'" [subtitle]="editing ? editing.id : 'Add a staff member, their duties and shift.'" icon="badge" tone="teal" (closed)="cancel()">
+    <div class="sf">
+      <div class="sf__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="sf-name">Full Name<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.name">
+            <input id="sf-name" formControlName="name" maxlength="80" autocomplete="off" placeholder="e.g. Ramesh Kumar" />
+          </span>
+          @if (errors.name) { <span class="fk-error">{{ errors.name }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="sf-category">Category<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="sf-category" formControlName="category">
+              @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (errors.category) { <span class="fk-error">{{ errors.category }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="sf-mobile">Mobile<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.mobile">
+            <input id="sf-mobile" formControlName="mobile" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="10-digit number" (input)="onMobileInput()" />
+          </span>
+          @if (errors.mobile) { <span class="fk-error">{{ errors.mobile }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="sf-email">Email <span class="opt">(Optional)</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.email">
+            <input id="sf-email" type="email" formControlName="email" autocomplete="off" placeholder="name@example.com" />
+          </span>
+          @if (errors.email) { <span class="fk-error">{{ errors.email }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="sf-start">Employment Start<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.employmentStart">
+            <input id="sf-start" type="date" formControlName="employmentStart" />
+          </span>
+          @if (errors.employmentStart) { <span class="fk-error">{{ errors.employmentStart }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="sf-end">Employment End <span class="opt">(Optional)</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.employmentEnd">
+            <input id="sf-end" type="date" formControlName="employmentEnd" />
+          </span>
+          @if (errors.employmentEnd) { <span class="fk-error">{{ errors.employmentEnd }}</span> }
+        </div>
+      </div>
+
+      <!-- Duties -->
+      <div class="fk-field">
+        <span class="fk-label" id="sf-duties-label">Assigned Duties<span class="req">*</span></span>
+        <div class="sf__chips" role="group" aria-labelledby="sf-duties-label">
+          @for (d of allDuties; track d) {
+            <button type="button" class="sf__chip" [class.is-on]="duties.includes(d)" [attr.aria-pressed]="duties.includes(d)" (click)="toggleDuty(d)">
+              @if (duties.includes(d)) { <mat-icon>check</mat-icon> }{{ d }}
+            </button>
+          }
+        </div>
+        <span class="fk-control sf__gap">
+          <input [value]="customDuty" (input)="onCustomDutyInput($event)" (keydown.enter)="onCustomDutyEnter($event)" maxlength="40" placeholder="Other duty, press Enter to add" aria-label="Add another duty" />
+        </span>
+        @if (errors.duties) { <span class="fk-error">{{ errors.duties }}</span> }
+      </div>
+
+      <!-- Shift -->
+      <div class="sf__grid sf__grid--3">
+        <div class="fk-field">
+          <label class="fk-label" for="sf-shift-name">Shift Name <span class="opt">(Optional)</span></label>
+          <span class="fk-control"><input id="sf-shift-name" formControlName="shiftName" maxlength="30" placeholder="e.g. Evening" /></span>
+        </div>
+        <div class="fk-field">
+          <label class="fk-label" for="sf-shift-start">Shift Start</label>
+          <span class="fk-control" [class.is-invalid]="errors.shift"><input id="sf-shift-start" type="time" formControlName="shiftStart" /></span>
+        </div>
+        <div class="fk-field">
+          <label class="fk-label" for="sf-shift-end">Shift End</label>
+          <span class="fk-control" [class.is-invalid]="errors.shift"><input id="sf-shift-end" type="time" formControlName="shiftEnd" /></span>
+        </div>
+      </div>
+      @if (errors.shift) { <span class="fk-error sf__shift-error">{{ errors.shift }}</span> }
+
+      <!-- Access -->
+      <div class="sf__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="sf-status">Status</label>
+          <span class="fk-control">
+            <select id="sf-status" formControlName="status">
+              @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+        <div class="fk-field">
+          <label class="fk-label" for="sf-role">Role Template</label>
+          <span class="fk-control" [class.is-invalid]="errors.roleTemplate">
+            <select id="sf-role" formControlName="roleTemplate">
+              @for (r of roles; track r) { <option [value]="r">{{ r }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (errors.roleTemplate) { <span class="fk-error">{{ errors.roleTemplate }}</span> }
+          @else { <span class="fk-hint">Permissions come from the Permissions module.</span> }
+        </div>
+      </div>
+
+      <label class="sf__toggle">
+        <input type="checkbox" formControlName="loginAccess" />
+        <span><strong>Login access</strong><small>Allow this person to sign in to the hostel system (optional).</small></span>
+      </label>
+
+      @if (saveError) { <p class="sf__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [iconOutlined]="true" [loading]="saving">{{ editing ? 'Save Changes' : 'Add Staff' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>
