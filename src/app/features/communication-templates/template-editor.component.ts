@@ -1,7 +1,8 @@
 import { AfterViewInit, Component, DestroyRef, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { localDateIso } from '../../shared/utils/local-date';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,6 +30,9 @@ const BODY_MAX_LENGTH = 5000;
 const CHIP_TONES = ['blue', 'green', 'purple', 'amber', 'pink'];
 const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const LIST_URL = '/communication-templates';
+
+/** Whitespace-only text counts as empty. */
+const notBlank: ValidatorFn = (c) => (typeof c.value === 'string' && c.value.length > 0 && !c.value.trim() ? { required: true } : null);
 
 export type TemplateEditorMode = 'add' | 'edit' | 'view';
 
@@ -102,7 +106,7 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
                 <label class="field-label" for="tpl-name">Template Name <span class="required-star">*</span></label>
                 <mat-form-field appearance="outline" class="full-width">
                   <input id="tpl-name" matInput formControlName="templateName" placeholder="Enter template name" />
-                  <mat-error>Template Name is required</mat-error>
+                  <mat-error>{{ templateForm.get('templateName')?.hasError('duplicate') ? 'A template with this name already exists' : 'Template Name is required' }}</mat-error>
                 </mat-form-field>
               </div>
 
@@ -913,11 +917,11 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
 
     this.templateForm = this.fb.group({
       templateId: [existing?.templateId ?? this.templateService.getNextTemplateId()],
-      templateName: [existing?.templateName ?? '', [Validators.required]],
+      templateName: [existing?.templateName ?? '', [Validators.required, notBlank, this.uniqueName(existing?.templateId)]],
       channel: [existing?.channel ?? 'Email', [Validators.required]],
       trigger: [existing?.trigger ?? '', [Validators.required]],
       subject: [existing?.subject ?? ''],
-      body: [existing?.body ?? '', [Validators.required, Validators.maxLength(BODY_MAX_LENGTH)]],
+      body: [existing?.body ?? '', [Validators.required, notBlank, Validators.maxLength(BODY_MAX_LENGTH)]],
       isActive: [existing ? existing.status === 'Active' : true],
     });
 
@@ -930,9 +934,20 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
     if (this.isView) this.templateForm.disable({ emitEvent: false });
   }
 
+  /** Template names are unique (ignoring case and spacing); an existing template may keep its own. */
+  private uniqueName(ownId?: string): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const key = String(control.value ?? '').trim().toLowerCase();
+      if (!key) return null;
+      return this.templateService.templates.some((t) => t.templateId !== ownId && t.templateName.trim().toLowerCase() === key)
+        ? { duplicate: true }
+        : null;
+    };
+  }
+
   private updateSubjectValidator(): void {
     const subject = this.templateForm.get('subject');
-    subject?.setValidators(this.hasSubject ? [Validators.required] : []);
+    subject?.setValidators(this.hasSubject ? [Validators.required, notBlank] : []);
     subject?.updateValueAndValidity({ emitEvent: false });
     if (!this.hasSubject) this.activeField = 'body';
   }
@@ -1051,7 +1066,7 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
       subject: this.hasSubject ? formVal.subject.trim() : '',
       body: formVal.body,
       status: formVal.isActive ? 'Active' : 'Inactive',
-      lastModified: new Date().toISOString().split('T')[0],
+      lastModified: localDateIso(),
     };
 
     const isNew = this.templateService.save(result);

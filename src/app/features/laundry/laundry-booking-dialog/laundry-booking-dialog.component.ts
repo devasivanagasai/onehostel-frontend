@@ -6,17 +6,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
-import { LaundryService } from '../laundry.service';
+import { residentFullName } from '../../../core/models/residents.models';
+import { BOOKING_WINDOW_DAYS, LaundryService } from '../laundry.service';
 import { LaundryBooking, LaundryUnit, Slot, addDays, clock, dayOfWeek, daysLabel, todayStr } from '../laundry.models';
 
 export interface LaundryBookingDialogData {
   /** Pre-selected machine / service. */
   unitId?: string;
 }
-
-/** How far ahead the owner can book. */
-const BOOKING_WINDOW_DAYS = 14;
 
 /** Book a slot on a resident's behalf. Closes with the new booking. */
 @Component({
@@ -111,7 +108,7 @@ export class LaundryBookingDialogComponent {
     if (!this.residentId) out.resident = 'Select a resident';
     if (!this.date || this.date < this.minDate || this.date > this.maxDate) out.date = `Pick a date within the next ${BOOKING_WINDOW_DAYS} days`;
     if (!this.start) out.slot = 'Pick a free slot';
-    if (this.perItem && !((this.items ?? 0) >= 1)) out.items = 'Enter the number of items';
+    if (this.perItem && !(Number.isInteger(this.items) && (this.items as number) >= 1)) out.items = 'Enter the number of items (whole number)';
     return out;
   }
 

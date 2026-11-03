@@ -11,7 +11,7 @@ import { AppFormatService } from '../../core/services/app-format.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
-import { residentFullName } from '../residents/residents.models';
+import { residentFullName } from '../../core/models/residents.models';
 import { HOSTEL_ID, ParcelsService } from './parcels.service';
 import {
   COURIERS,

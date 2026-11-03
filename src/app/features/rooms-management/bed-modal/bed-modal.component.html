@@ -71,7 +71,7 @@
         <div class="fk-field">
           <label class="fk-label" for="bm-join">Joining / Check-in Date<span class="req">*</span></label>
           <span class="fk-control" [class.is-invalid]="invalid(allocateForm, 'joiningDate')">
-            <input id="bm-join" type="date" formControlName="joiningDate" />
+            <input id="bm-join" type="date" formControlName="joiningDate" [min]="allocateMinDate" />
           </span>
           @if (invalid(allocateForm, 'joiningDate')) { <span class="fk-error">Joining date is required</span> }
         </div>
@@ -180,7 +180,7 @@
       <div class="fk-field">
         <label class="fk-label" for="bm-eff">Transfer Effective Date<span class="req">*</span></label>
         <span class="fk-control" [class.is-invalid]="invalid(transferForm, 'effectiveDate')">
-          <input id="bm-eff" type="date" formControlName="effectiveDate" />
+          <input id="bm-eff" type="date" formControlName="effectiveDate" [min]="data.bed.joinedDate || null" />
         </span>
       </div>
 
@@ -207,7 +207,7 @@
       <div class="fk-field">
         <label class="fk-label" for="bm-cod">Check-Out Effective Date<span class="req">*</span></label>
         <span class="fk-control" [class.is-invalid]="invalid(checkoutForm, 'checkOutDate')">
-          <input id="bm-cod" type="date" formControlName="checkOutDate" />
+          <input id="bm-cod" type="date" formControlName="checkOutDate" [min]="checkoutMinDate" [max]="today" />
         </span>
         @if (invalid(checkoutForm, 'checkOutDate')) { <span class="fk-error">Check-out date is required</span> }
       </div>
@@ -234,12 +234,13 @@
       <div class="fk-field">
         <label class="fk-label" for="bm-status">Bed Status<span class="req">*</span></label>
         <span class="fk-control fk-control--lead">
-          <mat-icon class="fk-lead bm-status-icon" [attr.data-status]="manageForm.value.status" fontSet="material-icons-outlined">{{ statusIcon(manageForm.value.status) }}</mat-icon>
+          <mat-icon class="fk-lead bm-status-icon" [attr.data-status]="manageForm.controls['status'].value" fontSet="material-icons-outlined">{{ statusIcon(manageForm.controls['status'].value) }}</mat-icon>
           <select id="bm-status" formControlName="status">
-            @for (st of statuses; track st.value) { <option [value]="st.value">{{ st.label }}</option> }
+            @for (st of statusOptions; track st.value) { <option [value]="st.value">{{ st.label }}</option> }
           </select>
           <mat-icon class="fk-caret">expand_more</mat-icon>
         </span>
+        @if (data.bed.status === 'Occupied') { <span class="fk-hint">Use Check-Out or Transfer to change an occupied bed.</span> }
       </div>
       <div class="fk-field">
         <label class="fk-label" for="bm-rent">Monthly Rent (₹)<span class="req">*</span></label>

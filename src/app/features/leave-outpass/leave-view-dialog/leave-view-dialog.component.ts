@@ -4,8 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { LeaveOutpassService } from '../leave-outpass.service';
-import { APPROVAL_TONES, LeaveRequest, MOVEMENT_TONES, durationLabel, time } from '../leave-outpass.models';
+import { LeaveOutpassService } from '../../../core/services/leave-outpass.service';
+import { APPROVAL_TONES, LeaveRequest, durationLabel, time } from '../../../core/models/leave-outpass.models';
 import { LeaveAction } from '../leave-action-dialog/leave-action-dialog.component';
 
 interface TimelineStep {
@@ -35,7 +35,7 @@ export class LeaveViewDialogComponent {
   readonly name = this.service.residentName(this.r.residentId);
   readonly movement = this.service.movement(this.r);
   readonly approvalTone = APPROVAL_TONES[this.r.status];
-  readonly movementTone = this.movement ? MOVEMENT_TONES[this.movement] : '';
+  readonly movementTone = this.movement ? this.service.movementTone(this.movement) : '';
   readonly duration = durationLabel(this.r.departAt, this.r.returnAt);
   readonly tracking = this.service.policy.movementTracking;
   readonly canExit = this.tracking && this.r.status === 'Approved' && !this.r.exitAt && time(this.r.returnAt) > Date.now();

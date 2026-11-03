@@ -8,7 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { SubscriptionPlanRow } from './subscription-plans.component';
+import { SubscriptionPlanRow } from '../../core/models/subscription-plan.models';
 import { AppDialogComponent } from '../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { AppFormatService } from '../../core/services/app-format.service';
-import { ExportTable } from './report.models';
+import { AppFormatService } from './app-format.service';
+import { ExportTable } from '../models/report.models';
 
 /**
  * Export Excel / Export PDF for the Reports page, with no third-party libraries:

@@ -1,4 +1,4 @@
-import { Charge, Payment } from './fees.models';
+import { Charge, Payment } from '../../core/models/fees.models';
 
 export interface ReceiptContext {
   appName: string;

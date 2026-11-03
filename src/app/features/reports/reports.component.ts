@@ -16,7 +16,7 @@ import {
   REPORT_HOSTELS,
   ReportHostel,
   ReportKey,
-} from './report.models';
+} from '../../core/models/report.models';
 import {
   HostelSubscription,
   MOCK_PAYMENTS,
@@ -24,8 +24,8 @@ import {
   PAYMENT_STATUSES,
   PaymentTransaction,
   SUBSCRIPTION_STATUSES,
-} from '../subscription-payments/subscription-payment.models';
-import { ReportExportService } from './report-export.service';
+} from '../../core/models/subscription-payment.models';
+import { ReportExportService } from '../../core/services/report-export.service';
 import { ReportBarListComponent, BarItem } from './report-bar-list.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';

@@ -5,10 +5,11 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { Bed, Room } from '../../rooms-management/rooms.models';
+import { Bed, Room } from '../../../core/models/rooms.models';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { ResidentAllocation, ResidentsService } from '../residents.service';
-import { HostelResident, residentFullName } from '../residents.models';
+import { ResidentAllocation, ResidentsService } from '../../../core/services/residents.service';
+import { HostelResident, residentFullName } from '../../../core/models/residents.models';
+import { localDateIso } from '../../../shared/utils/local-date';
 
 export type ResidentBedMode = 'allocate' | 'transfer' | 'checkout';
 
@@ -61,6 +62,8 @@ export class ResidentBedDialogComponent {
   readonly minDate =
     this.data.mode === 'transfer' && this.current?.bed.joinedDate ? this.current.bed.joinedDate : this.data.resident.joiningDate;
 
+  readonly today = localDateIso();
+
   readonly form = this.fb.nonNullable.group({
     roomId: ['', this.data.mode === 'checkout' ? [] : Validators.required],
     bedId: ['', this.data.mode === 'checkout' ? [] : Validators.required],
@@ -81,13 +84,18 @@ export class ResidentBedDialogComponent {
     return !!d && d < this.minDate;
   }
 
+  get dateInFuture(): boolean {
+    const d = this.form.value.date;
+    return this.data.mode === 'checkout' && !!d && d > this.today;
+  }
+
   onRoomPicked(): void {
     const beds = this.beds;
     this.form.patchValue({ bedId: beds.length === 1 ? beds[0].id : '' });
   }
 
   submit(): void {
-    if (this.form.invalid || this.dateTooEarly) {
+    if (this.form.invalid || this.dateTooEarly || this.dateInFuture) {
       this.form.markAllAsTouched();
       return;
     }
@@ -106,7 +114,7 @@ export class ResidentBedDialogComponent {
   }
 
   private defaultDate(): string {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateIso();
     return this.data.mode === 'allocate' && this.data.resident.joiningDate > today ? this.data.resident.joiningDate : today;
   }
 }

@@ -10,8 +10,8 @@ import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
 import { SystemSettingsService } from '../../../core/services/system-settings.service';
-import { FeesService, RecordPaymentInput } from '../fees.service';
-import { Charge, OFFLINE_METHODS, PaymentMethod, REFERENCE_REQUIRED } from '../fees.models';
+import { FeesService, RecordPaymentInput } from '../../../core/services/fees.service';
+import { Charge, OFFLINE_METHODS, PaymentMethod, REFERENCE_REQUIRED } from '../../../core/models/fees.models';
 
 export interface RecordPaymentDialogData {
   /** Pre-selects this charge (opened from the Charges tab). */

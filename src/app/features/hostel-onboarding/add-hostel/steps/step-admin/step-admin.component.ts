@@ -28,9 +28,9 @@ import { AppFormErrorComponent } from '../../../../../shared/components/form-err
       </div>
 
       <div class="field-group">
-        <label class="field-label">Last Name</label>
+        <label class="field-label">Last Name<span class="required-mark">*</span></label>
         <mat-form-field appearance="outline">
-          <input matInput formControlName="lastName" placeholder="Optional" />
+          <input matInput formControlName="lastName" placeholder="Enter last name" />
         </mat-form-field>
       </div>
 

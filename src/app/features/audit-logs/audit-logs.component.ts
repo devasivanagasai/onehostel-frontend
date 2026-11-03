@@ -22,7 +22,7 @@ import {
   auditModule,
 } from '../../core/models/audit.models';
 import { AuditLogDetailPanelComponent } from './audit-log-detail-panel.component';
-import { ReportExportService } from '../reports/report-export.service';
+import { ReportExportService } from '../../core/services/report-export.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';

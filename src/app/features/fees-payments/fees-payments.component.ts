@@ -12,7 +12,7 @@ import { SystemSettingsService } from '../../core/services/system-settings.servi
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { FeeInput, FeesService, OneTimeChargeInput, RecordPaymentInput } from './fees.service';
+import { FeeInput, FeesService, OneTimeChargeInput, RecordPaymentInput } from '../../core/services/fees.service';
 import {
   Charge,
   ChargeStatus,
@@ -25,7 +25,7 @@ import {
   describeFrequency,
   describeLateFee,
   feeDisplayName,
-} from './fees.models';
+} from '../../core/models/fees.models';
 import { FeeConfigDialogComponent, FeeConfigDialogData } from './fee-config-dialog/fee-config-dialog.component';
 import { RecordPaymentDialogComponent, RecordPaymentDialogData } from './record-payment-dialog/record-payment-dialog.component';
 import { ChargeDialogComponent } from './charge-dialog/charge-dialog.component';

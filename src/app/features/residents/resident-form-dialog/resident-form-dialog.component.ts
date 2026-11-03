@@ -15,8 +15,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { Room } from '../../rooms-management/rooms.models';
-import { ResidentsService } from '../residents.service';
+import { Room } from '../../../core/models/rooms.models';
+import { ResidentsService } from '../../../core/services/residents.service';
 import {
   DOCUMENT_TYPES,
   EDITABLE_STATUSES,
@@ -28,7 +28,7 @@ import {
   RESIDENT_TYPES,
   ResidentDocument,
   ResidentInput,
-} from '../residents.models';
+} from '../../../core/models/residents.models';
 
 export interface ResidentFormDialogData {
   resident?: HostelResident;

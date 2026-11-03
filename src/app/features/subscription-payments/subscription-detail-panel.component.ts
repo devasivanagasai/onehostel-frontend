@@ -10,9 +10,9 @@ import {
   hasInvoice,
   nextExpiryDate,
   subscriptionsFor,
-} from './subscription-payment.models';
+} from '../../core/models/subscription-payment.models';
 import { InvoiceService } from './invoice.service';
-import { AmountDue, SubscriptionPaymentService } from './subscription-payment.service';
+import { AmountDue, SubscriptionPaymentService } from '../../core/services/subscription-payment.service';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { statusTone } from '../../shared/constants/status.constants';

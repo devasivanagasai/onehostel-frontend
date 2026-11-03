@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { InvoiceDialogComponent } from './invoice-dialog.component';
-import { PaymentTransaction } from './subscription-payment.models';
+import { PaymentTransaction } from '../../core/models/subscription-payment.models';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { AppFormatService } from '../../core/services/app-format.service';
 

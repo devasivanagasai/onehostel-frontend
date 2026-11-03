@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { VisitorsService } from '../visitors.service';
 import { APPROVAL_TONES, VISIT_TONES, Visitor, maskId } from '../visitors.models';
 import { VisitorActionMode } from '../visitor-action-dialog/visitor-action-dialog.component';

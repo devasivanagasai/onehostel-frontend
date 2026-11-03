@@ -8,7 +8,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AppTableCardComponent } from '../../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { MessService } from '../mess.service';
 import { AttendanceMark, MEAL_TIMES, MEAL_TYPES, MealType, addDays, clock, localIso, todayStr } from '../mess.models';
 

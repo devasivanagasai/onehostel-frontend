@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { formatMobile, residentFullName } from '../../residents/residents.models';
+import { formatMobile, residentFullName } from '../../../core/models/residents.models';
 import { ParcelsService } from '../parcels.service';
 import { COURIERS, Parcel, STORAGE_SUGGESTIONS, initials } from '../parcels.models';
 

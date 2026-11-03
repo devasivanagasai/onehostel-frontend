@@ -4,7 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { UPGRADE_PLANS } from './hostel-settings.models';
+import { UPGRADE_PLANS } from '../../core/models/hostel-settings.models';
 
 export interface UpgradeRequestResult {
   desiredPlan: string;

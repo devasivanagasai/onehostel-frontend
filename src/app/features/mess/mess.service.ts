@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { FeesService } from '../fees-payments/fees.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident, residentFullName } from '../residents/residents.models';
+import { FeesService } from '../../core/services/fees.service';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident, residentFullName } from '../../core/models/residents.models';
 import {
   AttendanceMark,
   DietaryAccess,
@@ -75,7 +75,8 @@ export class MessService {
   readonly state$ = this.state.asObservable();
 
   constructor() {
-    this.syncMessFee();
+    // Re-sync whenever residents change (admissions / move-outs; residents without a profile default to Full Board).
+    this.residents.residents$.subscribe(() => this.syncMessFee());
   }
 
   get settings(): MessSettings {
@@ -150,8 +151,14 @@ export class MessService {
       .map((r) => r.residentId)
       .sort();
     const current = fee.applicability.mode === 'Residents' ? [...fee.applicability.residentIds].sort() : null;
-    if (!monthly.length || (current && current.join() === monthly.join())) return;
     const { id, createdAt, updatedAt, ...input } = fee;
+    if (!monthly.length) {
+      // The fee model rejects an empty resident list, so with nobody on a monthly plan the fee goes Inactive
+      // rather than keeping stale residents (who would otherwise still be charged).
+      this.fees.saveFee({ ...input, status: 'Inactive' }, id);
+      return;
+    }
+    if (current && current.join() === monthly.join()) return;
     this.fees.saveFee({ ...input, applicability: { mode: 'Residents', residentIds: monthly } }, id);
   }
 
@@ -283,6 +290,13 @@ export class MessService {
     if (!this.settings.attendanceEnabled) throw new Error('Meal attendance is turned off.');
     if (!date) throw new Error('Pick a meal date.');
     if (mark === 'Present' && date > todayStr()) throw new Error("Attendance can't be marked for a future meal.");
+    if (mark === 'Present' && date === todayStr() && MEAL_TIMES[meal][0] > localIso().slice(11, 16)) {
+      throw new Error(`${meal} hasn't started yet (serves from ${clock(MEAL_TIMES[meal][0])}).`);
+    }
+    if (mark === 'Present') {
+      const uncovered = residentIds.filter((id) => !PLAN_MEALS[this.profile(id).plan].includes(meal));
+      if (uncovered.length) throw new Error(`${uncovered.length} resident(s) aren't on a plan that covers ${meal}.`);
+    }
     const key = attKey(date, meal);
     const day = { ...(this.state.value.attendance[key] ?? {}) };
     for (const id of residentIds) {
@@ -366,6 +380,7 @@ export class MessService {
     const removed = a.items.filter((i) => !b.items.includes(i));
     if (added.length) parts.push(`added ${added.join(', ')}`);
     if (removed.length) parts.push(`removed ${removed.join(', ')}`);
+    if (!added.length && !removed.length && a.items.join('|') !== b.items.join('|')) parts.push('menu items reordered');
     if (a.start !== b.start || a.end !== b.end) parts.push(`serving time ${clock(b.start)} – ${clock(b.end)}`);
     if ((a.notes ?? '') !== (b.notes ?? '')) parts.push('notes updated');
     if (a.date !== b.date || a.mealType !== b.mealType) parts.push(`moved to ${this.describe(b)}`);

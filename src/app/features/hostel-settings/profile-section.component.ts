@@ -11,7 +11,7 @@ import {
   LOGO_MAX_BYTES,
   LOGO_TYPES,
   NameChangeRequest,
-} from './hostel-settings.models';
+} from '../../core/models/hostel-settings.models';
 
 /** Hostel Profile: logo, name (approval-gated), read-only type, address and contact. */
 @Component({

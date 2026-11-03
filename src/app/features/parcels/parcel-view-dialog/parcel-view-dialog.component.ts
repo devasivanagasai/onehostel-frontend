@@ -5,7 +5,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { ParcelsService } from '../parcels.service';
 import { NOTIFICATION_TONES, PICKUP_TONES, Parcel, ParcelNotice } from '../parcels.models';
 

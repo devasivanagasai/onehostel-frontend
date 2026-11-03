@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { AppFormatService } from '../../core/services/app-format.service';
+import { AppFormatService } from './app-format.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BehaviorSubject } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { SystemSettingsService } from '../../core/services/system-settings.service';
+import { AuditLogService } from './audit-log.service';
+import { SystemSettingsService } from './system-settings.service';
 import {
   HostelSubscription,
   LateFeePolicy,
@@ -20,7 +20,7 @@ import {
   lateFeeFor,
   paymentDueDate,
   renewSubscription,
-} from './subscription-payment.models';
+} from '../models/subscription-payment.models';
 
 /** What paying today would cost: the billed amount plus any late fee. */
 export interface AmountDue extends TaxBreakdown {

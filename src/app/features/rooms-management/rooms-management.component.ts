@@ -11,9 +11,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatMenuModule } from '@angular/material/menu';
 import { Observable } from 'rxjs';
-import { RoomsService } from './rooms.service';
-import { ResidentsService } from '../residents/residents.service';
-import { Bed, Room, RoomFilterState, RoomStats, RoomStatus } from './rooms.models';
+import { RoomsService } from '../../core/services/rooms.service';
+import { ResidentsService } from '../../core/services/residents.service';
+import { Bed, Room, RoomFilterState, RoomStats, RoomStatus } from '../../core/models/rooms.models';
 import { RoomModalComponent } from './room-modal/room-modal.component';
 import { BedModalComponent } from './bed-modal/bed-modal.component';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
@@ -348,7 +348,7 @@ export class RoomsManagementComponent implements OnInit {
 
       try {
         if (res.action === 'allocate') {
-          this.residentsService.allocate(res.resident.residentId, room.id, bed.id, res.joiningDate, res.notes);
+          this.residentsService.allocate(res.resident.residentId, room.id, bed.id, res.joiningDate, res.notes, res.monthlyRent);
           this.snackBar.open(`Bed ${bed.bedNumber} allocated to ${res.resident.name}!`, 'Close', { duration: 3500 });
         } else if (res.action === 'transfer') {
           if (residentId) {
@@ -366,8 +366,6 @@ export class RoomsManagementComponent implements OnInit {
           this.snackBar.open(`Resident check-out completed. Bed is now Available.`, 'Close', { duration: 3500 });
         } else if (res.action === 'manage') {
           this.roomsService.updateBedStatus(room.id, bed.id, res.status, {
-            tenantName: res.tenantName,
-            tenantContact: res.tenantContact,
             rent: res.monthlyRent,
           });
           this.snackBar.open(`Bed ${bed.bedNumber} updated to ${res.status}.`, 'Close', { duration: 3000 });

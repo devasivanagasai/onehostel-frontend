@@ -1,6 +1,6 @@
 // Resident fees & payments (Section 4.4). Distinct from platform subscription billing.
 
-import { ResidentType } from '../residents/residents.models';
+import { ResidentType } from './residents.models';
 
 export const FEE_NAMES = ['Hostel Fee/Rent', 'Mess', 'Laundry', 'Maintenance', 'Other'] as const;
 export type FeeName = (typeof FEE_NAMES)[number];

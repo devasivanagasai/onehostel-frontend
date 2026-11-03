@@ -5,8 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent, AppDialogTone } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent, AppButtonVariant } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { LeaveOutpassService } from '../leave-outpass.service';
-import { LeaveRequest, REASON_MAX, durationLabel, localIso, time } from '../leave-outpass.models';
+import { LeaveOutpassService } from '../../../core/services/leave-outpass.service';
+import { LeaveRequest, REASON_MAX, durationLabel, localIso, time } from '../../../core/models/leave-outpass.models';
 
 /** Decision or movement step on a request. Also returned by the view dialog. */
 export type LeaveAction = 'approve' | 'reject' | 'cancel' | 'exit' | 'return';

@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { RoomsService } from '../rooms-management/rooms.service';
-import { Bed, Room } from '../rooms-management/rooms.models';
+import { AuditLogService } from './audit-log.service';
+import { RoomsService } from './rooms.service';
+import { localDateIso } from '../../shared/utils/local-date';
+import { Bed, Room } from '../models/rooms.models';
 import {
   HostelResident,
   ResidentActivity,
@@ -10,7 +11,7 @@ import {
   ResidentStatus,
   formatMobile,
   residentFullName,
-} from './residents.models';
+} from '../models/residents.models';
 
 const STORAGE_KEY = 'onehostel_residents_v1';
 
@@ -275,8 +276,9 @@ export class ResidentsService {
     this.auditLog.record('Invite Resident', this.auditEntity(r), { details: `Activation link sent via ${channels}.` });
   }
 
-  allocate(residentId: string, roomId: string, bedId: string, date: string, notes?: string): void {
+  allocate(residentId: string, roomId: string, bedId: string, date: string, notes?: string, monthlyRent?: number): void {
     const r = this.require(residentId);
+    if (date < r.joiningDate) throw new Error(`Allocation date cannot be before the joining date (${r.joiningDate}).`);
     if (r.deactivatedAt || !this.canHoldBed(r.status)) {
       throw new Error(`${residentFullName(r)} is ${r.deactivatedAt ? 'deactivated' : r.status} and cannot be allocated a bed.`);
     }
@@ -297,6 +299,7 @@ export class ResidentsService {
       },
       date,
       notes,
+      monthlyRent,
     );
     const where = this.describe(this.allocationFor(residentId));
     this.log(r, 'Bed allocated', 'bed', where);
@@ -308,8 +311,13 @@ export class ResidentsService {
     const from = this.allocationFor(residentId);
     if (!from) throw new Error(`${residentFullName(r)} has no active bed to transfer from.`);
 
+    if (date < r.joiningDate) throw new Error(`Transfer date cannot be before the joining date (${r.joiningDate}).`);
+
     const fromLabel = this.describe(from);
-    this.rooms.transferResident(from.room.id, from.bed.id, targetRoomId, targetBedId, date, reason);
+    this.rooms.transferResident(from.room.id, from.bed.id, targetRoomId, targetBedId, date, reason, {
+      gender: r.gender === 'Other' ? undefined : r.gender,
+      collegeOrCompany: r.collegeOrCompany,
+    });
     const toLabel = this.describe(this.allocationFor(residentId));
     this.log(r, 'Bed transferred', 'swap_horiz', `${fromLabel} → ${toLabel}${reason ? ' · ' + reason : ''}`);
     this.auditLog.record('Transfer Resident', this.auditEntity(r), { details: `${fromLabel} → ${toLabel} effective ${date}.` });
@@ -320,6 +328,7 @@ export class ResidentsService {
     const r = this.require(residentId);
     if (r.status === 'Checked Out') throw new Error(`${residentFullName(r)} is already checked out.`);
     if (date < r.joiningDate) throw new Error('Check-out date cannot be before the joining date.');
+    if (date > localDateIso()) throw new Error('Check-out date cannot be in the future.');
 
     const alloc = this.allocationFor(residentId);
     if (alloc) this.rooms.checkOutResident(alloc.room.id, alloc.bed.id, date, remarks);

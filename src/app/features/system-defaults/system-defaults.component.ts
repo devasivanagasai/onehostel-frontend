@@ -25,7 +25,7 @@ import {
 } from '../../core/models/system-settings.models';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { UnsavedChangesAware } from '../../core/guards/unsaved-changes.guard';
-import { applyTax, lateFeeFor } from '../subscription-payments/subscription-payment.models';
+import { applyTax, lateFeeFor } from '../../core/models/subscription-payment.models';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 export interface PolicyStrength {

@@ -1,6 +1,6 @@
 // Announcements & Communication (Section 4.6).
 
-import { RoomType } from '../rooms-management/rooms.models';
+import { RoomType } from '../../core/models/rooms.models';
 
 export const ANNOUNCEMENT_STATUSES = ['Draft', 'Scheduled', 'Published', 'Expired', 'Cancelled'] as const;
 export type AnnouncementStatus = (typeof ANNOUNCEMENT_STATUSES)[number];

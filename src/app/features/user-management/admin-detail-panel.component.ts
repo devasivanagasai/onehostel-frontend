@@ -7,12 +7,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { HostelAdmin, LogoutType, adminFullName, formatDuration, sessionMinutes } from './admin.models';
+import { HostelAdmin, LogoutType, adminFullName, formatDuration, sessionMinutes } from '../../core/models/admin.models';
 import { COUNTRY_OPTIONS } from '../../core/models/system-settings.models';
-import { ADMIN_ACTION_META, AdminAction, AdminService, availableActions } from './admin.service';
+import { ADMIN_ACTION_META, AdminAction, AdminService, availableActions } from '../../core/services/admin.service';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { auditAction, auditEventLabel } from '../../core/models/audit.models';
-import { REPORT_HOSTELS } from '../reports/report.models';
+import { REPORT_HOSTELS } from '../../core/models/report.models';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppButtonComponent, AppButtonVariant } from '../../shared/components/button/app-button.component';
 

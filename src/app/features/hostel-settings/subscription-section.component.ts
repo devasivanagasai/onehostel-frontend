@@ -5,9 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../core/services/app-format.service';
-import { FEATURE_CONFIG_ITEMS } from '../subscription-plans/add-plan-side-panel.component';
-import { HostelSettingsService } from './hostel-settings.service';
-import { LimitKey, UpgradeRequest } from './hostel-settings.models';
+import { FEATURE_CONFIG_ITEMS } from '../../core/models/subscription-plan.models';
+import { HostelSettingsService } from '../../core/services/hostel-settings.service';
+import { LimitKey, UpgradeRequest } from '../../core/models/hostel-settings.models';
 import { UpgradeRequestDialogComponent, UpgradeRequestResult } from './upgrade-request-dialog.component';
 
 const DAY_MS = 86_400_000;

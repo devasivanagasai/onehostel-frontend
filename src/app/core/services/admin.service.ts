@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BehaviorSubject, Observable, map, of } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { HostelAdminAccount, HostelAdminAccountService } from '../../core/services/hostel-admin-account.service';
-import { diffForAudit } from '../../core/models/audit.models';
+import { AuditLogService } from './audit-log.service';
+import { HostelAdminAccount, HostelAdminAccountService } from './hostel-admin-account.service';
+import { diffForAudit } from '../models/audit.models';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { ConfirmDialogData } from '../../shared/components/confirm-dialog/app-confirm-dialog.component';
-import { AdminStatus, HostelAdmin, MOCK_ADMINS, adminFullName, maskEmail, maskMobile } from './admin.models';
+import { AdminStatus, HostelAdmin, MOCK_ADMINS, adminFullName, maskEmail, maskMobile } from '../models/admin.models';
 
 export type AdminAction = 'resetPassword' | 'activate' | 'deactivate' | 'lock' | 'unlock';
 

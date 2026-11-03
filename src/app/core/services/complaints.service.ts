@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { AuthService } from '../../core/services/auth.service';
-import { ResidentsService } from '../residents/residents.service';
-import { residentFullName } from '../residents/residents.models';
+import { AuditLogService } from './audit-log.service';
+import { AuthService } from './auth.service';
+import { ResidentsService } from './residents.service';
+import { residentFullName } from '../models/residents.models';
+import { localDateIso } from '../../shared/utils/local-date';
 import {
   Complaint,
   ComplaintAttachment,
@@ -15,7 +16,7 @@ import {
   REOPEN_WINDOW_DAYS,
   isActive,
   staffLabel,
-} from './complaints.models';
+} from '../models/complaints.models';
 
 const STORAGE_KEY = 'onehostel_complaints_v1';
 
@@ -40,7 +41,7 @@ export interface NewComplaintInput {
   attachments: ComplaintAttachment[];
 }
 
-const todayIso = (): string => new Date().toISOString().slice(0, 10);
+const todayIso = (): string => localDateIso();
 
 /** Local wall-clock ISO (yyyy-mm-ddTHH:mm:ss), matching the rest of the mock data. */
 const nowIso = (): string => {
@@ -137,6 +138,7 @@ export class ComplaintsService {
     };
     this.commit([complaint, ...this.complaints]);
     this.auditLog.record('Create Complaint', this.entity(complaint), { details: `${complaint.category} · ${complaint.priority} · ${complaint.title}` });
+    if (input.assignedTo) this.auditLog.record('Assign Complaint', this.entity(complaint), { details: `Assigned to ${staffLabel(input.assignedTo)}.` });
     return complaint;
   }
 
@@ -154,14 +156,20 @@ export class ComplaintsService {
     const c = this.require(id);
     this.assertEditable(c);
     if (c.priority === priority) return c;
-    return this.patch(c, { priority }, this.event('priority', `Priority changed ${c.priority} → ${priority}.`));
+    const text = `Priority changed ${c.priority} → ${priority}.`;
+    const next = this.patch(c, { priority }, this.event('priority', text));
+    this.auditLog.record('Update Complaint', this.entity(c), { details: text });
+    return next;
   }
 
   setTarget(id: string, targetDate: string | undefined): Complaint {
     const c = this.require(id);
     this.assertEditable(c);
     if (targetDate && targetDate < todayIso()) throw new Error('Target resolution date cannot be in the past.');
-    return this.patch(c, { targetDate: targetDate || undefined }, this.event('status', targetDate ? `Target resolution set to ${targetDate}.` : 'Target resolution cleared.'));
+    const text = targetDate ? `Target resolution set to ${targetDate}.` : 'Target resolution cleared.';
+    const next = this.patch(c, { targetDate: targetDate || undefined }, this.event('status', text));
+    this.auditLog.record('Update Complaint', this.entity(c), { details: text });
+    return next;
   }
 
   /** Open / Reopened → In Progress. */
@@ -177,7 +185,9 @@ export class ComplaintsService {
     const c = this.require(id);
     if (!text.trim() && !attachments.length) throw new Error('Write a note or attach a photo.');
     if (c.status === 'Closed') throw new Error('Closed complaints are read-only.');
-    return this.patch(c, {}, this.event('note', text.trim(), undefined, attachments));
+    const next = this.patch(c, {}, this.event('note', text.trim(), undefined, attachments));
+    this.auditLog.record('Update Complaint', this.entity(c), { details: `Note added${attachments.length ? ` (${attachments.length} attachment(s))` : ''}.` });
+    return next;
   }
 
   /** Marks Resolved with a resolution note; the resident is notified. */
@@ -208,6 +218,7 @@ export class ComplaintsService {
 
   /** Resolved → Reopened, within the policy window. */
   reopen(id: string, reason: string): Complaint {
+    if (!this.canResolve) throw new Error("You don't have permission to reopen complaints.");
     const c = this.require(id);
     if (!this.canReopen(c)) {
       throw new Error(c.status === 'Resolved' ? `Reopening is only allowed within ${REOPEN_WINDOW_DAYS} days of resolution.` : 'Only resolved complaints can be reopened.');

@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
-import { Bed, Room, RoomStats, RoomType } from './rooms.models';
-import { AuditLogService } from '../../core/services/audit-log.service';
+import { Bed, Room, RoomStats, RoomType } from '../models/rooms.models';
+import { AuditLogService } from './audit-log.service';
+import { localDateIso } from '../../shared/utils/local-date';
 
 const STORAGE_KEY = 'onehostel_rooms_beds_v4';
 
@@ -351,7 +352,13 @@ export class RoomsService {
           });
         }
       } else if (targetCapacity < existing.beds.length) {
-        // Shrink unoccupied beds from end
+        // Shrink from the end, but only vacant beds may go
+        const removed = updatedBeds.slice(targetCapacity);
+        if (removed.some((b) => b.status === 'Occupied' || b.status === 'Reserved')) {
+          throw new Error(
+            `Cannot reduce capacity to ${targetCapacity}: beds ${removed.map((b) => b.bedNumber).join(', ')} would be removed and some are occupied or reserved. Only trailing vacant beds can be removed.`,
+          );
+        }
         updatedBeds = updatedBeds.slice(0, targetCapacity);
       }
 
@@ -362,6 +369,7 @@ export class RoomsService {
       savedRoom = {
         ...existing,
         ...roomData,
+        status: existing.status,
         capacity: targetCapacity,
         hasAC,
         hasAttachedWashroom,
@@ -369,6 +377,15 @@ export class RoomsService {
         beds: updatedBeds,
         updatedAt: new Date().toISOString(),
       } as Room;
+
+      // A status change goes through the same bed cascade as setRoomStatus; Available/Full are derived from the beds
+      const requested = roomData.status;
+      const blocking = (s?: Room['status']) => s === 'Maintenance' || s === 'Inactive';
+      if (requested && blocking(requested) && requested !== existing.status) {
+        this.applyRoomStatus(savedRoom, requested);
+      } else if (requested && !blocking(requested) && blocking(existing.status)) {
+        this.applyRoomStatus(savedRoom, 'Available');
+      }
 
       this.updateRoomStatus(savedRoom);
       rooms[index] = savedRoom;
@@ -442,24 +459,8 @@ export class RoomsService {
     if (index === -1) return;
 
     const room = { ...rooms[index] };
-    room.status = status;
     if (note) room.maintenanceNote = note;
-
-    if (status === 'Maintenance') {
-      room.beds = room.beds.map((b) =>
-        b.status === 'Occupied' ? b : { ...b, status: 'Maintenance' },
-      );
-    } else if (status === 'Inactive') {
-      room.beds = room.beds.map((b) =>
-        b.status === 'Occupied' ? b : { ...b, status: 'Maintenance' },
-      );
-    } else {
-      // Re-activating: restore vacant beds
-      room.beds = room.beds.map((b) =>
-        b.status === 'Maintenance' ? { ...b, status: 'Available' } : b,
-      );
-      this.updateRoomStatus(room);
-    }
+    this.applyRoomStatus(room, status);
 
     room.updatedAt = new Date().toISOString();
     rooms[index] = room;
@@ -469,6 +470,32 @@ export class RoomsService {
     this.auditLog.record('Update Room', `Room ${room.roomNumber}`, {
       details: `Room ${room.roomNumber} status changed to ${status}. ${note || ''}`,
     });
+  }
+
+  /** Sets the room status and cascades it to the beds: vacant beds go to Maintenance, or come back when re-activating. */
+  private applyRoomStatus(room: Room, status: Room['status']): void {
+    room.status = status;
+    if (status === 'Maintenance' || status === 'Inactive') {
+      room.beds = room.beds.map((b) => (b.status === 'Available' ? { ...b, status: 'Maintenance' } : b));
+    } else {
+      // Re-activating: restore vacant beds
+      room.beds = room.beds.map((b) => (b.status === 'Maintenance' ? { ...b, status: 'Available' } : b));
+      this.updateRoomStatus(room);
+    }
+  }
+
+  /** Why this room cannot take the resident (room status, gender or college restriction), or null when it can. */
+  restrictionError(room: Room, who: { gender?: 'Male' | 'Female'; collegeOrCompany?: string }): string | null {
+    if (room.status === 'Inactive' || room.status === 'Maintenance') {
+      return `Cannot allocate: Room ${room.roomNumber} is currently under ${room.status}.`;
+    }
+    if (room.genderRestriction !== 'Any' && who.gender && room.genderRestriction !== who.gender) {
+      return `Allocation restricted: Room ${room.roomNumber} is reserved for ${room.genderRestriction} residents.`;
+    }
+    if (room.collegeRestriction && room.collegeRestriction !== 'Any' && room.collegeRestriction !== who.collegeOrCompany) {
+      return `Allocation restricted: Room ${room.roomNumber} is reserved for ${room.collegeRestriction}.`;
+    }
+    return null;
   }
 
   /**
@@ -487,6 +514,7 @@ export class RoomsService {
     },
     joiningDate: string,
     notes?: string,
+    monthlyRent?: number,
   ): void {
     const rooms = [...this.rooms];
     const roomIndex = rooms.findIndex((r) => r.id === roomId);
@@ -494,15 +522,9 @@ export class RoomsService {
 
     const room = { ...rooms[roomIndex] };
 
-    // Validations: Room must not be Inactive or Maintenance
-    if (room.status === 'Inactive' || room.status === 'Maintenance') {
-      throw new Error(`Cannot allocate: Room ${room.roomNumber} is currently under ${room.status}.`);
-    }
-
-    // Gender restriction validation
-    if (room.genderRestriction !== 'Any' && resident.gender && room.genderRestriction !== resident.gender) {
-      throw new Error(`Allocation restricted: Room ${room.roomNumber} is reserved for ${room.genderRestriction} residents.`);
-    }
+    // Room must be usable and its gender / college restrictions must allow the resident
+    const restriction = this.restrictionError(room, resident);
+    if (restriction) throw new Error(restriction);
 
     const bedIndex = room.beds.findIndex((b) => b.id === bedId);
     if (bedIndex === -1) throw new Error('Bed not found');
@@ -516,6 +538,9 @@ export class RoomsService {
     if (bed.status === 'Maintenance') {
       throw new Error(`Bed ${bed.bedNumber} is currently under maintenance.`);
     }
+    if (bed.status !== 'Available') {
+      throw new Error(`Bed ${bed.bedNumber} is ${bed.status.toLowerCase()} and cannot be allocated.`);
+    }
 
     const historyEntry = {
       id: `ALLOC-${Date.now()}`,
@@ -524,7 +549,7 @@ export class RoomsService {
       residentContact: resident.contact,
       gender: resident.gender,
       collegeOrCompany: resident.collegeOrCompany,
-      allocatedDate: joiningDate || new Date().toISOString().slice(0, 10),
+      allocatedDate: joiningDate || localDateIso(),
       notes: notes || 'New allocation',
       allocationType: 'New' as const,
     };
@@ -533,7 +558,8 @@ export class RoomsService {
     bed.residentId = resident.residentId;
     bed.tenantName = resident.name;
     bed.tenantContact = resident.contact;
-    bed.joinedDate = joiningDate || new Date().toISOString().slice(0, 10);
+    bed.joinedDate = joiningDate || localDateIso();
+    if (monthlyRent && monthlyRent > 0) bed.monthlyRent = monthlyRent;
     bed.allocationHistory = [historyEntry, ...(bed.allocationHistory || [])];
 
     room.beds = [...room.beds];
@@ -561,6 +587,7 @@ export class RoomsService {
     targetBedId: string,
     effectiveDate: string,
     reason?: string,
+    profile?: { gender?: 'Male' | 'Female'; collegeOrCompany?: string },
   ): void {
     const rooms = [...this.rooms];
     const srcRoom = rooms.find((r) => r.id === sourceRoomId);
@@ -577,6 +604,19 @@ export class RoomsService {
     if (dstBed.status !== 'Available') {
       throw new Error(`Destination bed ${dstBed.bedNumber} is not available (Status: ${dstBed.status}).`);
     }
+
+    if (srcBed.joinedDate && effectiveDate < srcBed.joinedDate) {
+      throw new Error(`Transfer date cannot be before the current allocation start (${srcBed.joinedDate}).`);
+    }
+
+    // Same eligibility rules as a fresh allocation; fall back to what the allocation history recorded
+    const last = srcBed.allocationHistory?.[0];
+    const who = {
+      gender: profile?.gender ?? last?.gender,
+      collegeOrCompany: profile?.collegeOrCompany ?? last?.collegeOrCompany,
+    };
+    const restriction = this.restrictionError(dstRoom, who);
+    if (restriction) throw new Error(restriction);
 
     const residentData = {
       residentId: srcBed.residentId || `RES-${Date.now().toString().slice(-4)}`,
@@ -610,6 +650,8 @@ export class RoomsService {
         residentId: residentData.residentId,
         residentName: residentData.name,
         residentContact: residentData.contact,
+        gender: who.gender,
+        collegeOrCompany: who.collegeOrCompany,
         allocatedDate: effectiveDate,
         notes: `Transferred from Room ${srcRoom.roomNumber} - Bed ${srcBed.bedNumber}. ${reason || ''}`,
         allocationType: 'Transfer',
@@ -649,11 +691,14 @@ export class RoomsService {
       throw new Error('Bed does not have an active allocation to check out.');
     }
 
+    const date = checkOutDate || localDateIso();
+    if (date > localDateIso()) throw new Error('Check-out date cannot be in the future.');
+
     const previousTenant = bed.tenantName;
 
     // Record check-out date in allocation history
     if (bed.allocationHistory?.length) {
-      bed.allocationHistory[0].checkOutDate = checkOutDate || new Date().toISOString().slice(0, 10);
+      bed.allocationHistory[0].checkOutDate = date;
       bed.allocationHistory[0].notes = remarks || 'Resident checked out normally.';
     }
 
@@ -672,7 +717,7 @@ export class RoomsService {
     this.persist(rooms);
 
     this.auditLog.record('Update Bed', `Check-out Bed ${bed.bedNumber}`, {
-      details: `${previousTenant} checked out from Room ${room.roomNumber} Bed ${bed.bedNumber} on ${checkOutDate}. Remarks: ${remarks || 'None'}`,
+      details: `${previousTenant} checked out from Room ${room.roomNumber} Bed ${bed.bedNumber} on ${date}. Remarks: ${remarks || 'None'}`,
     });
   }
 
@@ -707,12 +752,7 @@ export class RoomsService {
     });
   }
 
-  updateBedStatus(
-    roomId: string,
-    bedId: string,
-    status: Bed['status'],
-    details?: { tenantName?: string; tenantContact?: string; rent?: number },
-  ): void {
+  updateBedStatus(roomId: string, bedId: string, status: Bed['status'], details?: { rent?: number }): void {
     const rooms = [...this.rooms];
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
@@ -720,14 +760,20 @@ export class RoomsService {
     const bed = room.beds.find((b) => b.id === bedId);
     if (!bed) return;
 
+    if (bed.status === 'Occupied' && status !== 'Occupied') {
+      throw new Error(`Bed ${bed.bedNumber} is occupied. Use Check-Out or Transfer to change its status.`);
+    }
+    if (status === 'Occupied' && bed.status !== 'Occupied') {
+      throw new Error('A bed becomes Occupied only by allocating a resident. Use Allocate Bed.');
+    }
+    if ((status === 'Reserved' || status === 'Maintenance') && bed.residentId) {
+      throw new Error(`Bed ${bed.bedNumber} is linked to a resident and cannot be marked ${status}.`);
+    }
+
     bed.status = status;
     if (details?.rent) bed.monthlyRent = details.rent;
 
-    if (status === 'Occupied') {
-      bed.tenantName = details?.tenantName ?? bed.tenantName ?? 'New Tenant';
-      bed.tenantContact = details?.tenantContact ?? bed.tenantContact ?? '';
-      bed.joinedDate = bed.joinedDate ?? new Date().toISOString().slice(0, 10);
-    } else if (status === 'Available') {
+    if (status === 'Available') {
       delete bed.tenantName;
       delete bed.tenantContact;
       delete bed.residentId;

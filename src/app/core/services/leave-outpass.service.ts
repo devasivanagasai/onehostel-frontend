@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
-import { AuthService } from '../../core/services/auth.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident, formatMobile, residentFullName } from '../residents/residents.models';
+import { AuthService } from './auth.service';
+import { ResidentsService } from './residents.service';
+import { HostelResident, formatMobile, residentFullName } from '../models/residents.models';
 import {
   ApprovalStatus,
   DEFAULT_POLICY,
@@ -12,6 +12,7 @@ import {
   LeavePolicy,
   LeaveRequest,
   LeaveType,
+  MOVEMENT_TONES,
   MovementState,
   REASON_MAX,
   dayEnd,
@@ -19,7 +20,7 @@ import {
   localDate,
   localIso,
   time,
-} from './leave-outpass.models';
+} from '../models/leave-outpass.models';
 
 // Audit: AUDIT_EVENTS (core/models/audit.models.ts) has no leave / outpass events, so nothing is
 // recorded there. Submitted / decided / cancelled / exit / return by + at are kept on each request.
@@ -27,6 +28,9 @@ import {
 const STORAGE_KEY = 'onehostel_leave_requests_v1';
 const POLICY_KEY = 'onehostel_leave_policy_v1';
 export const HOSTEL_ID = 'HST-OWNER-01';
+
+/** Movement of an approved request; 'No-show' = the return time passed without the resident ever leaving. */
+export type LeaveMovement = MovementState | 'No-show';
 
 /** How early security may record an exit before the approved departure. */
 const EARLY_EXIT_MS = 2 * 3_600_000;
@@ -72,7 +76,7 @@ export class LeaveOutpassService {
     map((list) => {
       const today = localDate();
       const mine = list.filter((r) => r.hostelId === HOSTEL_ID);
-      const moving = (s: MovementState) => mine.filter((r) => this.movement(r) === s);
+      const moving = (s: LeaveMovement) => mine.filter((r) => this.movement(r) === s);
       return {
         pending: mine.filter((r) => r.status === 'Pending').length,
         upcoming: moving('Not yet left').length,
@@ -142,11 +146,16 @@ export class LeaveOutpassService {
   // ---- Movement ----------------------------------------------------------------
 
   /** Physical movement of an approved request; null when not approved (or tracking is off and nothing was recorded). */
-  movement(r: LeaveRequest, now = Date.now()): MovementState | null {
+  movement(r: LeaveRequest, now = Date.now()): LeaveMovement | null {
     if (r.status !== 'Approved') return null;
     if (r.returnedAt) return 'Returned';
     if (r.exitAt) return time(r.returnAt) < now ? 'Overdue return' : 'Out';
-    return this.policy.movementTracking ? 'Not yet left' : null;
+    if (!this.policy.movementTracking) return null;
+    return time(r.returnAt) < now ? 'No-show' : 'Not yet left';
+  }
+
+  movementTone(m: LeaveMovement): string {
+    return m === 'No-show' ? 'warning' : MOVEMENT_TONES[m];
   }
 
   /** Approved request covering any part of a local date (used by Attendance). */
@@ -210,7 +219,9 @@ export class LeaveOutpassService {
   create(input: LeaveInput): LeaveRequest {
     const resident = this.eligibleResidents.find((r) => r.residentId === input.residentId);
     if (!resident) throw new Error('Pick a current resident with a bed.');
-    if (!input.reason.trim() || input.reason.length > REASON_MAX) throw new Error('Reason is required.');
+    const reason = input.reason.trim();
+    if (!reason) throw new Error('Reason is required.');
+    if (reason.length > REASON_MAX) throw new Error(`Reason can be at most ${REASON_MAX} characters.`);
     const errors = this.checkTimes(input.type, input.departAt, input.returnAt);
     if (errors.depart || errors.return) throw new Error(errors.depart || errors.return);
     if (this.policy.destinationRequired[input.type] && !input.destination?.trim()) throw new Error('Destination is required.');
@@ -224,7 +235,7 @@ export class LeaveOutpassService {
       id: this.nextId(),
       hostelId: HOSTEL_ID,
       ...input,
-      reason: input.reason.trim(),
+      reason,
       destination: input.destination?.trim() || undefined,
       status: 'Pending',
       submittedBy: this.userName,
@@ -271,7 +282,7 @@ export class LeaveOutpassService {
   }
 
   canCancel(r: LeaveRequest): boolean {
-    return r.status === 'Pending' || (r.status === 'Approved' && !r.exitAt);
+    return r.status === 'Pending' || (r.status === 'Approved' && !r.exitAt && time(r.returnAt) >= Date.now());
   }
 
   /** Movement errors for an exit / return time, or ''. */

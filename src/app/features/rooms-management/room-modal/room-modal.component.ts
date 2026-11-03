@@ -5,9 +5,9 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { ALL_FACILITIES } from '../rooms.service';
-import { GenderRestriction, Room, RoomStatus, RoomType } from '../rooms.models';
-import { ResidentsService } from '../../residents/residents.service';
+import { ALL_FACILITIES } from '../../../core/services/rooms.service';
+import { GenderRestriction, Room, RoomStatus, RoomType } from '../../../core/models/rooms.models';
+import { ResidentsService } from '../../../core/services/residents.service';
 
 /** Icon per facility for the amenities checklist. */
 const FACILITY_ICONS: Record<string, string> = {

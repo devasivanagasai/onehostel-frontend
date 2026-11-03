@@ -12,8 +12,8 @@ import { AppFormatService } from '../../core/services/app-format.service';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { ResidentAllocation, ResidentsService } from './residents.service';
-import { FeesService } from '../fees-payments/fees.service';
+import { ResidentAllocation, ResidentsService } from '../../core/services/residents.service';
+import { FeesService } from '../../core/services/fees.service';
 import {
   HostelResident,
   RESIDENT_STATUSES,
@@ -22,7 +22,7 @@ import {
   ResidentStatus,
   formatMobile,
   residentFullName,
-} from './residents.models';
+} from '../../core/models/residents.models';
 import {
   ResidentFormDialogComponent,
   ResidentFormDialogData,

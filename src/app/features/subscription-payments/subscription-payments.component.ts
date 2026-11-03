@@ -14,16 +14,16 @@ import {
   PaymentTransaction,
   SUBSCRIPTION_STATUSES,
   hasInvoice,
-} from './subscription-payment.models';
+} from '../../core/models/subscription-payment.models';
 import { SubscriptionDetailPanelComponent } from './subscription-detail-panel.component';
 import { InvoiceService } from './invoice.service';
-import { SubscriptionPaymentService } from './subscription-payment.service';
+import { SubscriptionPaymentService } from '../../core/services/subscription-payment.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
-import { isOnboardedHostel } from '../hostel-onboarding/onboarded-hostels';
+import { isOnboardedHostel } from '../../core/models/onboarded-hostels';
 
 type TabKey = 'subscriptions' | 'payments';
 

@@ -6,7 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { formatMobile, residentFullName } from '../../residents/residents.models';
+import { formatMobile, residentFullName } from '../../../core/models/residents.models';
 import { VisitorsService } from '../visitors.service';
 import { ID_TYPES, MOBILE_PATTERN, PURPOSES, Visitor, VisitorIdType, VisitorInput, clock, initials, localIso, withinHours } from '../visitors.models';
 

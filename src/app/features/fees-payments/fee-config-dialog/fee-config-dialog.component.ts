@@ -11,9 +11,9 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { SystemSettingsService } from '../../../core/services/system-settings.service';
-import { ResidentsService } from '../../residents/residents.service';
-import { RESIDENT_TYPES, residentFullName } from '../../residents/residents.models';
-import { FeeInput } from '../fees.service';
+import { ResidentsService } from '../../../core/services/residents.service';
+import { RESIDENT_TYPES, residentFullName } from '../../../core/models/residents.models';
+import { FeeInput } from '../../../core/services/fees.service';
 import {
   Applicability,
   BILLING_FREQUENCIES,
@@ -23,7 +23,7 @@ import {
   FEE_STATUSES,
   FeeConfig,
   TAX_OPTIONS,
-} from '../fees.models';
+} from '../../../core/models/fees.models';
 
 export interface FeeConfigDialogData {
   fee?: FeeConfig;

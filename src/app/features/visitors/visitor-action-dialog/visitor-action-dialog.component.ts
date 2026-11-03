@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent, AppDialogTone } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { VisitorsService } from '../visitors.service';
 import { ID_TYPES, Visitor, VisitorIdType, clock, initials, localIso, maskId, withinHours } from '../visitors.models';
 

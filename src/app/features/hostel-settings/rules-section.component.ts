@@ -3,7 +3,7 @@ import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } fr
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { HOUSE_RULE_MAX_LENGTH, MAX_HOUSE_RULES } from './hostel-settings.models';
+import { HOUSE_RULE_MAX_LENGTH, MAX_HOUSE_RULES } from '../../core/models/hostel-settings.models';
 
 /** One line of the house rules list. */
 export function houseRuleControl(text = ''): FormControl<string> {

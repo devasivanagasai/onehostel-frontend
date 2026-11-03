@@ -2,35 +2,12 @@ import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, On
 import { AppFormatService } from '../../core/services/app-format.service';
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { SubscriptionPlanService } from '../../core/services/subscription-plan.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { SubscriptionPlanRow } from './subscription-plans.component';
+import { FEATURE_CONFIG_ITEMS, SubscriptionPlanRow } from '../../core/models/subscription-plan.models';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-
-export interface FeatureItem {
-  id: string;
-  name: string;
-  icon: string;
-  /** Icon tile colour in the plan dialog. */
-  tone?: 'blue' | 'purple' | 'green' | 'orange' | 'teal' | 'pink' | 'indigo';
-}
-
-export const FEATURE_CONFIG_ITEMS: FeatureItem[] = [
-  { id: 'residentManagement', name: 'Tenant Management', icon: 'groups', tone: 'blue' },
-  { id: 'roomManagement', name: 'Room Management', icon: 'bed', tone: 'purple' },
-  { id: 'payments', name: 'Payments', icon: 'payments', tone: 'green' },
-  { id: 'complaints', name: 'Complaints', icon: 'chat_bubble', tone: 'orange' },
-  { id: 'laundry', name: 'Laundry', icon: 'checkroom', tone: 'blue' },
-  { id: 'washingMachine', name: 'Washing Machine', icon: 'local_laundry_service', tone: 'teal' },
-  { id: 'visitors', name: 'Visitors', icon: 'groups_2', tone: 'purple' },
-  { id: 'announcements', name: 'Announcements', icon: 'campaign', tone: 'blue' },
-  { id: 'mess', name: 'Mess', icon: 'restaurant', tone: 'orange' },
-  { id: 'attendance', name: 'Attendance', icon: 'event_available', tone: 'green' },
-  { id: 'leaveOutpass', name: 'Leave / Outpass', icon: 'exit_to_app', tone: 'pink' },
-  { id: 'parentAccess', name: 'Parent Access', icon: 'family_restroom', tone: 'teal' },
-  { id: 'reports', name: 'Reports', icon: 'bar_chart', tone: 'indigo' },
-];
 
 /** Price suffix stored with the plan, per billing cycle (e.g. "₹999 / mo"). */
 const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
@@ -92,7 +69,7 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
                   <label class="field__label" for="plan-name">Plan Name <span class="req">*</span></label>
                   <input id="plan-name" class="text-input" formControlName="planName" placeholder="Enter plan name" />
                   @if (showError('planName')) {
-                    <span class="field__error">Plan name is required</span>
+                    <span class="field__error">{{ planForm.get('planName')?.hasError('duplicate') ? 'A plan with this name already exists' : 'Plan name is required' }}</span>
                   }
                 </div>
               </div>
@@ -109,7 +86,7 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
                     <input id="plan-price" formControlName="price" inputmode="decimal" placeholder="e.g. 999.00" />
                   </div>
                   @if (showError('price')) {
-                    <span class="field__error">{{ planForm.get('price')?.hasError('pattern') ? 'Enter an amount, e.g. 999 or 999.50' : 'Price is required' }}</span>
+                    <span class="field__error">{{ planForm.get('price')?.hasError('pattern') ? 'Enter an amount, e.g. 999 or 999.50' : planForm.get('price')?.hasError('positive') ? 'Price must be greater than 0' : 'Price is required' }}</span>
                   }
                 </div>
 
@@ -126,7 +103,7 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
                   <label class="field__label" for="plan-limit">Tenant Limit <span class="req">*</span></label>
                   <input id="plan-limit" class="text-input" type="number" min="1" formControlName="residentLimit" placeholder="e.g. 200" />
                   @if (showError('residentLimit')) {
-                    <span class="field__error">{{ planForm.get('residentLimit')?.hasError('min') ? 'Limit must be 1 or higher' : 'Tenant limit is required' }}</span>
+                    <span class="field__error">{{ planForm.get('residentLimit')?.hasError('min') ? 'Limit must be 1 or higher' : planForm.get('residentLimit')?.hasError('integer') ? 'Limit must be a whole number' : 'Tenant limit is required' }}</span>
                   }
                 </div>
               </div>
@@ -643,6 +620,7 @@ const CYCLE_SUFFIX: Record<SubscriptionPlanRow['billingCycle'], string> = {
 export class AddPlanSidePanelComponent implements OnInit, OnChanges, OnDestroy {
   /** Currency from System Defaults → General. */
   readonly fmt = inject(AppFormatService);
+  private readonly planService = inject(SubscriptionPlanService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   @Input() isOpen = false;
@@ -709,14 +687,22 @@ export class AddPlanSidePanelComponent implements OnInit, OnChanges, OnDestroy {
 
     this.planForm = this.fb.group({
       planId: [isEdit ? plan?.planId : (this.nextId || 'PLN-1005')],
-      planName: [isEdit ? plan?.planName : '', [Validators.required]],
+      planName: [isEdit ? plan?.planName : '', [Validators.required, this.uniqueNameValidator()]],
       // Just the amount; the currency symbol and billing period are added on save.
-      price: [isEdit && plan ? amountOf(plan.price) : '', [Validators.required, Validators.pattern(/^\d[\d,]*(\.\d{1,2})?$/)]],
+      price: [isEdit && plan ? amountOf(plan.price) : '', [Validators.required, Validators.pattern(/^\d[\d,]*(\.\d{1,2})?$/), positiveAmount]],
       billingCycle: [isEdit ? plan?.billingCycle : 'Monthly', [Validators.required]],
-      residentLimit: [isEdit ? plan?.residentLimit : '', [Validators.required, Validators.min(1)]],
+      residentLimit: [isEdit ? plan?.residentLimit : '', [Validators.required, Validators.min(1), wholeNumber]],
       active: [isEdit ? plan?.status !== 'Inactive' : true],
       featureConfig: this.fb.group(featureControls),
     });
+  }
+
+  /** Plan names are unique (ignoring case); the plan being edited may keep its own name. */
+  private uniqueNameValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const name = String(control.value ?? '').trim();
+      return name && this.planService.nameTaken(name, this.plan?.planId) ? { duplicate: true } : null;
+    };
   }
 
   /** Errors show once the field was touched (or after a submit attempt). */
@@ -780,6 +766,14 @@ export class AddPlanSidePanelComponent implements OnInit, OnChanges, OnDestroy {
     this.savePlan.emit(result);
   }
 }
+
+const positiveAmount: ValidatorFn = (c) => {
+  const n = Number(String(c.value ?? '').replace(/,/g, ''));
+  return c.value !== '' && c.value != null && !(n > 0) ? { positive: true } : null;
+};
+
+const wholeNumber: ValidatorFn = (c) =>
+  c.value !== '' && c.value != null && !Number.isInteger(Number(c.value)) ? { integer: true } : null;
 
 /** "₹1,999 / mo" → "1999" (for editing the amount on its own). */
 function amountOf(price: string): string {

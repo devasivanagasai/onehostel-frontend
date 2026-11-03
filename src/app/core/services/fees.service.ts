@@ -1,9 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { AuthService } from '../../core/services/auth.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident, residentFullName } from '../residents/residents.models';
+import { AuditLogService } from './audit-log.service';
+import { AuthService } from './auth.service';
+import { ResidentsService } from './residents.service';
+import { HostelResident, residentFullName } from '../models/residents.models';
+import { localDateIso } from '../../shared/utils/local-date';
 import {
   Charge,
   ChargeStatus,
@@ -14,7 +15,7 @@ import {
   PaymentMethod,
   REFERENCE_REQUIRED,
   feeDisplayName,
-} from './fees.models';
+} from '../models/fees.models';
 
 const STORAGE_KEY = 'onehostel_fees_v1';
 
@@ -56,7 +57,7 @@ export interface RecordPaymentInput {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
-const todayIso = (): string => new Date().toISOString().slice(0, 10);
+const todayIso = (): string => localDateIso();
 
 /** Local wall-clock ISO (yyyy-mm-ddTHH:mm:ss), matching the rest of the mock data. */
 const nowIso = (): string => {
@@ -288,7 +289,15 @@ export class FeesService {
     const due = this.balance(charge);
     if (!(amount > 0)) throw new Error('Payment amount must be greater than zero.');
     if (due <= 0) throw new Error(`${charge.id} is already fully paid.`);
-    if (amount > due) throw new Error(`Advance payments aren't enabled — the most you can collect is ${due}.`);
+    const pendingOnline = round2(this.payments.filter((p) => p.chargeId === charge.id && p.status === 'Pending').reduce((sum, p) => sum + p.amount, 0));
+    const available = round2(due - pendingOnline);
+    if (amount > available) {
+      throw new Error(
+        pendingOnline > 0
+          ? `Pending online payments already cover ${pendingOnline} — the most you can collect now is ${Math.max(0, available)}.`
+          : `Advance payments aren't enabled — the most you can collect is ${due}.`,
+      );
+    }
 
     const ref = input.transactionRef?.trim() || undefined;
     if (REFERENCE_REQUIRED.includes(input.method) && !ref) throw new Error(`A transaction reference is required for ${input.method}.`);
@@ -308,7 +317,7 @@ export class FeesService {
       amount,
       method: input.method,
       transactionRef: ref,
-      paidAt: input.paidAt,
+      paidAt: input.paidAt || nowIso(),
       collectedBy: online ? 'Online (payer)' : this.userName,
       status,
       notes: input.notes?.trim() || undefined,

@@ -1,12 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { AuditLogService } from '../../core/services/audit-log.service';
-import { SystemSettingsService } from '../../core/services/system-settings.service';
-import { AuditChange, diffForAudit } from '../../core/models/audit.models';
-import { BUILT_IN_HOSTEL_OWNER } from '../../core/models/built-in-accounts';
-import { FEATURE_CONFIG_ITEMS } from '../subscription-plans/add-plan-side-panel.component';
-import { RoomsService } from '../rooms-management/rooms.service';
-import { ResidentsService } from '../residents/residents.service';
+import { AuditLogService } from './audit-log.service';
+import { SystemSettingsService } from './system-settings.service';
+import { AuditChange, diffForAudit } from '../models/audit.models';
+import { BUILT_IN_HOSTEL_OWNER } from '../models/built-in-accounts';
+import { FEATURE_CONFIG_ITEMS } from '../models/subscription-plan.models';
+import { RoomsService } from './rooms.service';
+import { ResidentsService } from './residents.service';
 import {
   HostelSettingsPermissions,
   HostelSettingsState,
@@ -16,7 +16,7 @@ import {
   NOTIFICATION_EVENTS,
   NotificationChannel,
   NotificationPrefs,
-} from './hostel-settings.models';
+} from '../models/hostel-settings.models';
 
 const STORAGE_KEY = 'onehostel_hostel_settings_';
 const HOSTEL_ID = BUILT_IN_HOSTEL_OWNER.hostelId;
@@ -156,7 +156,7 @@ export class HostelSettingsService {
     return {
       rooms: rooms.length,
       beds: rooms.reduce((n, r) => n + r.beds.length, 0),
-      residents: this.residentsService.residents.filter((r) => r.status !== 'Checked Out').length,
+      residents: this.residentsService.residents.filter((r) => r.status !== 'Checked Out' && !r.deactivatedAt).length,
       staffUsers: this.subscription.staffUsersUsed,
     };
   }

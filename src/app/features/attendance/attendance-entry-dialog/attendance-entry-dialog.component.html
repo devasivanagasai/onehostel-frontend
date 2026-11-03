@@ -57,6 +57,9 @@
       <div class="fk-field">
         <label class="fk-label" for="ae-when">{{ mode === 'checkin' ? 'Check-in Time' : 'Check-out Time' }}<span class="req">*</span></label>
         <span class="fk-control ae-time" [class.is-invalid]="whenError"><input id="ae-when" type="time" [(ngModel)]="when" /></span>
+        @if (mode === 'checkout') {
+          <label class="fk-hint"><input type="checkbox" [(ngModel)]="nextDay" /> After midnight (next day)</label>
+        }
         @if (whenError) { <span class="fk-error">{{ whenError }}</span> }
         @else if (mode === 'checkout' && openSession) { <span class="fk-hint">Checked in at {{ fmt.date(openSession.in, 'time') }}</span> }
         @else if (mode === 'checkin' && !record) { <span class="fk-hint">Also marks {{ row.name }} Present.</span> }

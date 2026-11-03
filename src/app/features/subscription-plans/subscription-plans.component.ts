@@ -8,14 +8,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AddPlanSidePanelComponent, FEATURE_CONFIG_ITEMS } from './add-plan-side-panel.component';
+import { AddPlanSidePanelComponent } from './add-plan-side-panel.component';
+import { SubscriptionPlanService } from '../../core/services/subscription-plan.service';
+import { FEATURE_CONFIG_ITEMS, SubscriptionPlanRow } from '../../core/models/subscription-plan.models';
 import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
 import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { diffForAudit } from '../../core/models/audit.models';
-import { SubscriptionPaymentService } from '../subscription-payments/subscription-payment.service';
-import { isOpenSubscription } from '../subscription-payments/subscription-payment.models';
+import { SubscriptionPaymentService } from '../../core/services/subscription-payment.service';
+import { isOpenSubscription } from '../../core/models/subscription-payment.models';
 
 const PLAN_AUDIT_FIELDS: Record<string, string> = {
   planName: 'Plan Name',
@@ -31,18 +33,6 @@ function planAuditValues(plan: SubscriptionPlanRow): Record<string, unknown> {
     ? FEATURE_CONFIG_ITEMS.filter((f) => plan.featureConfig![f.id]).map((f) => f.name).join(', ')
     : undefined;
   return { ...plan, features: enabled };
-}
-
-export interface SubscriptionPlanRow {
-  planId: string;
-  planName: string;
-  price: string;
-  billingCycle: 'Monthly' | 'Yearly' | 'Quarterly';
-  residentLimit: number;
-  status: 'Active' | 'Inactive';
-  createdDate: string;
-  features?: string;
-  featureConfig?: Record<string, boolean>;
 }
 
 type BillingFilter = 'All' | SubscriptionPlanRow['billingCycle'];
@@ -560,44 +550,11 @@ export class SubscriptionPlansComponent {
   pageSize = 12;
   currentPage = 0;
 
-  rows: SubscriptionPlanRow[] = [
-    {
-      planId: 'PLN-1001',
-      planName: 'Basic',
-      price: '₹999 / mo',
-      billingCycle: 'Monthly',
-      residentLimit: 50,
-      status: 'Active',
-      createdDate: '2026-08-01',
-    },
-    {
-      planId: 'PLN-1002',
-      planName: 'Standard',
-      price: '₹1,999 / mo',
-      billingCycle: 'Monthly',
-      residentLimit: 150,
-      status: 'Active',
-      createdDate: '2026-08-01',
-    },
-    {
-      planId: 'PLN-1003',
-      planName: 'Premium',
-      price: '₹19,999 / yr',
-      billingCycle: 'Yearly',
-      residentLimit: 500,
-      status: 'Active',
-      createdDate: '2026-08-01',
-    },
-    {
-      planId: 'PLN-1004',
-      planName: 'Legacy Basic',
-      price: '₹799 / mo',
-      billingCycle: 'Monthly',
-      residentLimit: 50,
-      status: 'Inactive',
-      createdDate: '2025-11-12',
-    },
-  ];
+  /** Plans live in SubscriptionPlanService so Onboard Hostel offers the same (active) plans. */
+  private readonly planService = inject(SubscriptionPlanService);
+  get rows(): SubscriptionPlanRow[] {
+    return this.planService.plans;
+  }
 
   isSidePanelOpen = false;
   panelMode: 'add' | 'edit' = 'add';
@@ -719,7 +676,7 @@ export class SubscriptionPlansComponent {
   onSavePlan(result: SubscriptionPlanRow): void {
     this.isSidePanelOpen = false;
     if (this.panelMode === 'add') {
-      this.rows = [result, ...this.rows];
+      this.planService.save(result);
       this.auditLog.record('Create Plan', result.planName, {
         details: `${result.price} · ${result.billingCycle} · ${result.residentLimit} tenants`,
       });
@@ -741,8 +698,7 @@ export class SubscriptionPlansComponent {
             changes: [{ field: 'Status', oldValue: previous.status, newValue: result.status }],
           });
         }
-        this.rows[index] = result;
-        this.rows = [...this.rows];
+        this.planService.save(result);
         this.snackBar.open('Subscription Plan updated successfully', 'x', {
           duration: 4000,
           horizontalPosition: 'center',
