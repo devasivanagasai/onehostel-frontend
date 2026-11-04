@@ -1,0 +1,55 @@
+<app-dialog title="Verify Guardian" [subtitle]="g.name + ' · ' + service.residentName(g.residentId)" icon="verified_user" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="gd-pill gd-pill--{{ tones[g.verification] }}">{{ g.verification }}</span>
+  </ng-container>
+
+  @if (access.state === 'Revoked') {
+    <p class="gd-banner gd-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">block</mat-icon>{{ access.reason }}. Verification cannot be sent.</p>
+  } @else if (g.verification === 'Verified') {
+    <p class="gd-banner gd-banner--info"><mat-icon fontSet="material-icons-outlined">verified</mat-icon>Already verified for this resident.</p>
+  } @else {
+    <p class="gv-lead">
+      @if (pending) {
+        A code was sent by <strong>{{ g.otp!.sentTo }}</strong>. Ask the guardian to read it out, then enter it below.
+      } @else if (g.verification === 'Rejected') {
+        Verification was rejected after too many wrong codes. Send a new code to try again.
+      } @else {
+        Send a one-time code to the guardian by their {{ g.mobile ? 'mobile' : 'email' }}. It is valid for {{ service.otpMinutes }} minutes.
+      }
+    </p>
+
+    @if (pending) {
+      <!-- Simulation only: stands in for the SMS / email. Never shown in the list. -->
+      <p class="gd-banner gd-banner--sim" role="note">
+        <mat-icon fontSet="material-icons-outlined">science</mat-icon>
+        <span><strong>Simulation only.</strong> No message was sent. In production the guardian receives the code; it is never shown here.
+          @if (!expired) { Test code: <strong class="gv-code">{{ simulatedCode }}</strong> }</span>
+      </p>
+
+      <div class="fk-field gv-field">
+        <label class="fk-label" for="gv-code">Verification code<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="expired || (message && !messageOk)">
+          <input id="gv-code" [(ngModel)]="code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6-digit code" [disabled]="expired" (keydown.enter)="verify()" />
+        </span>
+        @if (expired) { <span class="fk-error">This code has expired. Send a new code.</span> }
+        @else { <span class="fk-hint">Expires in {{ countdown }} · {{ attemptsLeft }} {{ attemptsLeft === 1 ? 'try' : 'tries' }} left</span> }
+      </div>
+    }
+
+    @if (message) {
+      <p class="gd-banner" [class.gd-banner--info]="messageOk" [class.gd-banner--error]="!messageOk" role="alert">
+        <mat-icon fontSet="material-icons-outlined">{{ messageOk ? 'check_circle' : 'error' }}</mat-icon>{{ message }}
+      </p>
+    }
+  }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    @if (access.state === 'Active' && g.verification !== 'Verified') {
+      <app-button variant="outline" icon="send" (clicked)="send()">{{ pending ? 'Send New Code' : 'Send Code' }}</app-button>
+      @if (pending) {
+        <app-button variant="accent" icon="verified_user" [disabled]="expired || code.length !== 6" [loading]="busy" (clicked)="verify()">Verify</app-button>
+      }
+    }
+  </ng-container>
+</app-dialog>

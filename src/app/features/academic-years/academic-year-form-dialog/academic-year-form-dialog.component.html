@@ -1,0 +1,92 @@
+<form (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    [title]="correction ? 'Authorized Correction' : isEdit ? 'Edit Academic Year' : 'New Academic Year'"
+    [subtitle]="correction ? existing!.name + ' is Completed. Changes need a reason and are audited.' : isEdit ? existing!.id + ' · ' + existing!.status : 'Created as a Draft. Move it to Upcoming and Active when it is time.'"
+    [icon]="correction ? 'edit_note' : 'school'"
+    [tone]="correction ? 'amber' : 'teal'"
+    (closed)="cancel()"
+  >
+    <div class="af">
+      <div class="fk-field af-wide">
+        <label class="fk-label" for="af-name">Academic Year Name<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="nameError">
+          <input id="af-name" name="name" [(ngModel)]="name" maxlength="60" placeholder="e.g. 2026–2027" />
+        </span>
+        @if (nameError) { <span class="fk-error">{{ nameError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="af-start">Start Date<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="startError">
+          <input id="af-start" name="startDate" type="date" [(ngModel)]="startDate" />
+        </span>
+        @if (startError) { <span class="fk-error">{{ startError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="af-end">End Date<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="endError">
+          <input id="af-end" name="endDate" type="date" [(ngModel)]="endDate" [min]="startDate" />
+        </span>
+        @if (endError) { <span class="fk-error">{{ endError }}</span> }
+        @else if (duration) { <span class="fk-hint">{{ duration }}</span> }
+        @else { <span class="fk-hint">Must be after the start, at least {{ minDays }} days.</span> }
+      </div>
+
+      <div class="fk-field af-wide">
+        <label class="fk-label" for="af-block">Applicable Block <span class="opt">(Optional)</span></label>
+        <span class="fk-control">
+          <input id="af-block" name="block" [(ngModel)]="block" maxlength="60" placeholder="Leave empty for the whole hostel, or e.g. Block A" />
+        </span>
+        <span class="fk-hint">Years in the same block (or the whole hostel) cannot overlap.</span>
+      </div>
+
+      <div class="fk-field af-wide">
+        <label class="fk-label" for="af-chip">Resident Eligibility <span class="opt">(Optional)</span></label>
+        <div class="af-chips">
+          @for (c of eligibility; track c) {
+            <span class="af-chip">{{ c }}<button type="button" [attr.aria-label]="'Remove ' + c" (click)="removeChip(c)"><mat-icon>close</mat-icon></button></span>
+          }
+        </div>
+        <span class="af-add">
+          <span class="fk-control">
+            <input id="af-chip" name="chip" [(ngModel)]="chipDraft" maxlength="40" placeholder="Course, department, year or group, then Enter"
+              (keydown.enter)="$event.preventDefault(); addChip()" />
+          </span>
+          <app-button variant="outline" icon="add" (clicked)="addChip()" [disabled]="!chipDraft.trim()">Add</app-button>
+        </span>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="af-ws">Allocation Window Start <span class="opt">(Optional)</span></label>
+        <span class="fk-control"><input id="af-ws" name="winStart" type="date" [(ngModel)]="winStart" /></span>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="af-we">Allocation Window End <span class="opt">(Optional)</span></label>
+        <span class="fk-control"><input id="af-we" name="winEnd" type="date" [(ngModel)]="winEnd" [min]="winStart" /></span>
+        <span class="fk-hint">Room allocation dates. Within or before the year end.</span>
+      </div>
+
+      @if (correction) {
+        <div class="fk-field af-wide">
+          <label class="fk-label" for="af-reason">Reason for correction<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="reasonError">
+            <textarea id="af-reason" name="reason" rows="2" [(ngModel)]="reason" [maxlength]="reasonMax" placeholder="Why does this completed year need to change?"></textarea>
+          </span>
+          @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+        </div>
+      }
+    </div>
+
+    @if (problem && !nameError && !startError && !endError) {
+      <p class="ay-banner ay-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ problem }}</p>
+    }
+    @if (saveError) { <p class="ay-banner ay-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [loading]="saving">{{ correction ? 'Save Correction' : isEdit ? 'Save Changes' : 'Create Academic Year' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

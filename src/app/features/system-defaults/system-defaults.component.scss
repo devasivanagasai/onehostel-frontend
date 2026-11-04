@@ -391,7 +391,7 @@
   margin-top: -16px;
 }
 
-/* Radio choices (Login Method, Plan Prices, Fee Type): same height as a field so rows line up. */
+/* Radio choices (Plan Prices, Fee Type): same height as a field so rows line up. */
 .radio-row {
   display: flex;
   align-items: center;
@@ -493,85 +493,6 @@
 
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-/* Buttons */
-.btn-primary,
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  border-radius: var(--btn-radius);
-  font-size: var(--btn-font-size);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-}
-
-.btn-primary {
-  background: #0057e7;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 87, 231, 0.25);
-
-  &:hover:not(:disabled) {
-    background: #0045b5;
-  }
-}
-
-.btn-secondary {
-  height: var(--btn-height);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  border-radius: var(--btn-radius);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-
-  &:hover:not(:disabled) {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-}
-
-.btn-sm {
-  border-radius: var(--btn-radius);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--btn-height-sm);
-  padding: 0 var(--btn-padding-x-sm);
-  font-size: var(--btn-font-size-sm);
-}
-
-.btn-text-danger {
-  background: none;
-  border: none;
-  color: #dc2626;
-  font-weight: 600;
-  cursor: pointer;
-  border-radius: 8px;
-
-  &:hover {
-    background: #fef2f2;
-  }
 }
 
 /* ============================ Security ============================ */

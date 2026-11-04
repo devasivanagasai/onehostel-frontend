@@ -1,0 +1,113 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.leave-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.leave-table-card {
+  padding-top: 8px;
+}
+
+.lv-top-actions {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.leave-table {
+  .lv-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    background: #ccfbf1;
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .lv-resident {
+    gap: 10px;
+  }
+
+  // Type: coloured icon + label, no box
+  .lv-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    mat-icon { @include icon(18px); }
+
+    &--leave { color: #7c3aed; }
+    &--outpass { color: #d97706; }
+  }
+
+  .lv-arrow {
+    color: #94a3b8;
+  }
+
+  .dest-cell {
+    max-width: 190px;
+  }
+
+  .lv-clip {
+    display: block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  // Plain icon actions: blue, approve / return in green, reject / cancel in red
+  .lv-act ::ng-deep button { color: #2563eb; }
+  .lv-act--ok ::ng-deep button { color: #16a34a; }
+  .lv-act--danger ::ng-deep button { color: #dc2626; }
+
+  .lv-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+// Each KPI number in its card's colour
+.lv-kpi--orange .kpi-card__value { color: #ea580c; }
+.lv-kpi--indigo .kpi-card__value { color: #6d28d9; }
+.lv-kpi--blue .kpi-card__value { color: #2563eb; }
+.lv-kpi--teal .kpi-card__value { color: #0d9488; }
+.lv-kpi--red .kpi-card__value { color: #dc2626; }
+.lv-kpi--red .kpi-card__icon { background: #fee2e2; color: #dc2626; }
+
+.lv-id {
+  display: block;
+  margin-top: 2px;
+}

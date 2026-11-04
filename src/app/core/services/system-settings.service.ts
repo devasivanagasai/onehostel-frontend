@@ -114,9 +114,12 @@ export class SystemSettingsService {
         }).filter(([, v]) => v !== undefined),
       ) as Partial<FeeSettings>;
 
+      // Sign-in is password-only now: drop the OTP policy older builds stored.
+      const { otpExpiryMinutes, otpLength, ...security } = (stored.security ?? {}) as Record<string, unknown>;
+
       return {
         general: { ...DEFAULT_SYSTEM_SETTINGS.general, ...stored.general },
-        security: { ...DEFAULT_SYSTEM_SETTINGS.security, ...stored.security },
+        security: { ...DEFAULT_SYSTEM_SETTINGS.security, ...security },
         communication: { ...DEFAULT_SYSTEM_SETTINGS.communication, ...stored.communication },
         payment: { ...DEFAULT_SYSTEM_SETTINGS.payment, ...payment },
         fees: { ...DEFAULT_SYSTEM_SETTINGS.fees, ...legacyFees, ...stored.fees },

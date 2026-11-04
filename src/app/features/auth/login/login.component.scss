@@ -253,13 +253,6 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
   }
 }
 
-.login-form__row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin: 0 0 20px;
-}
-
 // "Password" label with "Forgot Password?" on the same line.
 .login-form__label-row {
   display: flex;
@@ -337,62 +330,6 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
   }
 }
 
-// "or" between two lines.
-.login-form__divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0;
-  font-size: 13px;
-  color: #64748b;
-
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: $border;
-  }
-
-
-}
-
-// Secondary action: outlined in the brand blue.
-.login-form__demo {
-  padding: 0 var(--btn-padding-x);
-  width: 100%;
-  height: var(--btn-height-lg);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1.5px solid #93b4f5;
-  border-radius: var(--btn-radius);
-  background: #ffffff;
-  color: $primary;
-  font-family: inherit;
-  font-size: var(--btn-font-size);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &:hover {
-    background: #eff6ff;
-    border-color: $primary-dark;
-  }
-
-  &:focus-visible {
-    outline: 2px solid $primary-dark;
-    outline-offset: 2px;
-  }
-}
-
 // Shown after an automatic sign-out (Session Timeout)
 .login-notice {
   display: flex;
@@ -414,122 +351,76 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
   }
 }
 
-// Password / OTP: underlined tabs
-.login-method {
+// Password / OTP switch.
+.login-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-bottom: 22px;
-  border-bottom: 1px solid $border;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border-radius: 12px;
+  background: $field-bg;
 }
 
-.login-method__tab {
-  position: relative;
-  height: 46px;
-  border: none;
+.login-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
   background: transparent;
-  color: $muted;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s ease;
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -1px;
-    height: 2px;
-    border-radius: 2px;
-    background: transparent;
-    transition: background 0.15s ease;
-  }
-
-  &:hover:not(.login-method__tab--active) {
-    color: $text;
-  }
-
-  &:focus-visible {
-    outline: 2px solid $primary-dark;
-    outline-offset: -2px;
-    border-radius: 6px;
-  }
-}
-
-.login-method__tab--active {
-  color: $primary-dark;
-
-  &::after {
-    background: $primary-dark;
-  }
-}
-
-.login-form__submit-btn--spaced {
-  margin-top: 12px;
-}
-
-// OTP step
-.otp-sent {
-  margin: 0 0 18px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: $muted;
-
-  strong {
-    color: $text;
-  }
-}
-
-.otp-sent__change,
-.otp-resend {
-  padding: 0;
-  border: none;
-  background: none;
-  font-family: inherit;
+  font: inherit;
   font-size: 14px;
   font-weight: 600;
-  color: $primary-dark;
+  color: $muted;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 
-  &:hover:not([disabled]) {
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    color: $text;
   }
 
   &:focus-visible {
     outline: 2px solid $primary-dark;
     outline-offset: 2px;
-    border-radius: 4px;
   }
 }
 
-.otp-sent__change {
-  margin-left: 4px;
+.login-tab--active,
+.login-tab--active:hover {
+  background: #ffffff;
+  color: $primary-dark;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
 }
 
-.otp-resend--wait {
-  cursor: default;
-  font-weight: 500;
-  color: $muted;
-}
-
-.otp-field input {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0.5em;
-}
-
-.otp-demo {
+// "Forgot Password?" right-aligned under the password field.
+.login-form__forgot-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0 12px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+// Sign-in failures, from the backend's message.
+.login-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 16px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: #eff6ff;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   font-size: 13px;
-  color: #1e40af;
+  line-height: 1.45;
+  color: #b91c1c;
 
   mat-icon {
     flex-shrink: 0;
@@ -537,9 +428,22 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
     width: 18px;
     height: 18px;
   }
+}
 
-  strong {
-    letter-spacing: 0.15em;
+// Tenants and guards: not an error, a pointer to the mobile app.
+.login-alert--info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.login-form__resend {
+  margin: 6px 4px 0;
+  font-size: 13px;
+  color: $muted;
+
+  .login-form__forgot {
+    font-size: 13px;
   }
 }
 

@@ -1,0 +1,12 @@
+// Revoke / restore access with a reason. Frame comes from <app-dialog>.
+@use '../../../../styles/dialog-kit' as *;
+@use '../gd-kit';
+
+@include form-fields;
+
+.ga-text {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #475569;
+}

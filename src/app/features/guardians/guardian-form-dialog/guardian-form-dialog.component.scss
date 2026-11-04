@@ -1,0 +1,30 @@
+// Add / edit guardian. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+@use '../gd-kit';
+
+@include form-fields;
+
+.gf {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 4px;
+
+  @media (max-width: 620px) { grid-template-columns: 1fr; }
+}
+
+.gf-wide { grid-column: 1 / -1; }
+
+.gf-warn { color: #b45309; }
+
+.gf-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+
+  input { width: 18px; height: 18px; accent-color: #0d9488; }
+}

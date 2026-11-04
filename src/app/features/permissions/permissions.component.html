@@ -1,0 +1,328 @@
+<div class="onboarding-page permissions-page">
+  <nav class="prm-tabs" role="tablist" aria-label="Permissions sections">
+    @for (t of tabs; track t.id) {
+      <button type="button" role="tab" class="prm-tab" [class.is-active]="tab === t.id" [attr.aria-selected]="tab === t.id" (click)="setTab(t.id)">
+        <mat-icon fontSet="material-icons-outlined">{{ t.icon }}</mat-icon>{{ t.label }}
+      </button>
+    }
+  </nav>
+
+  <!-- ===== Role permissions ===== -->
+  @if (tab === 'matrix') {
+    <section class="prm-card" aria-labelledby="prm-matrix-title">
+      <header class="prm-card__head">
+        <div>
+          <h2 id="prm-matrix-title">Role Permissions</h2>
+          <p>Choose what each staff role can do. The Owner always has full access.</p>
+        </div>
+        <div class="prm-card__actions">
+          <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetDefaults()">Reset to defaults</app-button>
+          <app-button variant="secondary" size="sm" [disabled]="!matrixDirty" (clicked)="discardMatrix()">Discard</app-button>
+          <app-button size="sm" icon="save" [disabled]="!matrixDirty" (clicked)="saveMatrix()">Save Changes</app-button>
+        </div>
+      </header>
+
+      <div class="prm-roles" role="radiogroup" aria-label="Role">
+        @for (r of roles; track r) {
+          <button type="button" role="radio" class="prm-role" [class.is-on]="role === r" [attr.aria-checked]="role === r" (click)="role = r">
+            {{ r }}<span class="prm-role__count">{{ reach(r) }}/{{ modules.length }}</span>
+          </button>
+        }
+      </div>
+
+      @if (role === 'Maintenance') {
+        <p class="prm-note" role="note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Maintenance can never be given access to Fees &amp; Payments or Disciplinary records.</p>
+      }
+
+      <div class="table-responsive">
+        <table class="saas-table prm-table">
+          <caption class="prm-sr">Permissions for {{ role }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Module</th>
+              @for (a of actions; track a) { <th scope="col" class="prm-th-action">{{ a | titlecase }}</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of modules; track m) {
+              <tr class="table-row" [class.is-blocked]="isBlocked(m)">
+                <th scope="row" class="prm-module">
+                  {{ moduleLabels[m] }}
+                  @if (isBlocked(m)) { <mat-icon class="prm-lock" fontSet="material-icons-outlined" [matTooltip]="blocker(m)">lock</mat-icon> }
+                </th>
+                @for (a of actions; track a) {
+                  <td class="prm-td-action">
+                    <input type="checkbox" class="prm-check"
+                      [checked]="draftMatrix[role][m][a]" [disabled]="isBlocked(m)"
+                      [attr.aria-label]="role + ': ' + a + ' ' + moduleLabels[m]"
+                      (change)="toggle(m, a, $any($event.target).checked)" />
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="prm-foot">Export also needs the role's export switch to be on (Export Controls tab).</p>
+    </section>
+  }
+
+  <!-- ===== Approval limits ===== -->
+  @if (tab === 'limits') {
+    <section class="prm-card" aria-labelledby="prm-limits-title">
+      <header class="prm-card__head">
+        <div>
+          <h2 id="prm-limits-title">Approval Limits</h2>
+          <p>Amounts above these limits need the Owner's approval.</p>
+        </div>
+        <div class="prm-card__actions">
+          <app-button variant="secondary" size="sm" [disabled]="!limitsDirty" (clicked)="discardLimits()">Discard</app-button>
+          <app-button size="sm" icon="save" [disabled]="!limitsDirty" (clicked)="saveLimits()">Save Changes</app-button>
+        </div>
+      </header>
+
+      <div class="prm-form">
+        <div class="fk-field">
+          <label class="fk-label" for="lim-refund">Refund maximum<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="limitErrors.refundMax">
+            <span class="fk-lead">₹</span>
+            <input id="lim-refund" inputmode="numeric" [(ngModel)]="draftLimits.refundMax" autocomplete="off" />
+          </span>
+          @if (limitErrors.refundMax) { <span class="fk-error">{{ limitErrors.refundMax }}</span> }
+          @else { <span class="fk-hint">Largest refund that can be issued without the Owner.</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="lim-adjust">Fee adjustment maximum<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="limitErrors.feeAdjustmentMax">
+            <span class="fk-lead">₹</span>
+            <input id="lim-adjust" inputmode="numeric" [(ngModel)]="draftLimits.feeAdjustmentMax" autocomplete="off" />
+          </span>
+          @if (limitErrors.feeAdjustmentMax) { <span class="fk-error">{{ limitErrors.feeAdjustmentMax }}</span> }
+          @else { <span class="fk-hint">Largest waiver or adjustment a delegate may apply.</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="lim-approver">Outpass approver</label>
+          <span class="fk-control" [class.is-invalid]="limitErrors.outpassApprover">
+            <select id="lim-approver" [(ngModel)]="draftLimits.outpassApprover">
+              @for (a of approvers; track a) { <option [value]="a">{{ a }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (limitErrors.outpassApprover) { <span class="fk-error">{{ limitErrors.outpassApprover }}</span> }
+        </div>
+
+        <label class="prm-toggle">
+          <input type="checkbox" [(ngModel)]="draftLimits.attendanceCorrectionNeedsApproval" />
+          <span><strong>Attendance corrections need approval</strong><small>Edits to past attendance wait for an approver before they count.</small></span>
+        </label>
+      </div>
+    </section>
+  }
+
+  <!-- ===== Export controls ===== -->
+  @if (tab === 'export') {
+    <section class="prm-card" aria-labelledby="prm-export-title">
+      <header class="prm-card__head">
+        <div>
+          <h2 id="prm-export-title">Export Controls</h2>
+          <p>Decide which roles may export data. Every export is logged below and in the audit history.</p>
+        </div>
+        <div class="prm-card__actions">
+          <app-button variant="secondary" size="sm" [disabled]="!exportDirty" (clicked)="discardExport()">Discard</app-button>
+          <app-button size="sm" icon="save" [disabled]="!exportDirty" (clicked)="saveExport()">Save Changes</app-button>
+        </div>
+      </header>
+
+      <ul class="prm-switches">
+        <li class="prm-switch">
+          <span><strong>Owner</strong><small>Always allowed</small></span>
+          <input type="checkbox" class="prm-check" checked disabled aria-label="Owner export allowed" />
+        </li>
+        @for (r of roles; track r) {
+          <li class="prm-switch">
+            <span><strong>{{ r }}</strong><small>{{ draftExport[r] ? 'May export where the role has export access' : 'Export blocked' }}</small></span>
+            <input type="checkbox" class="prm-check" [(ngModel)]="draftExport[r]" [attr.aria-label]="r + ' export allowed'" />
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="prm-card" aria-labelledby="prm-exportlog-title">
+      <header class="prm-card__head">
+        <div>
+          <h2 id="prm-exportlog-title">Export Log</h2>
+          <p>Latest {{ recentExports.length }} of {{ service.exportLog.length }} recorded exports.</p>
+        </div>
+      </header>
+      @if (recentExports.length) {
+        <div class="table-responsive">
+          <table class="saas-table prm-table">
+            <thead><tr><th scope="col">When</th><th scope="col">By</th><th scope="col">What was exported</th></tr></thead>
+            <tbody>
+              @for (e of recentExports; track e.id) {
+                <tr class="table-row">
+                  <td class="prm-nowrap">{{ fmt.date(e.at, 'datetime') }}</td>
+                  <td>{{ e.by }}</td>
+                  <td>{{ e.what }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="prm-empty"><mat-icon fontSet="material-icons-outlined">ios_share</mat-icon>No exports recorded yet. Exports from Reports appear here.</p>
+      }
+    </section>
+  }
+
+  <!-- ===== Session security ===== -->
+  @if (tab === 'session') {
+    <section class="prm-card" aria-labelledby="prm-session-title">
+      <header class="prm-card__head">
+        <div>
+          <h2 id="prm-session-title">Session Security</h2>
+          <p>Set by the platform. Shown here for reference; contact support to change them.</p>
+        </div>
+      </header>
+      <div class="prm-stats">
+        <div class="prm-stat">
+          <mat-icon fontSet="material-icons-outlined">timer</mat-icon>
+          <span class="prm-stat__value">{{ service.security.sessionTimeoutMinutes }} min</span>
+          <span class="prm-stat__label">Session timeout</span>
+        </div>
+        <div class="prm-stat">
+          <mat-icon fontSet="material-icons-outlined">lock_person</mat-icon>
+          <span class="prm-stat__value">{{ service.security.maxLoginAttempts }}</span>
+          <span class="prm-stat__label">Max login attempts</span>
+        </div>
+        <div class="prm-stat">
+          <mat-icon fontSet="material-icons-outlined">key</mat-icon>
+          <span class="prm-stat__value">{{ service.security.passwordExpiryDays ? service.security.passwordExpiryDays + ' days' : 'Never' }}</span>
+          <span class="prm-stat__label">Password expiry</span>
+        </div>
+        <div class="prm-stat">
+          <mat-icon fontSet="material-icons-outlined">password</mat-icon>
+          <span class="prm-stat__value">{{ service.security.minPasswordLength }}+ chars</span>
+          <span class="prm-stat__label">Minimum password length</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ===== Audit history ===== -->
+  @if (tab === 'audit') {
+    <div class="filter-card">
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search user, entity or action" aria-label="Search audit history"
+          [(ngModel)]="auditFilters.search" (ngModelChange)="auditPage = 0" />
+        @if (auditFilters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="auditFilters.search = ''; auditPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Module" [(ngModel)]="auditFilters.module" (ngModelChange)="auditPage = 0">
+            <option value="All">All Modules</option>
+            @for (m of historyModules; track m) { <option [value]="m">{{ m }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Result" [(ngModel)]="auditFilters.status" (ngModelChange)="auditPage = 0">
+            <option value="All">All Results</option>
+            <option value="Success">Success</option>
+            <option value="Failed">Failed</option>
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="prm-date">From
+        <input type="date" aria-label="From date" [(ngModel)]="auditFilters.from" (ngModelChange)="auditPage = 0" />
+      </label>
+      <label class="prm-date">To
+        <input type="date" aria-label="To date" [(ngModel)]="auditFilters.to" (ngModelChange)="auditPage = 0" />
+      </label>
+
+      @if (hasAuditFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearAuditFilters()">Reset</app-button>
+      }
+    </div>
+
+    <app-table-card
+      class="prm-audit-card"
+      [empty]="filteredHistory.length === 0"
+      emptyIcon="manage_search"
+      [emptyMessage]="hasAuditFilters ? 'No audit entries match your filters' : 'No audit entries yet'"
+      [emptyHint]="hasAuditFilters ? 'Try a different search, date range or module.' : 'Changes to residents, fees, staff and permissions appear here.'"
+      [clearable]="hasAuditFilters"
+      (clear)="clearAuditFilters()"
+      [page]="auditSafePage"
+      [totalPages]="auditTotalPages"
+      [pageSize]="auditPageSize"
+      (pageChange)="auditPage = $event"
+      (pageSizeChange)="auditPageSize = $event; auditPage = 0"
+    >
+      <table class="saas-table prm-table prm-audit">
+        <caption class="prm-sr">Audit history, newest first. Read-only.</caption>
+        <thead>
+          <tr>
+            <th scope="col">When</th>
+            <th scope="col">Actor</th>
+            <th scope="col">Action</th>
+            <th scope="col">Entity</th>
+            <th scope="col">Result</th>
+            <th scope="col">Before / After</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (l of pagedHistory; track l.logId) {
+            <tr class="table-row">
+              <td class="prm-nowrap">
+                <span class="list-entity__text">
+                  <span>{{ fmt.date(l.timestamp, 'date') }}</span>
+                  <span class="list-entity__sub">{{ fmt.date(l.timestamp, 'time') }}</span>
+                </span>
+              </td>
+              <td>{{ l.user }}</td>
+              <td>
+                <span class="list-entity__text">
+                  <span class="list-entity__name">{{ actionOf(l) }}</span>
+                  <span class="list-entity__sub">{{ moduleOf(l) }}</span>
+                </span>
+              </td>
+              <td class="prm-entity" [title]="l.entity">{{ l.entity }}</td>
+              <td>
+                <span class="status-badge status-badge--{{ l.status === 'Success' ? 'success' : 'danger' }}">{{ l.status }}</span>
+              </td>
+              <td class="prm-changes">
+                @if (l.changes?.length) {
+                  <button type="button" class="prm-more" [attr.aria-expanded]="expanded.has(l.logId)" (click)="toggleRow(l.logId)">
+                    {{ l.changes!.length }} change{{ l.changes!.length === 1 ? '' : 's' }}
+                    <mat-icon>{{ expanded.has(l.logId) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                  @if (expanded.has(l.logId)) {
+                    <ul class="prm-diff">
+                      @for (c of l.changes!; track c.field) {
+                        <li><strong>{{ c.field }}</strong> <span class="prm-old">{{ c.oldValue }}</span> <mat-icon>arrow_forward</mat-icon> <span class="prm-new">{{ c.newValue }}</span></li>
+                      }
+                    </ul>
+                  }
+                } @else if (l.details) {
+                  <span class="prm-detail" [title]="l.details">{{ l.details }}</span>
+                } @else { <span class="muted">—</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </app-table-card>
+  }
+</div>

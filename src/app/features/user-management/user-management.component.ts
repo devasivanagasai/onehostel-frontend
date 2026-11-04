@@ -7,21 +7,22 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { AdminStatus, HostelAdmin, adminFullName } from '../admin-management/admin.models';
-import { AdminService } from '../admin-management/admin.service';
-import { AdminDetailPanelComponent, AdminPanelTab } from '../admin-management/admin-detail-panel.component';
+import { AdminStatus, HostelAdmin, adminFullName } from '../../core/models/admin.models';
+import { AdminService } from '../../core/services/admin.service';
+import { AdminDetailPanelComponent, AdminPanelTab } from './admin-detail-panel.component';
 import { Resident, residentFullName } from './resident.models';
 import { ResidentService } from './resident.service';
-import { isOnboardedHostel } from '../hostel-onboarding/onboarded-hostels';
+import { isOnboardedHostel } from '../../core/models/onboarded-hostels';
 import { RESIDENT_STATUS_TONE, ResidentDetailPanelComponent } from './resident-detail-panel.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const ALL = 'All';
 
-export type UserRole = 'Admin' | 'Resident';
+export type UserRole = 'Hostel Owner' | 'Tenant';
 
-/** One row in a hostel card: either a hostel Admin or an Resident (resident). */
+/** One row in a hostel card: either a Hostel Owner or a Tenant. */
 interface UserRow {
   id: string;
   name: string;
@@ -51,8 +52,8 @@ const ADMIN_STATUS_TONE: Record<AdminStatus, 'success' | 'neutral' | 'danger'> =
 };
 
 /**
- * Every user of each onboarded hostel — its Admins and Residents (residents) —
- * listed together under one card per hostel. Admins share data (and the view
+ * Every user of each onboarded hostel — its Hostel Owners and Tenants —
+ * listed together under one card per hostel. Hostel Owners share data (and the view
  * panel) with the admin-management feature folder.
  */
 @Component({
@@ -70,7 +71,8 @@ const ADMIN_STATUS_TONE: Record<AdminStatus, 'success' | 'neutral' | 'danger'> =
     MatTooltipModule,
     AdminDetailPanelComponent,
     ResidentDetailPanelComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   templateUrl: './user-management.component.html',
   styleUrl: './user-management.component.scss',
@@ -81,7 +83,7 @@ export class UserManagementComponent {
   roleFilter: UserRole | 'All' = ALL;
   statusFilter = ALL;
 
-  readonly roles: UserRole[] = ['Admin', 'Resident'];
+  readonly roles: UserRole[] = ['Hostel Owner', 'Tenant'];
   readonly statusOptions = ['Active', 'Inactive', 'Locked', 'Blocked'];
 
   /** Hostel cards the user has opened. Cards start closed. */
@@ -106,7 +108,7 @@ export class UserManagementComponent {
       .map((a: HostelAdmin) => ({
         id: a.adminId,
         name: adminFullName(a),
-        role: 'Admin',
+        role: 'Hostel Owner',
         hostelName: a.hostelName,
         roomBed: null,
         lastLogin: a.lastLogin,
@@ -120,7 +122,7 @@ export class UserManagementComponent {
       .map((r: Resident) => ({
         id: r.residentId,
         name: residentFullName(r),
-        role: 'Resident',
+        role: 'Tenant',
         hostelName: r.hostelName,
         roomBed: `${r.roomNo} / ${r.bedNo}`,
         lastLogin: r.lastLogin,
@@ -135,12 +137,12 @@ export class UserManagementComponent {
   /** Summary tiles, over every user of the onboarded hostels (not just the filtered ones). */
   get tiles(): { label: string; count: number; icon: string; tone: string }[] {
     const rows = this.allRows;
-    const admins = rows.filter((r) => r.role === 'Admin').length;
+    const admins = rows.filter((r) => r.role === 'Hostel Owner').length;
     const locked = rows.filter((r) => r.status === 'Locked' || r.status === 'Blocked').length;
     return [
       { label: 'Total Users', count: rows.length, icon: 'group', tone: 'blue' },
-      { label: 'Total Admins', count: admins, icon: 'admin_panel_settings', tone: 'green' },
-      { label: 'Total Residents', count: rows.length - admins, icon: 'groups', tone: 'purple' },
+      { label: 'Total Hostel Owners', count: admins, icon: 'admin_panel_settings', tone: 'green' },
+      { label: 'Total Tenants', count: rows.length - admins, icon: 'groups', tone: 'purple' },
       { label: 'Locked Accounts', count: locked, icon: 'lock', tone: 'amber' },
     ];
   }
@@ -174,12 +176,12 @@ export class UserManagementComponent {
 
   // ---- Grouping (one card per hostel) ---------------------------------------
 
-  /** All matching users in display order: hostels A–Z; inside each, Admins first, then Residents, each by ID. */
+  /** All matching users in display order: hostels A–Z; inside each, Hostel Owners first, then Tenants, each by ID. */
   private get sortedRows(): UserRow[] {
     return [...this.filteredRows].sort(
       (a, b) =>
         a.hostelName.localeCompare(b.hostelName) ||
-        (a.role === b.role ? a.id.localeCompare(b.id) : a.role === 'Admin' ? -1 : 1),
+        (a.role === b.role ? a.id.localeCompare(b.id) : a.role === 'Hostel Owner' ? -1 : 1),
     );
   }
 
@@ -191,8 +193,8 @@ export class UserManagementComponent {
       hostel,
       rows,
       total: rows.length,
-      admins: rows.filter((r) => r.role === 'Admin').length,
-      residents: rows.filter((r) => r.role === 'Resident').length,
+      admins: rows.filter((r) => r.role === 'Hostel Owner').length,
+      residents: rows.filter((r) => r.role === 'Tenant').length,
     }));
   }
 
@@ -208,7 +210,7 @@ export class UserManagementComponent {
 
 
   edit(row: UserRow): void {
-    if (row.role !== 'Admin') return;
+    if (row.role !== 'Hostel Owner') return;
     this.selectedAdminId = row.id;
     this.adminPanelTab = 'edit';
     this.adminPanelOpen = true;
@@ -216,7 +218,7 @@ export class UserManagementComponent {
 
   /** The row's lock-type action for its status (Lock/Unlock admins, Block/Unblock residents); none when Inactive. */
   lockAction(row: UserRow): { label: string; icon: string } | null {
-    if (row.role === 'Admin') {
+    if (row.role === 'Hostel Owner') {
       if (row.status === 'Active') return { label: 'Lock', icon: 'lock' };
       if (row.status === 'Locked') return { label: 'Unlock', icon: 'lock_open' };
     } else {
@@ -228,7 +230,7 @@ export class UserManagementComponent {
 
   /** Runs the lock-type action through the service's confirm dialog. */
   toggleLock(row: UserRow): void {
-    if (row.role === 'Admin') {
+    if (row.role === 'Hostel Owner') {
       const admin = this.adminService.byId(row.id);
       if (admin) this.adminService.perform(admin, row.status === 'Locked' ? 'unlock' : 'lock').subscribe();
     } else {
@@ -238,7 +240,7 @@ export class UserManagementComponent {
   }
 
   view(row: UserRow): void {
-    if (row.role === 'Admin') {
+    if (row.role === 'Hostel Owner') {
       this.selectedAdminId = row.id;
       this.adminPanelTab = 'details';
       this.adminPanelOpen = true;

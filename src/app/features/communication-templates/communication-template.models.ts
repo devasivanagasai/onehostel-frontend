@@ -7,7 +7,7 @@ export const COMMUNICATION_CHANNELS: { value: CommunicationChannel; icon: string
 ];
 
 export const TEMPLATE_TRIGGERS: string[] = [
-  'Admin Onboarding',
+  'Hostel Owner Onboarding',
   'Hostel Onboarding',
   'Password Reset',
   'Subscription Activated',
@@ -24,7 +24,7 @@ export interface TemplateVariable {
 
 /** Placeholders the system can substitute; `sample` feeds the side panel's live preview. */
 export const TEMPLATE_VARIABLES: TemplateVariable[] = [
-  { key: 'admin_name', label: 'Admin Name', sample: 'Ravi Kumar' },
+  { key: 'admin_name', label: 'Hostel Owner Name', sample: 'Ravi Kumar' },
   { key: 'hostel_name', label: 'Hostel Name', sample: 'Sunrise Boys Hostel' },
   { key: 'username', label: 'Username', sample: 'ravi.kumar' },
   { key: 'temporary_password', label: 'Temporary Password', sample: 'Tmp@4821' },

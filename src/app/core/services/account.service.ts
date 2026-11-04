@@ -1,15 +1,49 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, delay, map, of, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, catchError, delay, map, of, tap, throwError } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
 import { AuditLogService } from './audit-log.service';
 import { SystemSettingsService } from './system-settings.service';
 import { HostelAdminAccount, HostelAdminAccountService } from './hostel-admin-account.service';
 import { AuditChange, diffForAudit } from '../models/audit.models';
+import { BUILT_IN_PASSWORD, builtInAccountById } from '../models/built-in-accounts';
 import { PROFILE_AUDIT_FIELDS, PasswordPolicy, UserProfile, profileFullName } from '../models/account.models';
+import { ApiResponse } from '../models/auth.models';
+
+/** GET / PUT /access/me (ProfileResponse in onehostel-access-core). */
+interface ServerProfile {
+  userId: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  mobileCountryCode?: string;
+  mobileNumber?: string;
+  role?: string;
+  /** ISO instants. */
+  memberSince?: string;
+  passwordChangedAt?: string;
+}
+
+/** Designation shown on My Profile for each backend role. */
+const ROLE_DESIGNATIONS: Record<string, string> = {
+  SUPER_ADMIN: 'Admin',
+  HOSTEL_OWNER: 'Hostel Owner',
+  HOSTEL_MANAGER: 'Hostel Manager',
+  HOSTEL_TENANT: 'Tenant',
+  SECURITY_GUARD: 'Security Guard',
+};
 
 const PROFILE_KEY = 'onehostel_profile_';
 const PASSWORD_KEY = 'onehostel_pw_';
-/** Matches the login screen's "Use demo credentials" password. */
+/** Role names shown as Designation on My Profile. */
+const ADMIN_DESIGNATION = 'Admin';
+const HOSTEL_OWNER_DESIGNATION = 'Hostel Owner';
+const TENANT_DESIGNATION = 'Tenant';
+const DEFAULT_FIRST_NAME = 'Admin';
+const DEFAULT_LAST_NAME = 'User';
+/** Starting password for mock Admin sign-ins other than the built-in accounts. */
 const DEMO_PASSWORD = 'Password123!';
 const DAY_MS = 86_400_000;
 
@@ -18,19 +52,23 @@ export type ChangePasswordResult = 'ok' | 'wrong-current';
 export type ProfileChanges = Pick<UserProfile, 'firstName' | 'lastName' | 'email' | 'mobileCode' | 'mobile' | 'avatarDataUrl'>;
 
 /**
- * The signed-in SuperAdmin's own account: profile details and password.
+ * The signed-in user's own account: profile details and password.
  *
- * UI-only build: the profile and a mock password are kept in localStorage per
- * user. Swap `saveProfile` / `changePassword` for `PUT /me` and
- * `POST /me/password` once the backend exists — passwords must only ever be
- * verified and stored (hashed) server-side.
+ * Signed in through the backend, name, email and mobile are read from and saved to
+ * GET / PUT /access/me (the users collection and Keycloak), and the password is changed on the
+ * gateway. This browser keeps a copy for an instant start, plus the profile photo, which has no
+ * server storage yet. Mock sign-in keeps everything in localStorage.
  */
 @Injectable({ providedIn: 'root' })
 export class AccountService {
   private readonly profileSubject = new BehaviorSubject<UserProfile | null>(null);
   readonly profile$: Observable<UserProfile | null> = this.profileSubject.asObservable();
+  private readonly meUrl = `${environment.apiUrl}/access/me`;
+  /** The user whose server profile was last fetched, so token refreshes don't refetch it. */
+  private fetchedFor: string | null = null;
 
   constructor(
+    private http: HttpClient,
     private auth: AuthService,
     private auditLog: AuditLogService,
     private settings: SystemSettingsService,
@@ -41,7 +79,41 @@ export class AccountService {
       const profile = user ? this.load(user.id, user.email) : null;
       this.profileSubject.next(profile);
       if (user && profile) this.syncSession(profile);
+      if (!user) this.fetchedFor = null;
+      else if (!environment.useMockAuth && this.fetchedFor !== user.id) this.fetchServerProfile(user.id);
     });
+  }
+
+  /** Replaces the stored copy with the account as the backend has it. On failure the stored copy stays. */
+  private fetchServerProfile(userId: string): void {
+    this.fetchedFor = userId;
+    this.http
+      .get<ApiResponse<ServerProfile>>(this.meUrl)
+      .pipe(catchError(() => of(null)))
+      .subscribe((res) => {
+        if (!res?.success || !res.responseObject || this.auth.currentUser?.id !== userId) return;
+        const profile = this.fromServer(res.responseObject, this.profile);
+        this.persist(profile);
+        this.profileSubject.next(profile);
+        this.syncSession(profile);
+      });
+  }
+
+  private fromServer(server: ServerProfile, cached: UserProfile | null): UserProfile {
+    const now = new Date().toISOString();
+    return {
+      userId: server.userId,
+      firstName: server.firstName ?? '',
+      lastName: server.lastName ?? '',
+      email: server.email ?? '',
+      mobileCode: server.mobileCountryCode ?? '+91',
+      mobile: server.mobileNumber ?? '',
+      designation: (server.role && ROLE_DESIGNATIONS[server.role]) || ADMIN_DESIGNATION,
+      // Photos are kept in this browser only until there is file storage on the backend
+      avatarDataUrl: cached?.userId === server.userId ? cached.avatarDataUrl : '',
+      memberSince: (server.memberSince ?? now).slice(0, 10),
+      passwordChangedAt: server.passwordChangedAt ?? cached?.passwordChangedAt ?? server.memberSince ?? now,
+    };
   }
 
   get profile(): UserProfile | null {
@@ -91,6 +163,31 @@ export class AccountService {
     }
     if (!auditChanges.length) return of([]);
 
+    if (!environment.useMockAuth) {
+      const body = {
+        firstName: changes.firstName,
+        lastName: changes.lastName,
+        email: changes.email,
+        mobileCountryCode: changes.mobileCode,
+        mobileNumber: changes.mobile,
+      };
+      return this.http
+        .put<ApiResponse<ServerProfile>>(this.meUrl, { requestObject: body, clientSource: 'WEB', requestedAt: new Date().toISOString() })
+        .pipe(
+          map((res) => {
+            if (!res.success || !res.responseObject) throw new HttpErrorResponse({ status: res.statusCode || 400, error: res });
+            return { ...this.fromServer(res.responseObject, current), avatarDataUrl: changes.avatarDataUrl };
+          }),
+          tap((updated) => {
+            this.persist(updated);
+            this.profileSubject.next(updated);
+            this.syncSession(updated);
+            this.auditLog.record('Update Profile', profileFullName(updated), { changes: auditChanges });
+          }),
+          map(() => auditChanges),
+        );
+    }
+
     const updated: UserProfile = { ...current, ...changes };
     return of(auditChanges).pipe(
       delay(500),
@@ -119,10 +216,33 @@ export class AccountService {
     });
   }
 
-  /** Verifies the current password, then stores the new one. */
+  /**
+   * Verifies the current password, then stores the new one: on the gateway (Keycloak and the users
+   * collection), or in this browser for mock sign-in. Other backend failures (rules, reuse, network)
+   * are thrown as the HttpErrorResponse.
+   */
   changePassword(currentPassword: string, newPassword: string): Observable<ChangePasswordResult> {
     const profile = this.profile;
     if (!profile) return of('wrong-current' as const);
+
+    if (!environment.useMockAuth) {
+      const name = profileFullName(profile);
+      return this.auth.changePassword(currentPassword, newPassword).pipe(
+        map((): ChangePasswordResult => 'ok'),
+        catchError((error: HttpErrorResponse) => {
+          if (error.error?.errorCode !== 'INVALID_CURRENT_PASSWORD') return throwError(() => error);
+          this.auditLog.record('Change Password', name, { status: 'Failed', details: 'Current password was incorrect.' });
+          return of('wrong-current' as const);
+        }),
+        tap((result) => {
+          if (result !== 'ok') return;
+          const updated: UserProfile = { ...profile, passwordChangedAt: new Date().toISOString() };
+          this.persist(updated);
+          this.profileSubject.next(updated);
+          this.auditLog.record('Change Password', name, { details: 'Password changed by the account owner.' });
+        }),
+      );
+    }
 
     const adminAccount = this.hostelAdminFor(profile.userId);
     const savedPassword = adminAccount ? adminAccount.password : this.readPassword(profile.userId);
@@ -154,7 +274,14 @@ export class AccountService {
       const raw = localStorage.getItem(PROFILE_KEY + userId);
       if (raw) {
         const stored = JSON.parse(raw) as UserProfile;
-        // A hostel admin's password date lives on their account (it changes on reset/re-onboarding too).
+        // Designation is the role (not editable), so always show the current role name.
+        stored.designation = this.designationFor(userId, account);
+        // Profiles saved before the role rename still carry the old default name "Super Admin".
+        if (!account && stored.firstName === 'Super' && stored.lastName === 'Admin') {
+          stored.firstName = DEFAULT_FIRST_NAME;
+          stored.lastName = DEFAULT_LAST_NAME;
+        }
+        // A hostel owner's password date lives on their account (it changes on reset/re-onboarding too).
         return account?.passwordChangedAt ? { ...stored, passwordChangedAt: account.passwordChangedAt } : stored;
       }
     } catch {
@@ -167,18 +294,25 @@ export class AccountService {
   }
 
   private defaultProfile(userId: string, email: string): UserProfile {
+    const builtIn = builtInAccountById(userId);
     return {
       userId,
-      firstName: 'Super',
-      lastName: 'Admin',
+      firstName: builtIn?.firstName ?? DEFAULT_FIRST_NAME,
+      lastName: builtIn?.lastName ?? DEFAULT_LAST_NAME,
       email,
       mobileCode: '+91',
       mobile: '9876543210',
-      designation: 'Super Admin',
+      designation: this.designationFor(userId, null),
       avatarDataUrl: '',
       memberSince: '2025-04-01',
       passwordChangedAt: new Date(Date.now() - 42 * DAY_MS).toISOString(),
     };
+  }
+
+  /** The role shown as Designation: Hostel Owner, Tenant (built-in tenant sign-in) or Admin. */
+  private designationFor(userId: string, hostelOwner: HostelAdminAccount | null): string {
+    if (hostelOwner) return HOSTEL_OWNER_DESIGNATION;
+    return builtInAccountById(userId)?.role === 'Tenant' ? TENANT_DESIGNATION : ADMIN_DESIGNATION;
   }
 
   /** Hostel admins sign in with ids like "HST123456-admin" (see AuthService). */
@@ -195,7 +329,7 @@ export class AccountService {
       email: account.email,
       mobileCode: '+91',
       mobile: account.mobileNumber,
-      designation: 'Hostel Admin',
+      designation: HOSTEL_OWNER_DESIGNATION,
       avatarDataUrl: '',
       memberSince: (account.passwordChangedAt ?? new Date().toISOString()).slice(0, 10),
       passwordChangedAt: account.passwordChangedAt ?? new Date().toISOString(),
@@ -220,10 +354,15 @@ export class AccountService {
 
   private readPassword(userId: string): string {
     try {
-      return localStorage.getItem(PASSWORD_KEY + userId) ?? DEMO_PASSWORD;
+      return localStorage.getItem(PASSWORD_KEY + userId) ?? this.startingPassword(userId);
     } catch {
-      return DEMO_PASSWORD;
+      return this.startingPassword(userId);
     }
+  }
+
+  /** Built-in sign-ins start with Password@123; any other mock Admin sign-in with DEMO_PASSWORD. */
+  private startingPassword(userId: string): string {
+    return builtInAccountById(userId) ? BUILT_IN_PASSWORD : DEMO_PASSWORD;
   }
 
   private writePassword(userId: string, password: string): void {

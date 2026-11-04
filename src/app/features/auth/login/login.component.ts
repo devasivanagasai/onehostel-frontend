@@ -1,8 +1,7 @@
-import { Component, DestroyRef, ElementRef, ViewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { NgTemplateOutlet } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,19 +10,37 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { AuthService } from '../../../core/services/auth.service';
-import { LoginErrorCode, LoginMethod, OtpChallenge } from '../../../core/models/auth.models';
+import {
+  EMAIL_OR_PHONE,
+  LoginErrorCode,
+  MOBILE_APP_ONLY_MESSAGE,
+  apiErrorMessage,
+  isUnknownAccount,
+} from '../../../core/models/auth.models';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormErrorComponent } from '../../../shared/components/form-error/app-form-error.component';
-import { CustomValidators } from '../../../shared/validators/custom-validators';
-import { ForgotPasswordDialogComponent } from '../forgot-password-dialog/forgot-password-dialog.component';
+import { AppOtpInputComponent } from '../../../shared/components/otp-input/app-otp-input.component';
+import {
+  ForgotPasswordDialogComponent,
+  ForgotPasswordDialogData,
+  ForgotPasswordDialogResult,
+} from '../forgot-password-dialog/forgot-password-dialog.component';
 
+/** How long before "Resend OTP" can be used again. */
+const OTP_RESEND_SECONDS = 30;
+
+export type LoginMode = 'password' | 'otp';
+
+/**
+ * Web portal sign-in for Admins, Hostel Owners and Hostel Managers, by password or by one-time code
+ * sent to the email or mobile number. Tenants and security guards are turned away to the mobile app.
+ * Signed-in users go to the page they came from, or else their role's home page.
+ */
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    NgTemplateOutlet,
-    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
@@ -31,201 +48,232 @@ import { ForgotPasswordDialogComponent } from '../forgot-password-dialog/forgot-
     MatDialogModule,
     AppButtonComponent,
     AppFormErrorComponent,
+    AppOtpInputComponent,
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
-  @ViewChild('passwordInput') private passwordInput?: ElementRef<HTMLInputElement>;
-  @ViewChild('otpInput') private otpInput?: ElementRef<HTMLInputElement>;
+  private readonly fb = inject(FormBuilder);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
-  /** Shared by both methods, so switching tabs keeps the typed login ID. */
-  readonly form = this.fb.group({
-    username: ['', [Validators.required, CustomValidators.noWhitespace]],
+  @ViewChild('passwordInput') private passwordInput?: ElementRef<HTMLInputElement>;
+  @ViewChild(AppOtpInputComponent) private otpInput?: AppOtpInputComponent;
+
+  /** One form for both tabs: the identifier is shared, password and otp are checked by the tab that needs them. */
+  readonly form = this.fb.nonNullable.group({
+    identifier: ['', [Validators.required, Validators.pattern(EMAIL_OR_PHONE)]],
     password: ['', [Validators.required]],
+    otp: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
 
-  /** Validators are set per challenge, since the code length comes from Security Settings. */
-  readonly otpCode = this.fb.control('', [Validators.required]);
+  readonly mode = signal<LoginMode>('password');
+  readonly loading = signal(false);
+  readonly hidePassword = signal(true);
+  readonly capsLockOn = signal(false);
+  /** Toggled briefly on a failed login to trigger the shake animation, then cleared so it can replay next time. */
+  readonly loginFailed = signal(false);
+  /** The last failure, from the backend's message. */
+  readonly error = signal('');
+  /** The failure was a mobile-app-only role (tenant, security guard). */
+  readonly mobileAppOnly = signal(false);
 
-  method: LoginMethod = 'Password';
-  /** Set once a code has been sent; switches the OTP tab to the "enter code" step. */
-  otpChallenge: OtpChallenge | null = null;
-  resendIn = 0;
+  /** Where the OTP went; set once it is sent, which moves the OTP tab to its "enter code" step. */
+  readonly otpSentTo = signal('');
+  /** Seconds until "Resend OTP" is available again. */
+  readonly resendIn = signal(0);
   private resendTimer?: ReturnType<typeof setInterval>;
 
-  loading = false;
-  hidePassword = true;
-  capsLockOn = false;
-  /** Toggled briefly on a failed login to trigger the shake animation, then cleared so it can replay next time. */
-  loginFailed = false;
+  readonly subtitle = computed(() => {
+    if (this.mode() === 'password') return 'Enter your email or mobile number and password to access your account.';
+    return this.otpSentTo()
+      ? 'Enter the 6-digit code we sent you.'
+      : 'We will send a one-time code to your registered email or mobile number.';
+  });
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog,
-    destroyRef: DestroyRef,
-  ) {
-    destroyRef.onDestroy(() => clearInterval(this.resendTimer));
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearInterval(this.resendTimer));
+    if (this.route.snapshot.queryParamMap.get('reason') === 'mobile-app') this.showError(MOBILE_APP_ONLY_MESSAGE, true);
   }
 
-  /** Set when the user was signed out automatically (Settings → Security → Session Timeout). */
-  get signedOutForInactivity(): boolean {
-    return this.route.snapshot.queryParamMap.get('reason') === 'timeout';
+  /** Why the user was signed out automatically, if they were: inactivity (Session Timeout) or an expired session. */
+  get signOutNotice(): string | null {
+    switch (this.route.snapshot.queryParamMap.get('reason')) {
+      case 'timeout':
+        return 'You were signed out because you were inactive. Please log in again.';
+      case 'expired':
+        return 'Your session has expired. Please log in again.';
+      default:
+        return null;
+    }
   }
 
-  get loginIdControl() {
-    return this.form.controls.username;
-  }
-
-  setMethod(method: LoginMethod): void {
-    if (this.method === method) return;
-    this.method = method;
-    this.resetOtp();
-  }
-
-  togglePasswordVisibility(): void {
-    this.hidePassword = !this.hidePassword;
+  setMode(mode: LoginMode): void {
+    if (mode === this.mode()) return;
+    this.mode.set(mode);
+    this.clearError();
   }
 
   onPasswordKeyEvent(event: KeyboardEvent): void {
-    this.capsLockOn = event.getModifierState?.('CapsLock') ?? false;
+    this.capsLockOn.set(event.getModifierState?.('CapsLock') ?? false);
   }
-
-  fillDemoCredentials(): void {
-    this.form.patchValue({
-      username: 'superadmin@onehostel.com',
-      password: 'Password123!',
-    });
-    this.form.markAsPristine();
-  }
-
-  // ---- Password -------------------------------------------------------------
 
   onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+    if (this.mode() === 'password') this.loginWithPassword();
+    else if (this.otpSentTo()) this.verifyOtp();
+    else this.sendOtp();
+  }
+
+  private loginWithPassword(): void {
+    const { identifier, password } = this.form.controls;
+    if (identifier.invalid || password.invalid) {
+      identifier.markAsTouched();
+      password.markAsTouched();
       return;
     }
 
-    const { username, password } = this.form.getRawValue();
-    this.loading = true;
-
-    this.authService.login({ identifier: username!.trim(), password: password!, rememberMe: true }).subscribe({
+    this.start();
+    this.authService.login({ identifier: identifier.value, password: password.value, rememberMe: true }).subscribe({
       next: () => this.onLoggedIn(),
       error: (error: HttpErrorResponse) => {
-        this.onFailed(error, 'Incorrect login ID or password.');
+        this.onFailed(error, 'Incorrect email/mobile number or password.');
+        password.reset('');
         this.passwordInput?.nativeElement.focus();
       },
     });
   }
 
-  // ---- OTP ------------------------------------------------------------------
-
-  onSendOtp(): void {
-    if (this.loginIdControl.invalid) {
-      this.loginIdControl.markAsTouched();
+  /** OTP step 1, and "Resend OTP" in step 2. */
+  sendOtp(): void {
+    const identifier = this.form.controls.identifier;
+    if (identifier.invalid) {
+      identifier.markAsTouched();
       return;
     }
 
-    this.loading = true;
-    this.authService.requestOtp(this.loginIdControl.value!.trim()).subscribe({
-      next: (challenge) => {
-        this.loading = false;
-        this.otpChallenge = challenge;
-        this.otpCode.setValidators([Validators.required, Validators.pattern(new RegExp(`^\\d{${challenge.length}}$`))]);
-        this.otpCode.reset('');
-        this.startResendCountdown(challenge.resendAfter);
-        setTimeout(() => this.otpInput?.nativeElement.focus());
+    this.start();
+    this.authService.sendLoginOtp(identifier.value).subscribe({
+      next: () => {
+        this.loading.set(false);
+        this.otpSentTo.set(identifier.value.trim());
+        this.form.controls.otp.reset('');
+        this.startResendCooldown();
+        this.snackBar.open(`OTP sent to ${identifier.value.trim()}.`, 'Dismiss', { duration: 4000 });
+        setTimeout(() => this.otpInput?.focus());
       },
-      error: (error: HttpErrorResponse) => this.onFailed(error, 'Could not send the OTP.'),
+      error: (error: HttpErrorResponse) => {
+        if (isUnknownAccount(error)) {
+          this.loading.set(false);
+          identifier.setErrors({ server: error.error?.message || 'No account found with this email or mobile number.' });
+          identifier.markAsTouched();
+          return;
+        }
+        this.onFailed(error, 'Could not send the OTP. Please try again.');
+      },
     });
   }
 
-  onVerifyOtp(): void {
-    if (this.otpCode.invalid) {
-      this.otpCode.markAsTouched();
+  private verifyOtp(): void {
+    const otp = this.form.controls.otp;
+    if (otp.invalid) {
+      otp.markAsTouched();
       return;
     }
 
-    this.loading = true;
-    this.authService.verifyOtp(this.loginIdControl.value!.trim(), this.otpCode.value!).subscribe({
+    this.start();
+    this.authService.loginWithOtp(this.otpSentTo(), otp.value, true).subscribe({
       next: () => this.onLoggedIn(),
       error: (error: HttpErrorResponse) => {
-        this.onFailed(error, 'Incorrect OTP.');
-        this.otpCode.reset('');
-        this.otpInput?.nativeElement.focus();
+        this.onFailed(error, 'Incorrect OTP. Please check the code and try again.');
+        otp.reset('');
+        setTimeout(() => this.otpInput?.focus());
       },
     });
   }
 
-  /** Keeps the code field digits-only as the user types or pastes. */
-  onOtpInput(): void {
-    const digits = (this.otpCode.value ?? '').replace(/\D/g, '').slice(0, this.otpChallenge?.length ?? 6);
-    if (digits !== this.otpCode.value) this.otpCode.setValue(digits);
-  }
-
-  resetOtp(): void {
-    this.otpChallenge = null;
-    this.otpCode.reset('');
-    this.resendIn = 0;
+  /** Back to the first OTP step to use a different email or mobile number. */
+  changeOtpIdentifier(): void {
+    this.otpSentTo.set('');
+    this.form.controls.otp.reset('');
     clearInterval(this.resendTimer);
-  }
-
-  private startResendCountdown(seconds: number): void {
-    clearInterval(this.resendTimer);
-    this.resendIn = seconds;
-    this.resendTimer = setInterval(() => {
-      this.resendIn = Math.max(0, this.resendIn - 1);
-      if (this.resendIn === 0) clearInterval(this.resendTimer);
-    }, 1000);
-  }
-
-  // ---- Shared ---------------------------------------------------------------
-
-  private onLoggedIn(): void {
-    this.loading = false;
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/dashboard';
-    this.router.navigateByUrl(returnUrl);
-  }
-
-  private onFailed(error: HttpErrorResponse, fallback: string): void {
-    this.loading = false;
-    const code = error.error?.code as LoginErrorCode | undefined;
-
-    // Wrong method for this account: move the user to the right tab instead of just failing.
-    if (code === 'USE_OTP' || code === 'USE_PASSWORD') {
-      this.setMethod(code === 'USE_OTP' ? 'OTP' : 'Password');
-      this.snackBar.open(`${error.error.message} We've switched the login method for you.`, 'OK', { duration: 5000 });
-      return;
-    }
-
-    // Locked (Maximum Login Attempts reached): leave the OTP code step; nothing more can be tried.
-    if (code === 'LOCKED') this.resetOtp();
-
-    const message =
-      error.status === 401 || error.status === 404
-        ? (error.error?.message ?? fallback)
-        : 'Something went wrong while signing you in. Please try again.';
-    this.snackBar.open(message, 'Dismiss', {
-      duration: code === 'LOCKED' ? 8000 : 5000,
-      panelClass: 'app-snackbar--error',
-    });
-
-    // Brief shake for a clear "try again" cue.
-    this.loginFailed = true;
-    setTimeout(() => (this.loginFailed = false), 500);
+    this.resendIn.set(0);
+    this.clearError();
   }
 
   onForgotPassword(event: Event): void {
     event.preventDefault();
-    this.dialog.open(ForgotPasswordDialogComponent, {
-      width: '440px',
-      maxWidth: '92vw',
-      panelClass: 'forgot-password-modal-panel',
+    this.dialog
+      .open<ForgotPasswordDialogComponent, ForgotPasswordDialogData, ForgotPasswordDialogResult>(
+        ForgotPasswordDialogComponent,
+        {
+          width: '480px',
+          maxWidth: '94vw',
+          maxHeight: '94vh',
+          panelClass: 'forgot-password-modal-panel',
+          data: { identifier: this.form.controls.identifier.value },
+        },
+      )
+      .afterClosed()
+      .subscribe((identifier) => {
+        if (!identifier) return;
+        this.snackBar.open('Password reset successfully. Please log in with your new password.', 'Dismiss', {
+          duration: 6000,
+        });
+        this.mode.set('password');
+        this.clearError();
+        this.form.patchValue({ identifier, password: '' });
+        setTimeout(() => this.passwordInput?.nativeElement.focus());
+      });
+  }
+
+  private startResendCooldown(): void {
+    clearInterval(this.resendTimer);
+    this.resendIn.set(OTP_RESEND_SECONDS);
+    this.resendTimer = setInterval(() => {
+      this.resendIn.update((s) => s - 1);
+      if (this.resendIn() <= 0) clearInterval(this.resendTimer);
+    }, 1000);
+  }
+
+  private start(): void {
+    this.loading.set(true);
+    this.clearError();
+  }
+
+  /** To the page the user came from (when their role may open it), else their role's home page. */
+  private onLoggedIn(): void {
+    this.loading.set(false);
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    const target = returnUrl && returnUrl !== '/' && this.authService.canAccess(returnUrl) ? returnUrl : this.authService.landingRoute;
+    this.router.navigateByUrl(target);
+  }
+
+  private onFailed(error: HttpErrorResponse, fallback: string): void {
+    this.loading.set(false);
+    // Mock sign-in sends `code`; the gateway sends `errorCode`.
+    const code = (error.error?.code ?? error.error?.errorCode) as LoginErrorCode | undefined;
+    const message = apiErrorMessage(error, {
+      fallback,
+      unavailable: 'Login with OTP is not available yet. Please log in with your password.',
     });
+    this.showError(code === 'MOBILE_APP_ONLY' ? MOBILE_APP_ONLY_MESSAGE : message, code === 'MOBILE_APP_ONLY');
+
+    // Brief shake for a clear "try again" cue.
+    this.loginFailed.set(true);
+    setTimeout(() => this.loginFailed.set(false), 500);
+  }
+
+  private showError(message: string, mobileApp = false): void {
+    this.error.set(message);
+    this.mobileAppOnly.set(mobileApp);
+  }
+
+  private clearError(): void {
+    this.error.set('');
+    this.mobileAppOnly.set(false);
   }
 }

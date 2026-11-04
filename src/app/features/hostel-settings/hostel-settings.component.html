@@ -1,0 +1,86 @@
+<div class="hs">
+  <!-- Section nav: dot = unsaved edits, red = needs fixing -->
+  <nav class="hs-nav" aria-label="Hostel settings sections">
+    @for (s of sections; track s.key) {
+      <button
+        type="button"
+        class="hs-nav__item"
+        [class.is-active]="active === s.key"
+        [attr.aria-current]="active === s.key ? 'page' : null"
+        (click)="active = s.key"
+      >
+        <mat-icon fontSet="material-icons-outlined">{{ s.icon }}</mat-icon>
+        <span class="hs-nav__label">{{ s.label }}</span>
+        @if (sectionInvalid(s.key) && sectionDirty(s.key)) {
+          <mat-icon class="hs-nav__flag hs-nav__flag--error" aria-label="Has errors">error</mat-icon>
+        } @else if (sectionDirty(s.key)) {
+          <span class="hs-nav__dot" aria-label="Unsaved changes"></span>
+        }
+      </button>
+    }
+  </nav>
+
+  <div class="hs-main">
+    @let s = section(active);
+    <section class="hs-card">
+      <header class="hs-card__head">
+        <span class="hs-card__icon"><mat-icon fontSet="material-icons-outlined">{{ s.icon }}</mat-icon></span>
+        <div class="hs-card__text">
+          <h2 class="hs-card__title">{{ s.label }}</h2>
+          <p class="hs-card__desc">{{ s.description }}</p>
+        </div>
+        @if (active === 'subscription' || active === 'security') {
+          <span class="hs-card__badge"><mat-icon fontSet="material-icons-outlined">visibility</mat-icon>Read-only</span>
+        }
+      </header>
+
+      <div class="hs-card__body">
+        @switch (active) {
+          @case ('profile') {
+            <app-hs-profile-section
+              [group]="form.controls.profile"
+              [hostelType]="state.hostelType"
+              [currentName]="state.value.profile.hostelName"
+              [pending]="state.pendingNameChange"
+              [permissions]="service.permissions"
+              (withdraw)="withdrawNameChange()"
+            />
+          }
+          @case ('rules') {
+            <app-hs-rules-section [group]="form.controls.rules" [rules]="houseRules" />
+          }
+          @case ('facilities') {
+            <app-hs-facilities-section
+              [control]="form.controls.facilities"
+              [subscription]="service.subscription"
+              [canEdit]="service.permissions.canEditFacilities"
+            />
+          }
+          @case ('notifications') {
+            <app-hs-notifications-section [group]="form.controls.notifications" />
+          }
+          @case ('subscription') {
+            <app-hs-subscription-section [upgradeRequest]="state.upgradeRequest" (requested)="refreshState()" />
+          }
+          @case ('security') {
+            <app-hs-security-section />
+          }
+        }
+      </div>
+    </section>
+
+    @if (dirty) {
+      <div class="hs-savebar" role="region" aria-label="Unsaved changes">
+        <mat-icon fontSet="material-icons-outlined">edit_note</mat-icon>
+        <span class="hs-savebar__text">
+          You have unsaved changes
+          @if (invalidCount) {
+            <span class="hs-savebar__error">· {{ invalidCount }} {{ invalidCount === 1 ? 'section needs' : 'sections need' }} attention</span>
+          }
+        </span>
+        <app-button variant="secondary" (clicked)="discard()">Discard</app-button>
+        <app-button icon="save" (clicked)="save()">Save changes</app-button>
+      </div>
+    }
+  </div>
+</div>

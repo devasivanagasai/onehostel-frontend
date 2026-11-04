@@ -1,14 +1,14 @@
 import { AfterViewInit, Component, DestroyRef, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { localDateIso } from '../../shared/utils/local-date';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -22,6 +22,7 @@ import {
 import { CommunicationTemplateService } from './communication-template.service';
 import { UnsavedChangesAware } from '../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const SMS_SEGMENT_LENGTH = 160;
 const BODY_MAX_LENGTH = 5000;
@@ -29,6 +30,9 @@ const BODY_MAX_LENGTH = 5000;
 const CHIP_TONES = ['blue', 'green', 'purple', 'amber', 'pink'];
 const VARIABLE_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 const LIST_URL = '/communication-templates';
+
+/** Whitespace-only text counts as empty. */
+const notBlank: ValidatorFn = (c) => (typeof c.value === 'string' && c.value.length > 0 && !c.value.trim() ? { required: true } : null);
 
 export type TemplateEditorMode = 'add' | 'edit' | 'view';
 
@@ -46,9 +50,9 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
     MatInputModule,
     MatSelectModule,
     MatIconModule,
-    MatButtonModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    AppButtonComponent,
   ],
   template: `
     <div class="editor-page">
@@ -67,18 +71,11 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
 
           <span class="topbar-divider" aria-hidden="true"></span>
 
-          <button type="button" class="btn-secondary" (click)="onCancel()">
-            {{ isView ? 'Close' : 'Cancel' }}
-          </button>
+          <app-button variant="secondary" (clicked)="onCancel()">{{ isView ? 'Close' : 'Cancel' }}</app-button>
           @if (isView) {
-            <button type="button" class="btn-primary" (click)="onSwitchToEdit()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit Template</span>
-            </button>
+            <app-button icon="edit" (clicked)="onSwitchToEdit()">Edit Template</app-button>
           } @else {
-            <button type="submit" form="templateEditorForm" class="btn-primary" [disabled]="templateForm.invalid">
-              <span>{{ mode === 'edit' ? 'Update' : 'Submit' }}</span>
-            </button>
+            <app-button type="submit" form="templateEditorForm" [disabled]="templateForm.invalid">{{ mode === 'edit' ? 'Update' : 'Submit' }}</app-button>
           }
         </div>
       </div>
@@ -109,7 +106,7 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
                 <label class="field-label" for="tpl-name">Template Name <span class="required-star">*</span></label>
                 <mat-form-field appearance="outline" class="full-width">
                   <input id="tpl-name" matInput formControlName="templateName" placeholder="Enter template name" />
-                  <mat-error>Template Name is required</mat-error>
+                  <mat-error>{{ templateForm.get('templateName')?.hasError('duplicate') ? 'A template with this name already exists' : 'Template Name is required' }}</mat-error>
                 </mat-form-field>
               </div>
 
@@ -826,60 +823,6 @@ export type TemplateEditorMode = 'add' | 'edit' | 'view';
       height: 24px;
       background: #e2e8f0;
     }
-
-    .btn-secondary {
-      height: var(--btn-height);
-      min-width: 100px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #0f172a;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #f1f5f9;
-      }
-    }
-
-    .btn-primary {
-      height: var(--btn-height);
-      min-width: 110px;
-      background: #2563eb;
-      color: #ffffff;
-      border: none;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover:not(:disabled) {
-        background: #1d4ed8;
-      }
-
-      &:disabled {
-        background: #94a3b8;
-        cursor: not-allowed;
-        box-shadow: none;
-      }
-    }
   `],
 })
 export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewInit {
@@ -974,11 +917,11 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
 
     this.templateForm = this.fb.group({
       templateId: [existing?.templateId ?? this.templateService.getNextTemplateId()],
-      templateName: [existing?.templateName ?? '', [Validators.required]],
+      templateName: [existing?.templateName ?? '', [Validators.required, notBlank, this.uniqueName(existing?.templateId)]],
       channel: [existing?.channel ?? 'Email', [Validators.required]],
       trigger: [existing?.trigger ?? '', [Validators.required]],
       subject: [existing?.subject ?? ''],
-      body: [existing?.body ?? '', [Validators.required, Validators.maxLength(BODY_MAX_LENGTH)]],
+      body: [existing?.body ?? '', [Validators.required, notBlank, Validators.maxLength(BODY_MAX_LENGTH)]],
       isActive: [existing ? existing.status === 'Active' : true],
     });
 
@@ -991,9 +934,20 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
     if (this.isView) this.templateForm.disable({ emitEvent: false });
   }
 
+  /** Template names are unique (ignoring case and spacing); an existing template may keep its own. */
+  private uniqueName(ownId?: string): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const key = String(control.value ?? '').trim().toLowerCase();
+      if (!key) return null;
+      return this.templateService.templates.some((t) => t.templateId !== ownId && t.templateName.trim().toLowerCase() === key)
+        ? { duplicate: true }
+        : null;
+    };
+  }
+
   private updateSubjectValidator(): void {
     const subject = this.templateForm.get('subject');
-    subject?.setValidators(this.hasSubject ? [Validators.required] : []);
+    subject?.setValidators(this.hasSubject ? [Validators.required, notBlank] : []);
     subject?.updateValueAndValidity({ emitEvent: false });
     if (!this.hasSubject) this.activeField = 'body';
   }
@@ -1112,7 +1066,7 @@ export class TemplateEditorComponent implements UnsavedChangesAware, AfterViewIn
       subject: this.hasSubject ? formVal.subject.trim() : '',
       body: formVal.body,
       status: formVal.isActive ? 'Active' : 'Inactive',
-      lastModified: new Date().toISOString().split('T')[0],
+      lastModified: localDateIso(),
     };
 
     const isNew = this.templateService.save(result);

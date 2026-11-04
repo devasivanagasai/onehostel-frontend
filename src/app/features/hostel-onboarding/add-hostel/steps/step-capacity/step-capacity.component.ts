@@ -41,6 +41,9 @@ import { AppFormErrorComponent } from '../../../../../shared/components/form-err
         </mat-form-field>
         <app-form-error [control]="formGroup.get('totalBeds')" label="Total beds"></app-form-error>
       </div>
+      @if (formGroup.errors?.['bedsLessThanRooms'] && formGroup.get('totalBeds')?.touched) {
+        <p style="grid-column:1/-1;color:#dc2626;font-size:12px;margin:0" role="alert">Total beds cannot be fewer than the number of rooms.</p>
+      }
     </div>
   `,
   styles: [

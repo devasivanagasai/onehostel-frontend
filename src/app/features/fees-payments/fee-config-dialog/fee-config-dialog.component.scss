@@ -1,0 +1,56 @@
+@use '../../../../styles/dialog-kit' as *;
+
+.fd__section {
+  margin-top: 18px;
+
+  &:first-child {
+    margin-top: 4px;
+  }
+
+  h3 {
+    @include section-heading;
+  }
+}
+
+.fd__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+
+  &--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  @media (max-width: 600px) {
+    &,
+    &--3 {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.fd__full {
+  width: 100%;
+}
+
+.fd__toggle {
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.fd__switch {
+  display: block;
+  margin: 4px 0 14px;
+}
+
+.fd__info {
+  @include info-box;
+}
+
+.fd__error {
+  color: #dc2626;
+}

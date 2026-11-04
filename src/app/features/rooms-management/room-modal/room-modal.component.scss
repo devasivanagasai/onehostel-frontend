@@ -1,0 +1,145 @@
+// Create / Edit Room. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+/* ---- Numbered section panels ---- */
+.rm-section {
+  margin-bottom: 12px;
+  padding: 14px 16px 16px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.rm-section__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.rm-section__icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: $teal;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.rm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 16px;
+
+  &--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    &,
+    &--2 {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.rm-full {
+  grid-column: 1 / -1;
+}
+
+/* ---- Facilities checklist ---- */
+.rm-facilities {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 16px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.rm-facility {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: #334155;
+  cursor: pointer;
+
+  // Native checkbox kept for keyboard / screen readers, drawn by .rm-facility__box
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+  }
+
+  &:focus-within .rm-facility__box {
+    box-shadow: 0 0 0 3px rgba($teal, 0.2);
+  }
+}
+
+.rm-facility__box {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #ffffff;
+    opacity: 0;
+  }
+
+  .is-selected & {
+    border-color: $teal;
+    background: $teal;
+
+    mat-icon {
+      opacity: 1;
+    }
+  }
+}
+
+.rm-facility__icon {
+  flex-shrink: 0;
+  font-size: 19px;
+  width: 19px;
+  height: 19px;
+  color: #475569;
+}

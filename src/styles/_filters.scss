@@ -4,7 +4,7 @@
 //     <mat-form-field appearance="outline" class="filter-field filter-field--search">…</mat-form-field>
 //     <mat-form-field appearance="outline" class="filter-field filter-field--date">…</mat-form-field>
 //     <mat-form-field appearance="outline" class="filter-field">…</mat-form-field>
-//     <button type="button" class="filter-reset">…</button>
+//     <app-button variant="text" size="sm" icon="restart_alt">Reset</app-button>
 //   </div>
 //
 // One look everywhere: 38px outlined field, 8px radius, slate-300 border,
@@ -170,32 +170,6 @@ $filter-border-focus: #0d9488;
 
   &:hover .mat-icon {
     color: #475569;
-  }
-}
-
-// "Reset" link shown once any filter is applied
-.filter-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: $filter-height;
-  padding: 0 10px;
-  background: none;
-  border: none;
-  border-radius: 8px;
-  color: #0057e7;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-
-  .mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
-
-  &:hover {
-    background: #eff6ff;
   }
 }
 

@@ -1,8 +1,11 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { passwordExpiryGuard } from './core/guards/password-expiry.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -14,13 +17,127 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
-    canActivateChild: [passwordExpiryGuard],
+    // Password expiry first, then the role checks (AuthService.canAccess).
+    canActivateChild: [passwordExpiryGuard, adminGuard],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // Each role's home page: Admin → onboarding, Hostel Owner → their hostel's dashboard,
+      // Hostel Manager → branch overview.
+      { path: '', pathMatch: 'full', redirectTo: () => inject(AuthService).landingRoute },
+      {
+        path: 'admin/onboarding',
+        loadComponent: () =>
+          import('./features/hostel-onboarding/hostel-onboarding.component').then(
+            (m) => m.HostelOnboardingComponent,
+          ),
+      },
+      {
+        path: 'owner/dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/owner-dashboard.component').then((m) => m.OwnerDashboardComponent),
+      },
+      {
+        // The manager's own overview page isn't built yet; the Dashboard shows the hostel modules they can use.
+        path: 'manager/branch-overview',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      // Hostel Owners get their own hostel's dashboard; the platform-wide one is for everyone else.
+      {
+        path: 'dashboard',
+        canMatch: [() => inject(AuthService).isHostelOwner],
+        loadComponent: () =>
+          import('./features/dashboard/owner-dashboard.component').then((m) => m.OwnerDashboardComponent),
+      },
       {
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'rooms',
+        loadComponent: () =>
+          import('./features/rooms-management/rooms-management.component').then(
+            (m) => m.RoomsManagementComponent,
+          ),
+      },
+      {
+        path: 'residents',
+        loadComponent: () =>
+          import('./features/residents/residents.component').then((m) => m.ResidentsComponent),
+      },
+      {
+        path: 'fees',
+        loadComponent: () =>
+          import('./features/fees-payments/fees-payments.component').then((m) => m.FeesPaymentsComponent),
+      },
+      {
+        path: 'complaints',
+        loadComponent: () =>
+          import('./features/complaints/complaints.component').then((m) => m.ComplaintsComponent),
+      },
+      {
+        path: 'laundry',
+        loadComponent: () => import('./features/laundry/laundry.component').then((m) => m.LaundryComponent),
+      },
+      {
+        path: 'visitors',
+        loadComponent: () => import('./features/visitors/visitors.component').then((m) => m.VisitorsComponent),
+      },
+      {
+        path: 'mess',
+        loadComponent: () => import('./features/mess/mess.component').then((m) => m.MessComponent),
+      },
+      {
+        path: 'leave-outpass',
+        loadComponent: () => import('./features/leave-outpass/leave-outpass.component').then((m) => m.LeaveOutpassComponent),
+      },
+      {
+        path: 'attendance',
+        loadComponent: () => import('./features/attendance/attendance.component').then((m) => m.AttendanceComponent),
+      },
+      {
+        path: 'parcels',
+        loadComponent: () => import('./features/parcels/parcels.component').then((m) => m.ParcelsComponent),
+      },
+      {
+        path: 'announcements',
+        loadComponent: () =>
+          import('./features/announcements/announcements.component').then((m) => m.AnnouncementsComponent),
+      },
+      {
+        path: 'hostel-reports',
+        loadComponent: () =>
+          import('./features/hostel-reports/hostel-reports.component').then((m) => m.HostelReportsComponent),
+      },
+      {
+        path: 'staff',
+        loadComponent: () => import('./features/staff/staff.component').then((m) => m.StaffComponent),
+      },
+      {
+        path: 'permissions',
+        loadComponent: () => import('./features/permissions/permissions.component').then((m) => m.PermissionsComponent),
+      },
+      {
+        path: 'guardians',
+        loadComponent: () => import('./features/guardians/guardians.component').then((m) => m.GuardiansComponent),
+      },
+      {
+        path: 'academic-years',
+        loadComponent: () => import('./features/academic-years/academic-years.component').then((m) => m.AcademicYearsComponent),
+      },
+      {
+        path: 'disciplinary',
+        loadComponent: () => import('./features/disciplinary/disciplinary.component').then((m) => m.DisciplinaryComponent),
+      },
+      {
+        path: 'analytics',
+        loadComponent: () => import('./features/analytics/analytics.component').then((m) => m.AnalyticsComponent),
+      },
+      {
+        path: 'hostel-settings',
+        canDeactivate: [unsavedChangesGuard],
+        loadComponent: () =>
+          import('./features/hostel-settings/hostel-settings.component').then((m) => m.HostelSettingsComponent),
       },
       {
         path: 'hostel-onboarding',
@@ -50,7 +167,8 @@ export const routes: Routes = [
             (m) => m.SubscriptionPlansComponent,
           ),
       },
-      // Admin Management: hostel Admins and Residents. "/users" was its address for a while; keep it working.
+      // Admin Management: Hostel Owners and Tenants.
+      // "/users" was its address for a while; keep it working.
       { path: 'users', redirectTo: 'admins', pathMatch: 'full' },
       {
         path: 'admins',
@@ -142,5 +260,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: () => inject(AuthService).landingRoute },
 ];

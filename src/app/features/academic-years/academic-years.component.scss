@@ -1,0 +1,100 @@
+// Table look comes from styles/_table.scss; filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.academic-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.ay-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  text-align: center;
+
+  h2 { margin: 6px 0 0; font-size: 18px; font-weight: 700; color: #0f172a; }
+  p { margin: 0; max-width: 460px; font-size: 14px; line-height: 1.5; color: #64748b; }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #e6f7f5;
+    color: #0d9488;
+
+    mat-icon { @include icon(30px); }
+  }
+}
+
+.ay-current {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  background: #f0fdf4;
+
+  &__icon { display: flex; color: #16a34a; mat-icon { @include icon(28px); } }
+  &__body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  &__label { font-size: 12.5px; font-weight: 600; color: #15803d; }
+  strong { font-size: 16px; color: #0f172a; }
+  small { font-size: 12.5px; color: #475569; }
+}
+
+.academic-table-card { padding-top: 8px; }
+
+.ay-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: #64748b;
+  font-size: 14px;
+
+  mat-icon { @include icon(20px); }
+}
+
+.ay-spin { animation: ay-rot 1s linear infinite; }
+
+@keyframes ay-rot { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) { .ay-spin { animation: none; } }
+
+.academic-table {
+  .date-cell { white-space: nowrap; color: #334155; }
+
+  .ay-clip {
+    display: block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ay-ready { color: #b45309; font-weight: 600; }
+
+  .ay-act ::ng-deep button { color: #2563eb; }
+  .ay-act--ok ::ng-deep button { color: #16a34a; }
+
+  .ay-actions { display: inline-flex; align-items: center; gap: 2px; }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}

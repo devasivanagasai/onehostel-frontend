@@ -60,7 +60,7 @@ export class AuditLogService {
   }
 
   private currentUserName(): string {
-    return this.injector.get(AuthService).currentUser?.name || 'SuperAdmin';
+    return this.injector.get(AuthService).currentUser?.name || 'Admin';
   }
 
   private nextId(): string {

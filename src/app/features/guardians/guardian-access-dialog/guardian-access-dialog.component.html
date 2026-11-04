@@ -1,0 +1,36 @@
+<app-dialog
+  [title]="revoking ? 'Revoke Guardian Access' : 'Restore Guardian Access'"
+  [subtitle]="g.name + ' · ' + residentName"
+  [icon]="revoking ? 'gpp_bad' : 'verified_user'"
+  [tone]="revoking ? 'red' : 'teal'"
+  (closed)="close()"
+>
+  @if (revoking) {
+    <p class="ga-text">
+      {{ g.name }} will stop receiving alerts and can no longer be sent verification codes for {{ residentName }}.
+      You can restore access later. This action is recorded in the audit log.
+    </p>
+  } @else {
+    <p class="ga-text">
+      {{ g.name }} will be able to receive alerts for {{ residentName }} again, within their consent and access scope.
+      @if (g.verification !== 'Verified') { Their verification status is <strong>{{ g.verification }}</strong>, so they will not get alerts until verified. }
+    </p>
+  }
+
+  <div class="fk-field">
+    <label class="fk-label" for="ga-reason">Reason<span class="req">*</span></label>
+    <span class="fk-control" [class.is-invalid]="reasonError">
+      <textarea id="ga-reason" rows="3" [(ngModel)]="reason" [maxlength]="reasonMax" [placeholder]="revoking ? 'e.g. Parents asked to stop alerts' : 'e.g. Authorization confirmed again'"></textarea>
+    </span>
+    @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+  </div>
+
+  @if (saveError) { <p class="gd-banner gd-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+    <app-button [variant]="revoking ? 'danger' : 'accent'" [icon]="revoking ? 'block' : 'verified_user'" [loading]="saving" (clicked)="confirm()">
+      {{ revoking ? 'Revoke Access' : 'Restore Access' }}
+    </app-button>
+  </ng-container>
+</app-dialog>

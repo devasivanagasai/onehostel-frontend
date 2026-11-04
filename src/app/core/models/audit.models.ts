@@ -1,12 +1,19 @@
 export type AuditModule =
   | 'Auth'
   | 'Hostel'
-  | 'Admin'
-  | 'Resident'
+  | 'Hostel Owner'
+  | 'Tenant'
   | 'Subscription Plan'
   | 'Subscription & Payment'
+  | 'Fees & Payments'
+  | 'Complaints'
   | 'Communication Template'
-  | 'System Defaults';
+  | 'System Defaults'
+  | 'Staff'
+  | 'Guardian'
+  | 'Academic Year'
+  | 'Disciplinary'
+  | 'Permissions';
 
 /** Every tracked platform event, and the Module / Action it is shown under. */
 export const AUDIT_EVENTS = {
@@ -19,16 +26,16 @@ export const AUDIT_EVENTS = {
   'Update Hostel': { module: 'Hostel', action: 'Update' },
   'Activate Hostel': { module: 'Hostel', action: 'Activate' },
   'Deactivate Hostel': { module: 'Hostel', action: 'Deactivate' },
-  'Create Admin': { module: 'Admin', action: 'Create' },
-  'Update Admin': { module: 'Admin', action: 'Update' },
-  'Activate Admin': { module: 'Admin', action: 'Activate' },
-  'Deactivate Admin': { module: 'Admin', action: 'Deactivate' },
-  'Lock Admin': { module: 'Admin', action: 'Lock' },
-  'Unlock Admin': { module: 'Admin', action: 'Unlock' },
-  'Activate Resident': { module: 'Resident', action: 'Activate' },
-  'Deactivate Resident': { module: 'Resident', action: 'Deactivate' },
-  'Block Resident': { module: 'Resident', action: 'Block' },
-  'Unblock Resident': { module: 'Resident', action: 'Unblock' },
+  'Create Admin': { module: 'Hostel Owner', action: 'Create' },
+  'Update Admin': { module: 'Hostel Owner', action: 'Update' },
+  'Activate Admin': { module: 'Hostel Owner', action: 'Activate' },
+  'Deactivate Admin': { module: 'Hostel Owner', action: 'Deactivate' },
+  'Lock Admin': { module: 'Hostel Owner', action: 'Lock' },
+  'Unlock Admin': { module: 'Hostel Owner', action: 'Unlock' },
+  'Activate Resident': { module: 'Tenant', action: 'Activate' },
+  'Deactivate Resident': { module: 'Tenant', action: 'Deactivate' },
+  'Block Resident': { module: 'Tenant', action: 'Block' },
+  'Unblock Resident': { module: 'Tenant', action: 'Unblock' },
   'Create Plan': { module: 'Subscription Plan', action: 'Create' },
   'Update Plan': { module: 'Subscription Plan', action: 'Update' },
   'Activate Plan': { module: 'Subscription Plan', action: 'Activate' },
@@ -37,6 +44,50 @@ export const AUDIT_EVENTS = {
   'Create Template': { module: 'Communication Template', action: 'Create' },
   'Update Template': { module: 'Communication Template', action: 'Update' },
   'Change Settings': { module: 'System Defaults', action: 'Update' },
+  'Create Resident': { module: 'Tenant', action: 'Create' },
+  'Update Resident': { module: 'Tenant', action: 'Update' },
+  'Invite Resident': { module: 'Tenant', action: 'Send Invite' },
+  'Allocate Resident': { module: 'Tenant', action: 'Allocate Bed' },
+  'Transfer Resident': { module: 'Tenant', action: 'Transfer Bed' },
+  'Check Out Resident': { module: 'Tenant', action: 'Check Out' },
+  'Create Fee': { module: 'Fees & Payments', action: 'Create Fee' },
+  'Update Fee': { module: 'Fees & Payments', action: 'Update Fee' },
+  'Generate Charges': { module: 'Fees & Payments', action: 'Generate Charges' },
+  'Create Charge': { module: 'Fees & Payments', action: 'Create Charge' },
+  'Cancel Charge': { module: 'Fees & Payments', action: 'Cancel Charge' },
+  'Collect Payment': { module: 'Fees & Payments', action: 'Record Payment' },
+  'Confirm Payment': { module: 'Fees & Payments', action: 'Confirm Payment' },
+  'Reverse Payment': { module: 'Fees & Payments', action: 'Reverse' },
+  'Refund Payment': { module: 'Fees & Payments', action: 'Refund' },
+  'Send Reminder': { module: 'Fees & Payments', action: 'Send Reminder' },
+  'Create Complaint': { module: 'Complaints', action: 'Create' },
+  'Assign Complaint': { module: 'Complaints', action: 'Assign' },
+  'Update Complaint': { module: 'Complaints', action: 'Update Status' },
+  'Resolve Complaint': { module: 'Complaints', action: 'Resolve' },
+  'Close Complaint': { module: 'Complaints', action: 'Close' },
+  'Reopen Complaint': { module: 'Complaints', action: 'Reopen' },
+  'Create Room': { module: 'Hostel', action: 'Create' },
+  'Update Room': { module: 'Hostel', action: 'Update' },
+  'Delete Room': { module: 'Hostel', action: 'Delete' },
+  'Update Bed': { module: 'Hostel', action: 'Update' },
+  'Create Staff': { module: 'Staff', action: 'Create' },
+  'Update Staff': { module: 'Staff', action: 'Update' },
+  'Activate Staff': { module: 'Staff', action: 'Activate' },
+  'Deactivate Staff': { module: 'Staff', action: 'Deactivate' },
+  'Create Task': { module: 'Staff', action: 'Create Task' },
+  'Update Task': { module: 'Staff', action: 'Update Task' },
+  'Create Guardian': { module: 'Guardian', action: 'Create' },
+  'Update Guardian': { module: 'Guardian', action: 'Update' },
+  'Verify Guardian': { module: 'Guardian', action: 'Verify' },
+  'Revoke Guardian': { module: 'Guardian', action: 'Revoke Access' },
+  'Create Academic Year': { module: 'Academic Year', action: 'Create' },
+  'Update Academic Year': { module: 'Academic Year', action: 'Update' },
+  'Change Academic Year Status': { module: 'Academic Year', action: 'Change Status' },
+  'Create Incident': { module: 'Disciplinary', action: 'Create' },
+  'Update Incident': { module: 'Disciplinary', action: 'Update' },
+  'View Incident': { module: 'Disciplinary', action: 'View' },
+  'Update Permissions': { module: 'Permissions', action: 'Update' },
+  'Export Data': { module: 'Permissions', action: 'Export' },
 } as const satisfies Record<string, { module: AuditModule; action: string }>;
 
 export type AuditEvent = keyof typeof AUDIT_EVENTS;
@@ -46,12 +97,19 @@ export const AUDIT_EVENT_NAMES = Object.keys(AUDIT_EVENTS) as AuditEvent[];
 export const AUDIT_MODULES: AuditModule[] = [
   'Auth',
   'Hostel',
-  'Admin',
-  'Resident',
+  'Hostel Owner',
+  'Tenant',
   'Subscription Plan',
   'Subscription & Payment',
+  'Fees & Payments',
+  'Complaints',
   'Communication Template',
   'System Defaults',
+  'Staff',
+  'Guardian',
+  'Academic Year',
+  'Disciplinary',
+  'Permissions',
 ];
 
 export type AuditStatus = 'Success' | 'Failed';
@@ -85,6 +143,14 @@ export function auditModule(log: AuditLog): AuditModule {
 
 export function auditAction(log: AuditLog): string {
   return AUDIT_EVENTS[log.event].action;
+}
+
+/**
+ * How an event name is shown on screen. The stored keys ("Lock Admin", "Block Resident") stay
+ * unchanged so entries saved earlier still work; users see the current role names.
+ */
+export function auditEventLabel(event: string): string {
+  return event.replace(/\bAdmin$/, 'Hostel Owner').replace(/\bResident$/, 'Tenant');
 }
 
 /**

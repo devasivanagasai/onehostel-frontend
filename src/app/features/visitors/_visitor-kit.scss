@@ -1,0 +1,126 @@
+// Bits shared by the visitor dialogs: option chips, status pills, notice banners, visitor summary.
+
+$teal: #0d9488;
+$teal-dark: #0f766e;
+$line: #e8edf3;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+@mixin chips {
+  .vk-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .vk-opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid #dbe3ec;
+    border-radius: 8px;
+    background: #ffffff;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+
+    > mat-icon:first-child { @include icon(18px); color: #64748b; }
+    &:hover:not(:disabled) { border-color: $teal; }
+    &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+    &.is-on {
+      border-color: $teal;
+      background: #e6f7f5;
+      color: $teal-dark;
+
+      > mat-icon:first-child { color: $teal; }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      color: #94a3b8;
+      background: #f8fafc;
+      border-style: dashed;
+    }
+  }
+
+  .vk-check { @include icon(20px); margin-right: -4px; color: $teal; }
+}
+
+@mixin pills {
+  .vk-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    mat-icon { @include icon(15px); }
+
+    &--success { background: #dcfce7; color: #16a34a; }
+    &--warning { background: #ffedd5; color: #ea580c; }
+    &--danger { background: #fee2e2; color: #dc2626; }
+    &--info { background: #e0f2fe; color: #0369a1; }
+    &--neutral { background: #f1f5f9; color: #64748b; }
+  }
+}
+
+@mixin notices {
+  .vk-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f0fdfa;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #115e59;
+
+    mat-icon { @include icon(18px); flex-shrink: 0; }
+
+    &--warn { background: #fff7ed; color: #9a3412; }
+    &--error { background: #fef2f2; color: #b91c1c; }
+    &--info { background: #eff6ff; color: #1d4ed8; }
+  }
+}
+
+@mixin summary {
+  .vk-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8fafb;
+
+    strong { display: block; font-size: 14.5px; color: #0f172a; }
+    small { font-size: 12.5px; color: #64748b; }
+  }
+
+  .vk-avatar {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 14px;
+    font-weight: 700;
+  }
+}

@@ -1,0 +1,136 @@
+<div class="onboarding-page disc-page">
+  @if (!allowed) {
+    <div class="disc-denied" role="alert">
+      <mat-icon fontSet="material-icons-outlined">lock</mat-icon>
+      <h2>Restricted</h2>
+      <p>Disciplinary records are available only to the Hostel Owner.</p>
+    </div>
+  } @else {
+    <p class="disc-note" role="note">
+      <mat-icon fontSet="material-icons-outlined">shield</mat-icon>
+      <span>{{ retention }}</span>
+    </p>
+
+    <!-- Filter card -->
+    <div class="filter-card">
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search incident ID, resident or category" aria-label="Search incidents"
+          [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+        @if (filters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Review status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+            <option value="All">All Statuses</option>
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Category" [(ngModel)]="filters.category" (ngModelChange)="currentPage = 0">
+            <option value="All">All Categories</option>
+            @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Access classification" [(ngModel)]="filters.classification" (ngModelChange)="currentPage = 0">
+            <option value="All">All Classifications</option>
+            @for (c of classifications; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="disc-date">
+        <span>From</span>
+        <input type="date" aria-label="Incident date from" [(ngModel)]="filters.from" [max]="filters.to || null" (ngModelChange)="currentPage = 0" />
+      </label>
+      <label class="disc-date">
+        <span>To</span>
+        <input type="date" aria-label="Incident date to" [(ngModel)]="filters.to" [min]="filters.from || null" (ngModelChange)="currentPage = 0" />
+      </label>
+
+      @if (hasFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+      }
+
+      <app-button class="filter-card__add" icon="add" (clicked)="openReport()">Report Incident</app-button>
+    </div>
+    @if (rangeError) { <p class="disc-error" role="alert">{{ rangeError }} The date filter is ignored until it is fixed.</p> }
+
+    <app-table-card
+      class="disc-table-card"
+      [empty]="filtered.length === 0"
+      [emptyIcon]="hasFilters ? 'search_off' : 'gavel'"
+      [emptyMessage]="hasFilters ? 'No incidents match your filters' : 'No incidents recorded'"
+      [emptyHint]="hasFilters ? 'Try a different search, status, category or date range.' : 'Use Report Incident to record one.'"
+      [clearable]="hasFilters"
+      (clear)="clearFilters()"
+      [page]="safePage"
+      [totalPages]="totalPages"
+      [pageSize]="pageSize"
+      (pageChange)="currentPage = $event"
+      (pageSizeChange)="onPageSizeChange($event)"
+    >
+      <table mat-table [dataSource]="paged" class="saas-table disc-table">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef> Incident </th>
+          <td mat-cell *matCellDef="let i"><strong>{{ i.id }}</strong></td>
+        </ng-container>
+
+        <ng-container matColumnDef="resident">
+          <th mat-header-cell *matHeaderCellDef> Resident </th>
+          <td mat-cell *matCellDef="let i">{{ service.residentName(i) }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef> Category </th>
+          <td mat-cell *matCellDef="let i">{{ i.category }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="occurred">
+          <th mat-header-cell *matHeaderCellDef> Incident Date </th>
+          <td mat-cell *matCellDef="let i" class="date-cell">{{ fmt.date(i.occurredAt) }}, {{ fmt.date(i.occurredAt, 'time') }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="classification">
+          <th mat-header-cell *matHeaderCellDef> Access </th>
+          <td mat-cell *matCellDef="let i">
+            <span class="disc-class disc-class--{{ i.classification === 'Confidential' ? 'conf' : 'res' }}">
+              <mat-icon fontSet="material-icons-outlined">lock</mat-icon>{{ i.classification }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Review Status </th>
+          <td mat-cell *matCellDef="let i"><span class="status-badge status-badge--{{ tone(i) }}">{{ i.status }}</span></td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let i" class="actions-cell">
+            <app-button variant="icon" size="sm" icon="visibility" matTooltip="View details" [ariaLabel]="'View ' + i.id" (clicked)="openView(i)"></app-button>
+            @if (i.status !== 'Closed') {
+              <app-button variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + i.id" (clicked)="openEdit(i)"></app-button>
+            }
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="row.status === 'Closed'"></tr>
+      </table>
+    </app-table-card>
+  }
+</div>

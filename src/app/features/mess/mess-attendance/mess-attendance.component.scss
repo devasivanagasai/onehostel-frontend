@@ -1,0 +1,113 @@
+// Meal attendance. Table look from styles/_table.scss; filter card from styles/_page-kit.scss.
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.ma {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ma__date input {
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: #334155;
+}
+
+.ma__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+
+.ma__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ma__menu-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+.ma__menu-items { font-size: 12.5px; color: #64748b; }
+.ma__warn { color: #d97706; }
+
+.ma__counts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ma__count {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12.5px;
+
+  strong { font-size: 14px; }
+  &--green { background: #dcfce7; color: #15803d; }
+  &--amber { background: #ffedd5; color: #c2410c; }
+}
+
+.ma-table {
+  .ma__avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+
+// Present / Opted out segmented toggle
+.ma__seg {
+  display: inline-flex;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  overflow: hidden;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 12px;
+    border: none;
+    background: #ffffff;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+
+    & + button { border-left: 1px solid #dbe3ec; }
+    mat-icon { @include icon(16px); }
+    &:hover:not(:disabled) { background: #f8fafc; }
+    &:disabled { cursor: not-allowed; opacity: 0.5; }
+    &:focus-visible { outline: 2px solid $teal; outline-offset: -2px; }
+  }
+
+  .is-present.is-on { background: #dcfce7; color: #15803d; }
+  .is-out.is-on { background: #ffedd5; color: #c2410c; }
+}

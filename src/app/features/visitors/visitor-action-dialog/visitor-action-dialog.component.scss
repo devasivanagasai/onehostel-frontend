@@ -1,0 +1,54 @@
+// Approve / reject / cancel / check in. Frame comes from <app-dialog>; fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+@use '../visitor-kit' as vk;
+
+@include form-fields;
+@include vk.notices;
+@include vk.summary;
+
+.va {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.va__visiting {
+  margin-left: auto;
+  text-align: right;
+
+  strong { font-size: 13.5px !important; }
+}
+
+.va__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+
+  dt { font-size: 12px; color: #64748b; }
+  dd { margin: 2px 0 0; font-size: 13.5px; color: #0f172a; }
+}
+
+.va__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.va__wide { grid-column: 1 / -1; }
+
+.va__verify {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+
+  input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: #0d9488; }
+  &.is-invalid { border-color: #f87171; }
+}

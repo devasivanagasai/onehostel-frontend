@@ -15,26 +15,26 @@ const TEMPLATE_AUDIT_FIELDS: Record<string, string> = {
 const SEED_TEMPLATES: CommunicationTemplateRow[] = [
   {
     templateId: 'TMP001',
-    templateName: 'Admin Account Created',
+    templateName: 'Hostel Owner Account Created',
     templateCode: 'ADMIN_ACCOUNT_CREATED',
     channel: 'Email',
-    trigger: 'Admin Onboarding',
+    trigger: 'Hostel Owner Onboarding',
     subject: 'Welcome to {{hostel_name}}',
     body:
-      'Hello {{admin_name}},\n\nYour Admin account has been created.\n\n' +
+      'Hello {{admin_name}},\n\nYour Hostel Owner account has been created.\n\n' +
       'Username: {{username}}\nTemporary Password: {{temporary_password}}\n\nLogin: {{login_link}}',
     status: 'Active',
     lastModified: '2026-09-17',
   },
   {
     templateId: 'TMP002',
-    templateName: 'Admin Account Created (SMS)',
+    templateName: 'Hostel Owner Account Created (SMS)',
     templateCode: 'ADMIN_ACCOUNT_CREATED_SMS',
     channel: 'SMS',
-    trigger: 'Admin Onboarding',
+    trigger: 'Hostel Owner Onboarding',
     subject: '',
     body:
-      'Hi {{admin_name}}, your {{hostel_name}} admin account is ready. ' +
+      'Hi {{admin_name}}, your {{hostel_name}} hostel owner account is ready. ' +
       'Username: {{username}}, Temp password: {{temporary_password}}. Login: {{login_link}}',
     status: 'Active',
     lastModified: '2026-09-17',

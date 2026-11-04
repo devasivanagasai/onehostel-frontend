@@ -1,8 +1,9 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AuthService } from '../../core/services/auth.service';
 
 export interface NavItem {
   label: string;
@@ -27,19 +28,64 @@ export class SidebarComponent {
   /** When true, shrinks to an icon-only rail (labels shown as tooltips instead). */
   @Input() collapsed = false;
 
-  readonly navSections: NavSection[] = [
-    {
-      items: [
-        { label: 'Dashboard', icon: 'home', route: '/dashboard' },
-        { label: 'Onboard Hostel', icon: 'apartment', route: '/hostel-onboarding' },
-        { label: 'Subscription Plans', icon: 'credit_card', route: '/subscription-plans' },
-        { label: 'Communication Templates', icon: 'campaign', route: '/communication-templates' },
-        { label: 'Admin Management', icon: 'manage_accounts', route: '/admins' },
-        { label: 'Subscription & Payment', icon: 'payments', route: '/subscription-payments' },
-        { label: 'Reports', icon: 'bar_chart', route: '/reports' },
-        { label: 'Audit Logs', icon: 'assignment', route: '/audit-logs' },
-        { label: 'System Defaults', icon: 'settings', route: '/settings' },
-      ],
-    },
-  ];
+  private readonly auth = inject(AuthService);
+
+  /**
+   * Menu for the signed-in user, filtered through AuthService.canAccess() (privileges, else role rules):
+   * Hostel Owner modules (Rooms & Beds, Residents, Fees & Payments, Complaints, Announcements, Reports,
+   * Hostel Settings) for Hostel Owners only,
+   * Admin modules for Admins only.
+   */
+  get navSections(): NavSection[] {
+    // Built once per access state (roles, privToken, catalogue) and reused: a fresh array on every check
+    // would re-create the menu links, and each new routerLinkActive schedules another check — an endless
+    // render loop (white screen).
+    const cacheKey = this.auth.accessKey;
+    if (!this.cachedSections || this.cachedRoleKey !== cacheKey) {
+      this.cachedRoleKey = cacheKey;
+      this.cachedSections = ALL_SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.filter((item) => this.auth.canAccess(item.route)),
+      })).filter((section) => section.items.length > 0); // drop sections the role sees nothing in
+    }
+    return this.cachedSections;
+  }
+
+  private cachedSections?: NavSection[];
+  private cachedRoleKey?: string;
 }
+
+const ALL_SECTIONS: NavSection[] = [
+  {
+    items: [
+      { label: 'Dashboard', icon: 'home', route: '/dashboard' },
+      { label: 'Rooms & Beds', icon: 'meeting_room', route: '/rooms' },
+      { label: 'Residents', icon: 'groups', route: '/residents' },
+      { label: 'Fees & Payments', icon: 'payments', route: '/fees' },
+      { label: 'Complaints', icon: 'build_circle', route: '/complaints' },
+      { label: 'Laundry & Machines', icon: 'local_laundry_service', route: '/laundry' },
+      { label: 'Visitors', icon: 'badge', route: '/visitors' },
+      { label: 'Mess & Food', icon: 'restaurant_menu', route: '/mess' },
+      { label: 'Leave & Outpass', icon: 'exit_to_app', route: '/leave-outpass' },
+      { label: 'Attendance', icon: 'fact_check', route: '/attendance' },
+      { label: 'Parcels', icon: 'inventory_2', route: '/parcels' },
+      { label: 'Announcements', icon: 'campaign', route: '/announcements' },
+      { label: 'Reports', icon: 'bar_chart', route: '/hostel-reports' },
+      { label: 'Staff', icon: 'badge', route: '/staff' },
+      { label: 'Guardians', icon: 'family_restroom', route: '/guardians' },
+      { label: 'Academic Years', icon: 'school', route: '/academic-years' },
+      { label: 'Disciplinary', icon: 'gavel', route: '/disciplinary' },
+      { label: 'Analytics', icon: 'insights', route: '/analytics' },
+      { label: 'Permissions & Audit', icon: 'admin_panel_settings', route: '/permissions' },
+      { label: 'Hostel Settings', icon: 'settings', route: '/hostel-settings' },
+      { label: 'Onboard Hostel', icon: 'apartment', route: '/hostel-onboarding' },
+      { label: 'Subscription Plans', icon: 'credit_card', route: '/subscription-plans' },
+      { label: 'Communication Templates', icon: 'campaign', route: '/communication-templates' },
+      { label: 'Admin Management', icon: 'manage_accounts', route: '/admins' },
+      { label: 'Subscription & Payment', icon: 'payments', route: '/subscription-payments' },
+      { label: 'Reports', icon: 'bar_chart', route: '/reports' },
+      { label: 'Audit Logs', icon: 'assignment', route: '/audit-logs' },
+      { label: 'System Defaults', icon: 'settings', route: '/settings' },
+    ],
+  },
+];

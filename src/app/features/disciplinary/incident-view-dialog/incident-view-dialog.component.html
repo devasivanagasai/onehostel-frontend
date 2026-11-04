@@ -1,0 +1,95 @@
+<app-dialog title="Incident Details" [eyebrow]="i.id" icon="gavel" tone="red" [subtitle]="i.classification + ' · visible only inside Disciplinary Records'">
+  <span dialogMeta class="status-badge status-badge--{{ tones[i.status] }}">{{ i.status }}</span>
+
+  <div class="iv">
+    <!-- Progress -->
+    <ol class="iv__steps" aria-label="Review progress">
+      @for (s of steps; track s; let idx = $index) {
+        <li [class.is-done]="idx < steps.indexOf(i.status)" [class.is-current]="s === i.status" [attr.aria-current]="s === i.status ? 'step' : null">
+          <span class="iv__dot">{{ idx + 1 }}</span>{{ s }}
+        </li>
+      }
+    </ol>
+
+    <dl class="iv__grid">
+      <div><dt>Resident</dt><dd>{{ service.residentName(i) }} <small>({{ i.residentId }})</small></dd></div>
+      <div><dt>Incident date and time</dt><dd>{{ fmt.date(i.occurredAt, 'datetime') }}</dd></div>
+      <div><dt>Category</dt><dd>{{ i.category }}</dd></div>
+      <div><dt>Access classification</dt><dd>{{ i.classification }}</dd></div>
+      <div><dt>Reported by</dt><dd>{{ i.reportedBy }}</dd></div>
+      <div><dt>Recorded</dt><dd>{{ fmt.date(i.createdAt, 'datetime') }}</dd></div>
+    </dl>
+
+    <section>
+      <h3>Description</h3>
+      <p class="iv__text">{{ i.description }}</p>
+    </section>
+
+    <section>
+      <h3>Evidence</h3>
+      @if (i.evidence.length) {
+        <ul class="iv__files">
+          @for (f of i.evidence; track $index) {
+            <li><mat-icon fontSet="material-icons-outlined">{{ f.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>{{ f.name }} <small>{{ sizeLabel(f.size) }}</small></li>
+          }
+        </ul>
+        <small class="iv__muted">File names only; the files themselves are not stored in this system.</small>
+      } @else {
+        <p class="iv__muted">No evidence attached.</p>
+      }
+    </section>
+
+    <section>
+      <h3>Action taken</h3>
+      <p class="iv__text" [class.iv__muted]="!i.actionTaken">{{ i.actionTaken || 'Not recorded yet.' }}</p>
+    </section>
+
+    @if (i.closingNote) {
+      <section>
+        <h3>Closing note</h3>
+        <p class="iv__text">{{ i.closingNote }}</p>
+      </section>
+    }
+
+    <!-- Review workflow -->
+    @if (next) {
+      <section class="iv__advance">
+        <h3>Move to {{ next }}</h3>
+        @if (needsNote) {
+          <label class="iv__label" for="iv-note">{{ noteLabel }}</label>
+          <textarea id="iv-note" rows="3" [(ngModel)]="note" [attr.maxlength]="actionMax"></textarea>
+        }
+        @if (error) { <p class="iv__error" role="alert">{{ error }}</p> }
+        <app-button icon="arrow_forward" size="sm" (clicked)="advance()">Move to {{ next }}</app-button>
+      </section>
+    } @else {
+      <p class="iv__muted"><mat-icon fontSet="material-icons-outlined">lock</mat-icon> Closed incidents are read-only. Use an authorized correction (a reason is required and audited).</p>
+    }
+
+    <section>
+      <h3>History</h3>
+      <ol class="iv__timeline" aria-label="Incident history, newest first">
+        @for (e of timeline; track $index) {
+          <li>
+            <mat-icon class="iv__ev-icon" fontSet="material-icons-outlined">{{ icons[e.type] }}</mat-icon>
+            <div>
+              <strong>{{ e.text }}</strong>
+              <small>{{ fmt.date(e.at, 'datetime') }} · {{ e.by }}</small>
+              @for (c of e.changes ?? []; track c.field) {
+                <small class="iv__change">{{ c.field }}: {{ c.oldValue }} → {{ c.newValue }}</small>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    </section>
+  </div>
+
+  <ng-container dialogFooter>
+    @if (i.status === 'Closed') {
+      <app-button variant="secondary" icon="rule" [iconOutlined]="true" (clicked)="act('correct')">Authorized Correction</app-button>
+    } @else {
+      <app-button variant="secondary" icon="edit" [iconOutlined]="true" (clicked)="act('edit')">Edit</app-button>
+    }
+  </ng-container>
+</app-dialog>

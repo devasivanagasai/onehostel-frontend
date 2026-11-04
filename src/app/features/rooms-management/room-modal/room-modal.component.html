@@ -1,0 +1,171 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <app-dialog
+    [title]="isEdit ? 'Edit Room ' + data.room?.roomNumber : 'Create New Room'"
+    [subtitle]="isEdit ? 'Update this room\'s details, facilities and policies' : 'Add a new room to your property inventory'"
+    icon="apartment"
+    tone="teal"
+    (closed)="onCancel()"
+  >
+    <!-- Building & location -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">location_on</mat-icon></span>
+        Building &amp; Location Scope
+      </h3>
+      <div class="rm-grid">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-building">Building / Block Name<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-building" formControlName="building" required>
+              @for (b of buildings; track b) { <option [value]="b">{{ b }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-floor">Floor<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-floor" formControlName="floor" required>
+              @for (floor of floors; track floor) { <option [value]="floor">{{ floor }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-number">Room Number / Code<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="invalid('roomNumber')">
+            <input id="rm-number" formControlName="roomNumber" placeholder="e.g., 101, A-201" maxlength="12" required />
+          </span>
+          @if (invalid('roomNumber')) {
+            <span class="fk-error">{{ form.get('roomNumber')?.hasError('required') ? 'Room number is required' : 'Use letters, numbers and dashes only' }}</span>
+          } @else {
+            <span class="fk-hint">Unique within building and floor</span>
+          }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-type">Room Type<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-type" formControlName="roomType" required>
+              @for (type of roomTypes; track type) { <option [value]="type">{{ type }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Capacity, rent & status -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">group</mat-icon></span>
+        Capacity, Rent &amp; Status
+      </h3>
+      <div class="rm-grid">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-capacity">Capacity (Total Beds)<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-capacity" formControlName="capacity" required>
+              @for (n of capacityOptions; track n) { <option [ngValue]="n">{{ n }} {{ n === 1 ? 'Bed' : 'Beds' }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          <span class="fk-hint">Cannot be lower than active allocations</span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-rent">Base Rent per Bed (₹)<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead" [class.is-invalid]="invalid('baseRent')">
+            <span class="fk-lead">₹</span>
+            <input id="rm-rent" type="number" min="500" step="100" formControlName="baseRent" placeholder="6500" required />
+          </span>
+          @if (invalid('baseRent')) { <span class="fk-error">Enter at least ₹500</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-status">Room Status<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-status" formControlName="status" required>
+              @for (st of roomStatuses; track st) { <option [value]="st">{{ st }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-gender">Gender Restriction<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rm-gender" formControlName="genderRestriction" required>
+              @for (g of genderOptions; track g) { <option [value]="g">{{ g }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <!-- Required only while the room is under maintenance -->
+        @if (form.get('status')?.value === 'Maintenance') {
+          <div class="fk-field rm-full">
+            <label class="fk-label" for="rm-maint">Maintenance Note<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="invalid('maintenanceNote')">
+              <input id="rm-maint" formControlName="maintenanceNote" placeholder="e.g. AC servicing and wall repainting in progress" />
+            </span>
+            @if (invalid('maintenanceNote')) { <span class="fk-error">A note is required when marking Maintenance</span> }
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Facilities -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">weekend</mat-icon></span>
+        Facilities &amp; Room Amenities
+      </h3>
+      <div class="rm-facilities" role="group" aria-label="Facilities and room amenities">
+        @for (facility of availableFacilities; track facility) {
+          <label class="rm-facility" [class.is-selected]="isFacilitySelected(facility)">
+            <input type="checkbox" [checked]="isFacilitySelected(facility)" (change)="toggleFacility(facility)" />
+            <span class="rm-facility__box" aria-hidden="true"><mat-icon>check</mat-icon></span>
+            <mat-icon class="rm-facility__icon" fontSet="material-icons-outlined">{{ facilityIcon(facility) }}</mat-icon>
+            <span>{{ facility }}</span>
+          </label>
+        }
+      </div>
+    </section>
+
+    <!-- 4. Policies -->
+    <section class="rm-section">
+      <h3 class="rm-section__title">
+        <span class="rm-section__icon"><mat-icon fontSet="material-icons-outlined">description</mat-icon></span>
+        Additional Guidelines &amp; Policies
+      </h3>
+      <div class="rm-grid rm-grid--2">
+        <div class="fk-field">
+          <label class="fk-label" for="rm-college">College / Company Specific Restriction</label>
+          <span class="fk-control">
+            <select id="rm-college" formControlName="collegeRestriction">
+              @for (c of collegeOptions; track c) { <option [value]="c">{{ c === 'Any' ? 'Any (no restriction)' : c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rm-notes">Internal Notes / Remarks <span class="opt">(Optional)</span></label>
+          <span class="fk-control">
+            <textarea id="rm-notes" formControlName="notes" rows="2" maxlength="300" placeholder="Add any notes or remarks about this room..."></textarea>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="onCancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="check_circle" [iconOutlined]="true">
+        {{ isEdit ? 'Save Changes' : 'Create Room' }}
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

@@ -1,0 +1,64 @@
+// KPI row from styles/_page-kit.scss; each tab styles itself.
+
+$teal: #0d9488;
+
+.mess-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+/* ---- Underline tabs (as in the bed modal) ---- */
+.ms-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: -6px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.ms-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover { color: #1e293b; }
+
+  &.is-active {
+    color: $teal;
+    border-bottom-color: $teal;
+  }
+}
+
+.kpi-card__value small {
+  font-size: 15px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.ms-kpi--teal .kpi-card__bar span { background: $teal; }
+
+// Each KPI number in its card's colour
+.ms-kpi--teal .kpi-card__value { color: $teal; }
+.ms-kpi--indigo .kpi-card__value { color: #6d28d9; }
+.ms-kpi--blue .kpi-card__value { color: #2563eb; }
+.ms-kpi--green .kpi-card__value { color: #16a34a; }
+.ms-kpi--orange .kpi-card__value { color: #ea580c; }

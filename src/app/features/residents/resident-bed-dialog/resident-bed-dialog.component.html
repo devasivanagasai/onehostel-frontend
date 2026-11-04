@@ -1,0 +1,124 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    [title]="meta.title"
+    [subtitle]="name + ' • ' + data.resident.residentId"
+    [icon]="meta.icon"
+    [tone]="data.mode === 'checkout' ? 'red' : 'teal'"
+    (closed)="cancel()"
+  >
+    <div class="rb__body">
+      <!-- Current bed (transfer / check-out) -->
+      @if (data.mode !== 'allocate') {
+        <div class="rb__current">
+          <span class="rb__current-label">Current bed</span>
+          <div class="rb__current-row">
+            <span class="rb__current-icon" [class.is-empty]="!current">
+              <mat-icon fontSet="material-icons-outlined">{{ current ? 'bed' : 'bedroom_child' }}</mat-icon>
+            </span>
+            <div>
+              <strong>{{ current ? currentLabel : 'No bed allocated' }}</strong>
+              <span>
+                @if (current) {
+                  {{ current.room.building }} · {{ current.room.floor }} · since {{ fmt.date(current.bed.joinedDate) }}
+                } @else {
+                  The resident is not assigned to any bed.
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (data.mode === 'checkout') {
+        @if (data.resident.outstandingBalance > 0) {
+          <p class="rb__banner rb__banner--warn">
+            <mat-icon fontSet="material-icons-outlined">account_balance_wallet</mat-icon>
+            <span>Outstanding balance of <strong>₹{{ data.resident.outstandingBalance | number }}</strong>. Settle it before or after check-out as per policy.</span>
+          </p>
+        }
+        <p class="rb__banner">
+          <mat-icon>info</mat-icon>
+          <span>The allocation is closed and the bed becomes available from the check-out date. Resident history is kept.</span>
+        </p>
+      } @else {
+        @if (rooms.length === 0) {
+          <p class="rb__banner rb__banner--warn"><mat-icon fontSet="material-icons-outlined">bed</mat-icon><span>No available beds match this resident right now.</span></p>
+        } @else {
+          <p class="rb__banner">
+            <mat-icon>info</mat-icon>
+            <span>
+              Showing beds that allow <strong>{{ data.resident.gender }}</strong> residents{{ data.resident.collegeOrCompany ? ' from ' + data.resident.collegeOrCompany : '' }}.
+              Rooms under maintenance or inactive are hidden.
+            </span>
+          </p>
+
+          <div class="rb__grid">
+            <div class="fk-field">
+              <label class="fk-label" for="rb-room">{{ data.mode === 'transfer' ? 'New Room' : 'Room' }}<span class="req">*</span></label>
+              <span class="fk-control" [class.is-invalid]="form.controls.roomId.touched && form.controls.roomId.invalid">
+                <select id="rb-room" formControlName="roomId" [class.is-placeholder]="!form.value.roomId" (change)="onRoomPicked()">
+                  <option value="" disabled>Select room</option>
+                  @for (room of rooms; track room.id) {
+                    <option [value]="room.id">Room {{ room.roomNumber }} · {{ room.floor }} · {{ room.roomType }}</option>
+                  }
+                </select>
+                <mat-icon class="fk-caret">expand_more</mat-icon>
+              </span>
+              @if (form.controls.roomId.touched && form.controls.roomId.invalid) { <span class="fk-error">Select a room</span> }
+            </div>
+
+            <div class="fk-field">
+              <label class="fk-label" for="rb-bed">Bed<span class="req">*</span></label>
+              <span class="fk-control" [class.is-invalid]="form.controls.bedId.touched && form.controls.bedId.invalid">
+                <select id="rb-bed" formControlName="bedId" [class.is-placeholder]="!form.value.bedId">
+                  <option value="" disabled>{{ form.value.roomId ? 'Select bed' : 'Pick a room first' }}</option>
+                  @for (bed of beds; track bed.id) {
+                    <option [value]="bed.id">Bed {{ bed.bedNumber }} · ₹{{ bed.monthlyRent | number }}/mo</option>
+                  }
+                </select>
+                <mat-icon class="fk-caret">expand_more</mat-icon>
+              </span>
+              @if (form.controls.bedId.touched && form.controls.bedId.invalid) { <span class="fk-error">Select a bed</span> }
+            </div>
+          </div>
+        }
+      }
+
+      <div class="fk-field">
+        <label class="fk-label" for="rb-date">
+          {{ data.mode === 'checkout' ? 'Check-out Date' : data.mode === 'transfer' ? 'Effective Date' : 'Allocation Start Date' }}<span class="req">*</span>
+        </label>
+        <span class="fk-control" [class.is-invalid]="dateTooEarly || dateInFuture">
+          <input id="rb-date" type="date" formControlName="date" [min]="minDate" [max]="data.mode === 'checkout' ? today : null" />
+        </span>
+        @if (dateTooEarly) { <span class="fk-error">Can't be before {{ fmt.date(minDate) }}</span> }
+        @else if (dateInFuture) { <span class="fk-error">Check-out date can't be in the future</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="rb-notes">{{ data.mode === 'checkout' ? 'Remarks' : data.mode === 'transfer' ? 'Reason' : 'Notes' }}</label>
+        <span class="fk-control">
+          <textarea
+            id="rb-notes"
+            formControlName="notes"
+            rows="3"
+            maxlength="250"
+            [placeholder]="data.mode === 'checkout' ? 'Add any remarks (optional)...' : 'Add any additional notes (optional)'"
+          ></textarea>
+        </span>
+      </div>
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button
+        type="submit"
+        [variant]="data.mode === 'checkout' ? 'danger' : 'accent'"
+        [icon]="meta.icon"
+        [disabled]="data.mode !== 'checkout' && rooms.length === 0"
+      >
+        {{ meta.submit }}
+      </app-button>
+    </ng-container>
+  </app-dialog>
+</form>

@@ -1,0 +1,113 @@
+// Priority, category and status colours for complaints, shared by the list and the dialogs.
+
+$priority-colors: (
+  low: (#f1f5f9, #64748b, #475569),
+  medium: (#eff6ff, #2563eb, #1d4ed8),
+  high: (#fff7ed, #f59e0b, #b45309),
+  urgent: (#fee2e2, #dc2626, #b91c1c),
+);
+
+$category-colors: (
+  plumbing: (#eff6ff, #2563eb),
+  electrical: (#f5f3ff, #7c3aed),
+  cleaning: (#fef2f2, #dc2626),
+  wifi: (#ecfdf5, #059669),
+  furniture: (#fffbeb, #d97706),
+  other: (#f1f5f9, #475569),
+);
+
+/** Small coloured dot, e.g. inside a <mat-option>. */
+@mixin priority-dots {
+  .prio-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+
+  @each $key, $c in $priority-colors {
+    .prio-dot--#{$key} {
+      background: nth($c, 2);
+    }
+  }
+}
+
+/** Light pill with a coloured dot: <span class="prio prio--urgent">Urgent</span> */
+@mixin priority-pills {
+  .prio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  @each $key, $c in $priority-colors {
+    .prio--#{$key} {
+      background: nth($c, 1);
+      color: nth($c, 3);
+
+      &::before {
+        background: nth($c, 2);
+      }
+    }
+  }
+
+  // Urgent reads louder than the rest
+  .prio--urgent {
+    font-weight: 700;
+  }
+
+  // Pill with its own icon drops the dot
+  .prio--icon::before {
+    display: none;
+  }
+}
+
+/** Category chip: <span class="cat-chip cat-chip--wifi">Wi-Fi</span> (key = lowercase letters only). */
+@mixin category-chips {
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  }
+
+  @each $key, $c in $category-colors {
+    .cat-chip--#{$key} {
+      background: nth($c, 1);
+      color: nth($c, 2);
+    }
+  }
+}

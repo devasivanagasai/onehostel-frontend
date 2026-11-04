@@ -1,0 +1,19 @@
+// Send / check a guardian verification code. Frame comes from <app-dialog>.
+@use '../../../../styles/dialog-kit' as *;
+@use '../gd-kit';
+
+@include form-fields;
+
+.gv-lead {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: #475569;
+}
+
+.gv-field { margin-top: 14px; }
+
+.gv-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+  letter-spacing: 2px;
+}

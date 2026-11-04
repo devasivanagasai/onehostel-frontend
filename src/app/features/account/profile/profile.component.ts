@@ -1,22 +1,24 @@
 import { Component, DestroyRef, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AccountService } from '../../../core/services/account.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { MOBILE_CODES, UserProfile, profileFullName, profileInitials } from '../../../core/models/account.models';
 import { UnsavedChangesAware } from '../../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { CustomValidators } from '../../../shared/validators/custom-validators';
 import { AppDatePipe } from '../../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 
 const MAX_PHOTO_BYTES = 1024 * 1024;
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -26,15 +28,14 @@ const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
   standalone: true,
   imports: [
     AppDatePipe,
+    AppButtonComponent,
     CommonModule,
     ReactiveFormsModule,
-    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatIconModule,
     MatTooltipModule,
-    MatProgressSpinnerModule,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
@@ -44,9 +45,11 @@ export class ProfileComponent implements UnsavedChangesAware {
 
   private readonly fb = inject(FormBuilder);
   private readonly account = inject(AccountService);
+  private readonly auth = inject(AuthService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   readonly mobileCodes = MOBILE_CODES;
 
@@ -55,7 +58,8 @@ export class ProfileComponent implements UnsavedChangesAware {
     lastName: ['', [Validators.required, CustomValidators.noWhitespace, Validators.maxLength(50)]],
     email: ['', [Validators.required, Validators.email]],
     mobileCode: ['+91', Validators.required],
-    mobile: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+    // Same rule as the backend (MobileNumber): 10 digits starting with 6-9
+    mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
     avatarDataUrl: [''],
   });
 
@@ -84,6 +88,11 @@ export class ProfileComponent implements UnsavedChangesAware {
 
   get initials(): string {
     return profileInitials(this.preview);
+  }
+
+  /** When you last signed in on this browser. */
+  get lastLoginAt(): string | null {
+    return this.auth.lastLoginAt;
   }
 
   get passwordAgeDays(): number {
@@ -154,6 +163,10 @@ export class ProfileComponent implements UnsavedChangesAware {
     reader.readAsDataURL(file);
   }
 
+  goToChangePassword(): void {
+    this.router.navigateByUrl('/change-password');
+  }
+
   removePhoto(): void {
     this.applyPhoto('');
   }
@@ -183,11 +196,18 @@ export class ProfileComponent implements UnsavedChangesAware {
         mobile: v.mobile,
         avatarDataUrl: v.avatarDataUrl,
       })
-      .subscribe((changes) => {
-        this.saving = false;
-        this.form.markAsPristine();
-        if (this.profile) this.resetForm(this.profile);
-        this.toast(changes.length ? 'Profile updated successfully' : 'No changes to save');
+      .subscribe({
+        next: (changes) => {
+          this.saving = false;
+          this.form.markAsPristine();
+          if (this.profile) this.resetForm(this.profile);
+          this.toast(changes.length ? 'Profile updated successfully' : 'No changes to save');
+        },
+        error: (error: HttpErrorResponse) => {
+          // The edits stay in the form so the user can correct them (e.g. an email another account uses)
+          this.saving = false;
+          this.toast(error.error?.errors?.[0]?.message || error.error?.message || 'Could not save your profile. Please try again.', true);
+        },
       });
   }
 

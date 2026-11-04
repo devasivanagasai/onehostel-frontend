@@ -1,0 +1,211 @@
+// KPI and filter look comes from styles/_page-kit.scss; this file adds the analytics cards and inline charts.
+
+$text: #0f172a;
+$muted: #64748b;
+$line: #e8edf3;
+$accent: #0d9488;
+
+.an-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 24px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.an-head__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: $text;
+
+  small { font-size: 13px; font-weight: 500; color: $muted; }
+}
+
+.an-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #e6f7f5;
+    font-size: 12.5px;
+    color: #0f766e;
+  }
+}
+
+.an-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+
+  input {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #dbe3ec;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    color: #1e293b;
+
+    &:focus-visible { outline: 2px solid $accent; outline-offset: 1px; }
+  }
+}
+
+.an-error {
+  margin: -6px 0 0;
+  font-size: 12.5px;
+  color: #dc2626;
+}
+
+.an-fail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+
+  mat-icon { flex-shrink: 0; }
+  div { display: flex; flex-direction: column; flex: 1; font-size: 13px; }
+}
+
+.an-loading { margin: 0; padding: 24px; text-align: center; color: $muted; }
+
+.an-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+
+  h3 { margin: 0; font-size: 16px; color: $text; }
+}
+
+.an-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.an-export { display: inline-flex; gap: 8px; }
+
+.an-def {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #475569;
+
+  mat-icon { flex-shrink: 0; font-size: 18px; width: 18px; height: 18px; color: $muted; }
+}
+
+.an-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.an-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid $line;
+  border-radius: 12px;
+
+  span { font-size: 12px; color: $muted; }
+  strong { font-size: 20px; color: $text; }
+  .pos { color: #16a34a; }
+  .neg { color: #dc2626; }
+}
+
+.an-sub { margin: 0; font-size: 13px; color: #475569; }
+.an-h4 { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: #334155; }
+.an-empty { margin: 0; padding: 16px; text-align: center; font-size: 13.5px; color: $muted; }
+
+.an-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+/* ---- Horizontal CSS bars ---- */
+.an-bars {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  li { display: grid; grid-template-columns: minmax(90px, 140px) 1fr minmax(60px, auto); align-items: center; gap: 10px; font-size: 13px; }
+  small { color: $muted; }
+}
+
+.an-bars__track { height: 10px; border-radius: 999px; background: #eef2f6; overflow: hidden; }
+.an-bars__fill { display: block; height: 100%; border-radius: 999px; background: $accent; }
+.an-bars__fill--warn { background: #f59e0b; }
+.an-bars__val { text-align: right; font-weight: 600; color: $text; }
+
+/* ---- Occupancy SVG ---- */
+.an-svg { width: 100%; max-height: 240px; }
+.an-axis { stroke: #cbd5e1; stroke-width: 1; }
+.an-bar { fill: $accent; }
+.an-bar-val { font-size: 12px; font-weight: 700; fill: $text; }
+.an-bar-lbl { font-size: 11px; fill: $muted; }
+
+/* ---- Tables ---- */
+.an-scroll { overflow-x: auto; }
+
+.an-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    padding: 8px 10px;
+    background: #f1f5f9;
+    text-align: left;
+    font-weight: 700;
+    white-space: nowrap;
+    color: #334155;
+  }
+
+  td { padding: 8px 10px; border-bottom: 1px solid $line; color: #1e293b; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  small { color: $muted; }
+}
+
+@media (max-width: 560px) {
+  .an-card { padding: 14px; }
+  .an-bars li { grid-template-columns: 80px 1fr 56px; }
+}

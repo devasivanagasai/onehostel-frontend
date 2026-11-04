@@ -1,0 +1,74 @@
+<div class="mw">
+  <!-- Toolbar: week navigation, notify setting, copy / preview & publish -->
+  <div class="filter-card">
+    <div class="mw__nav">
+      <app-button variant="icon" size="sm" icon="chevron_left" ariaLabel="Previous week" matTooltip="Previous week" (clicked)="shiftWeek(-1)"></app-button>
+      <span class="mw__week">{{ weekLabel }}</span>
+      <app-button variant="icon" size="sm" icon="chevron_right" ariaLabel="Next week" matTooltip="Next week" (clicked)="shiftWeek(1)"></app-button>
+      @if (!isThisWeek) { <app-button variant="text" size="sm" icon="today" (clicked)="goToThisWeek()">This week</app-button> }
+    </div>
+
+    <div class="filter-toggle" matTooltip="Record a notification to residents when menus are published or changed">
+      <span>Notify residents</span>
+      <mat-slide-toggle [ngModel]="service.settings.notifyResidents" (ngModelChange)="setNotify($event)" color="primary" aria-label="Notify residents of menu changes"></mat-slide-toggle>
+    </div>
+
+    <app-button class="filter-card__add" variant="secondary" icon="content_copy" [iconOutlined]="true" (clicked)="copyPrevious()">Copy Previous Week</app-button>
+    <app-button icon="visibility" [iconOutlined]="true" (clicked)="preview()">Preview &amp; Publish{{ draftsToPublish ? ' (' + draftsToPublish + ')' : '' }}</app-button>
+  </div>
+
+  <!-- Week grid -->
+  <section class="mw__card" aria-label="Weekly menu">
+    <div class="mw__grid">
+      <div class="mw__corner"></div>
+      @for (d of days; track d) {
+        <div class="mw__day" [class.is-today]="d === today" [class.is-past]="d < today">
+          <span>{{ dayName(d) }}</span><strong>{{ dayNum(d) }}</strong>
+        </div>
+      }
+
+      @for (meal of meals; track meal) {
+        <div class="mw__meal">
+          <mat-icon fontSet="material-icons-outlined">{{ mealIcons[meal] }}</mat-icon>
+          <span>{{ meal }}</span>
+        </div>
+        @for (d of days; track d) {
+          @if (menu(d, meal); as m) {
+            <button type="button" class="mw__cell mw__cell--{{ tone(m) }}" [class.is-today]="d === today" (click)="open(d, meal)"
+              [attr.aria-label]="meal + ' on ' + d + ', ' + status(m)">
+              <span class="mw__cell-top">
+                <span class="mw__pill mw__pill--{{ tone(m) }}">{{ status(m) }}</span>
+                @if (m.changes.length) { <mat-icon class="mw__edited" fontSet="material-icons-outlined" [matTooltip]="'Changed after publishing: ' + m.changes[0].summary">history</mat-icon> }
+              </span>
+              <ul>
+                @for (item of m.items.slice(0, cellItems); track $index) { <li>{{ item }}</li> }
+              </ul>
+              @if (m.items.length > cellItems) { <small class="mw__more">+{{ m.items.length - cellItems }} more</small> }
+              <small class="mw__time">{{ clock(m.start) }} – {{ clock(m.end) }}</small>
+            </button>
+          } @else if (d >= today) {
+            <button type="button" class="mw__cell mw__cell--empty" (click)="open(d, meal)" [attr.aria-label]="'Add ' + meal + ' on ' + d">
+              <mat-icon>add</mat-icon><span>Add menu</span>
+            </button>
+          } @else {
+            <div class="mw__cell mw__cell--none">No menu</div>
+          }
+        }
+      }
+    </div>
+  </section>
+
+  <!-- Mock notifications log -->
+  <section class="mw__card mw__log" aria-label="Resident notifications">
+    <h3><mat-icon fontSet="material-icons-outlined">notifications</mat-icon>Resident notifications</h3>
+    @for (n of recentNotices; track n.id) {
+      <div class="mw__log-row">
+        <span class="mw__pill" [class.mw__pill--success]="n.kind === 'Published'" [class.mw__pill--warning]="n.kind === 'Updated'">{{ n.kind }}</span>
+        <span class="mw__log-text">{{ n.summary }}</span>
+        <small>{{ n.recipients }} residents · {{ fmt.date(n.at, 'datetime') }}</small>
+      </div>
+    } @empty {
+      <p class="mw__log-empty">No notifications sent yet.</p>
+    }
+  </section>
+</div>
