@@ -1,0 +1,134 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+.announcements-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.announcements-table-card {
+  padding-top: 8px;
+}
+
+.announcements-table {
+  .title-cell {
+    max-width: 280px;
+  }
+
+  .ann-title {
+    display: block;
+    max-width: 270px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ann-clip {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+    color: #64748b;
+  }
+
+  .ann-channels {
+    display: inline-flex;
+    gap: 10px;
+  }
+
+  // Coloured channel icons, no box
+  .ann-channel {
+    display: inline-flex;
+
+    mat-icon {
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+    }
+
+    &--teal { color: #0d9488; }
+    &--blue { color: #2563eb; }
+    &--purple { color: #7c3aed; }
+    &--amber { color: #d97706; }
+  }
+
+  // Audience icon in a tinted circle
+  .ann-dot {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+
+    &--teal { background: #e6f7f5; color: #0d9488; }
+    &--amber { background: #fef3c7; color: #d97706; }
+    &--purple { background: #f1e8ff; color: #7c3aed; }
+  }
+
+  .ann-cal {
+    color: #64748b;
+  }
+
+  .ann-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  // Plain icon actions: blue, delete / cancel in red
+  .ann-act ::ng-deep button {
+    color: #2563eb;
+  }
+
+  .ann-act--danger ::ng-deep button {
+    color: #dc2626;
+  }
+
+  .ann-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  // Expired / cancelled stay listed but read as inactive
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name {
+      color: #94a3b8;
+    }
+  }
+}
+
+.muted {
+  color: #94a3b8;
+}
+
+// Each KPI number in its card's colour
+.ann-kpi--teal .kpi-card__value { color: #0d9488; }
+.ann-kpi--blue .kpi-card__value { color: #2563eb; }
+.ann-kpi--indigo .kpi-card__value { color: #6d28d9; }
+.ann-kpi--green .kpi-card__value { color: #0d9488; }
+.ann-kpi--orange .kpi-card__value { color: #dc2626; }

@@ -1,0 +1,132 @@
+// Shared dialog frame. Width comes from MatDialog's open() config.
+
+$tones: (
+  'blue': (#eaf1ff, #2563eb),
+  'teal': (#e6f7f5, #0d9488),
+  'green': (#e9f9ef, #16a34a),
+  'amber': (#fff4e5, #ea580c),
+  'red': (#fee2e2, #dc2626),
+  'purple': (#f3e8ff, #7c3aed),
+  'slate': (#f1f5f9, #475569),
+);
+
+:host {
+  display: block;
+}
+
+.app-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  padding: 20px 24px 16px;
+  box-sizing: border-box;
+}
+
+/* ---- Header ---- */
+.app-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+.app-dialog__heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.app-dialog__icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tone-bg);
+  color: var(--tone);
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.app-dialog__titles {
+  min-width: 0;
+}
+
+.app-dialog__eyebrow {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.app-dialog__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+// Reset Material's mat-dialog-title spacing so the header lines up
+.app-dialog__title.mat-mdc-dialog-title {
+  margin: 0;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #0f172a;
+
+  &::before {
+    display: none;
+  }
+}
+
+.app-dialog__subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ---- Body ---- */
+.app-dialog__body.mat-mdc-dialog-content {
+  flex: 1;
+  max-height: none;
+  margin: 0 -4px;
+  padding: 16px 4px 8px;
+  overflow-y: auto;
+  color: inherit;
+}
+
+/* ---- Footer ---- */
+.app-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf3;
+
+  &:empty {
+    display: none;
+  }
+}
+
+/** Place first in the footer to push the following buttons right and keep earlier ones left. */
+:host ::ng-deep .app-dialog__spacer {
+  flex: 1;
+}
+
+@each $key, $t in $tones {
+  .app-dialog--#{$key} {
+    --tone-bg: #{nth($t, 1)};
+    --tone: #{nth($t, 2)};
+  }
+}

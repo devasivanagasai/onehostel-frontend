@@ -1,0 +1,283 @@
+// Mixins shared by feature dialogs (Residents, Fees & Payments): shell, header, footer, info boxes, status pills.
+
+@mixin dialog-shell($max-width) {
+  width: 100%;
+  max-width: $max-width;
+  padding: 18px 22px 16px;
+  box-sizing: border-box;
+}
+
+@mixin dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+@mixin dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: #64748b;
+  }
+
+  > span:first-child {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e6f7f5;
+    color: #0d9488;
+
+    mat-icon {
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
+    }
+  }
+}
+
+@mixin dialog-content {
+  padding: 16px 2px 8px !important;
+  max-height: 68vh;
+  overflow-y: auto;
+}
+
+@mixin dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf3;
+}
+
+@mixin section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+
+  > mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #0d9488;
+  }
+}
+
+@mixin info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 13px;
+  color: #475569;
+
+  mat-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+}
+
+// Resident status pills: Invited, Active, On Leave, Checked Out, Suspended (+ Deactivated)
+@mixin status-pills {
+  .res-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    &--active { background: #ecfdf5; color: #047857; }
+    &--invited { background: #eff6ff; color: #1d4ed8; }
+    &--on-leave { background: #fffbeb; color: #b45309; }
+    &--checked-out { background: #f1f5f9; color: #475569; }
+    &--suspended { background: #fef2f2; color: #b91c1c; }
+    &--deactivated { background: #f8fafc; color: #94a3b8; border: 1px dashed #cbd5e1; }
+  }
+
+  .doc-status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+
+    &--verified { background: #ecfdf5; color: #047857; }
+    &--pending { background: #fffbeb; color: #b45309; }
+    &--rejected { background: #fef2f2; color: #b91c1c; }
+  }
+}
+
+// Labelled form fields for dialogs: label above, plain bordered control, optional leading icon / ₹ prefix.
+//   <div class="fk-field">
+//     <label class="fk-label" for="x">Floor<span class="req">*</span></label>
+//     <span class="fk-control fk-control--lead"> <mat-icon class="fk-lead">…</mat-icon> <select id="x">…</select> <mat-icon class="fk-caret">expand_more</mat-icon> </span>
+//     <span class="fk-error">…</span>
+//   </div>
+@mixin form-fields($accent: #0d9488) {
+  .fk-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .fk-label {
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+
+    .req {
+      color: #dc2626;
+    }
+
+    .opt {
+      font-weight: 400;
+      color: #64748b;
+    }
+  }
+
+  .fk-control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    border: 1px solid #dbe3ec;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus-within {
+      border-color: $accent;
+      box-shadow: 0 0 0 3px rgba($accent, 0.12);
+    }
+
+    &.is-invalid {
+      border-color: #f87171;
+    }
+
+    select,
+    input,
+    textarea {
+      flex: 1;
+      min-width: 0;
+      height: 38px;
+      padding: 0 12px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      font-size: 14px;
+      color: #1e293b;
+    }
+
+    select {
+      appearance: none;
+      padding-right: 34px;
+      cursor: pointer;
+
+      &.is-placeholder {
+        color: #94a3b8;
+      }
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #94a3b8;
+    }
+
+    textarea {
+      height: auto;
+      min-height: 64px;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+
+    &--lead select,
+    &--lead input {
+      padding-left: 38px;
+    }
+  }
+
+  .fk-lead {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  // Text prefix such as "₹"
+  span.fk-lead {
+    font-size: 14px;
+    width: auto;
+    height: auto;
+  }
+
+  .fk-caret {
+    position: absolute;
+    right: 10px;
+    pointer-events: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #475569;
+  }
+
+  .fk-hint,
+  .fk-error {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  .fk-hint {
+    color: #64748b;
+  }
+
+  .fk-error {
+    color: #dc2626;
+  }
+}

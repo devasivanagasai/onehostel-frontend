@@ -1,0 +1,54 @@
+// Table look comes from the shared list styles (styles/_table.scss), same as Onboard Hostel.
+// Only what's unique to Residents lives here.
+
+.residents-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.residents-table-card {
+  padding-top: 8px;
+}
+
+.residents-table {
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  th.num,
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  td.is-due {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  // Deactivated residents stay listed (when shown) but read as inactive.
+  .is-deactivated td {
+    color: #94a3b8;
+
+    .list-entity__name {
+      color: #94a3b8;
+    }
+
+    .list-entity__avatar {
+      filter: grayscale(1);
+      opacity: 0.6;
+    }
+  }
+}
+
+// Photo in place of the initials avatar
+img.resident-photo {
+  object-fit: cover;
+}
+
+.muted {
+  color: #94a3b8;
+}

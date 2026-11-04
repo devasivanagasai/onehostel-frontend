@@ -1,0 +1,78 @@
+// Pieces shared by the guardian dialogs: pills, chip options, banners, key-value tiles.
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.gd-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}
+
+.gd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gd-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); color: #64748b; }
+
+  &:hover { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+
+    mat-icon { color: $teal; }
+  }
+}
+
+.gd-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; margin-top: 1px; }
+
+  &--error { background: #fef2f2; color: #b91c1c; }
+  &--info { background: #eff6ff; color: #1d4ed8; }
+  &--warn { background: #fffbeb; color: #b45309; }
+  &--sim { background: #f5f3ff; color: #6d28d9; border: 1px dashed #c4b5fd; }
+}
+
+.gd-muted { color: #94a3b8; }

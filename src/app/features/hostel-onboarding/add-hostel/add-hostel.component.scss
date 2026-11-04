@@ -18,29 +18,6 @@
   flex-wrap: wrap;
 }
 
-.wizard-back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &:hover {
-    color: #0f172a;
-  }
-}
-
 // Back / Save Draft / Next
 .wizard-actions {
   display: flex;
@@ -411,79 +388,6 @@
     border-color: #dbe3ef !important;
   }
 }
-
-.wizard-btn {
-  height: var(--btn-height);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  border-radius: var(--btn-radius);
-  padding: 0 var(--btn-padding-x);
-  font-size: var(--btn-font-size);
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  &--primary {
-    background: #2563eb;
-    color: #ffffff;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
-
-    &:hover:not([disabled]) {
-      background: #1d4ed8;
-      box-shadow: 0 8px 22px rgba(37, 99, 235, 0.4);
-    }
-
-    &[disabled] {
-      background: #e2e8f0;
-      color: #94a3b8;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-  }
-
-  &--secondary {
-    background: #f1f5f9;
-    color: #475569;
-
-    &:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-  }
-
-  &--stroked {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #475569;
-
-    &:hover {
-      background: #f8fafc;
-      color: #0f172a;
-    }
-  }
-
-  // Save Draft: white with a blue label and icon.
-  &--outline-blue {
-    background: #ffffff;
-    border: 1px solid #dbe3ef;
-    color: #2563eb;
-
-    &:hover {
-      border-color: #93c5fd;
-      background: #f8fbff;
-    }
-  }
-}
-
-// Same height for every action button.
 
 // Success state
 .wizard-success {

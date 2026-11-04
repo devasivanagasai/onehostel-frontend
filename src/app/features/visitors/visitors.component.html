@@ -1,0 +1,240 @@
+<div class="onboarding-page visitors-page">
+  <!-- KPI Summary -->
+  @if (stats$ | async; as s) {
+    <section class="kpi-row vis-kpis" aria-label="Visitors summary">
+      <div class="kpi-card vis-kpi--green">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">sensor_door</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Inside Now</span>
+          <span class="kpi-card__value">{{ s.inside }}</span>
+          <span class="kpi-card__sub">Checked in, not yet out</span>
+        </div>
+      </div>
+
+      <div class="kpi-card vis-kpi--blue">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">event_available</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Expected Today</span>
+          <span class="kpi-card__value">{{ s.expectedToday }}</span>
+          <span class="kpi-card__sub">Yet to arrive</span>
+        </div>
+      </div>
+
+      <div class="kpi-card vis-kpi--orange">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">pending_actions</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Pending Approval</span>
+          <span class="kpi-card__value">{{ s.pending }}</span>
+          <span class="kpi-card__sub">Waiting for a decision</span>
+        </div>
+      </div>
+
+      <div class="kpi-card vis-kpi--indigo">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">logout</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Checked Out Today</span>
+          <span class="kpi-card__value">{{ s.checkedOutToday }}</span>
+          <span class="kpi-card__sub">Visits completed</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Currently inside -->
+  <section class="vis-inside" aria-label="Visitors currently inside">
+    <header class="vis-inside__head">
+      <span class="vis-inside__live" aria-hidden="true"></span>
+      <h2>Currently Inside</h2>
+      <span class="vis-inside__count">{{ inside.length }}</span>
+      <small>Visiting hours {{ clock(service.policy.visitingFrom) }} – {{ clock(service.policy.visitingTo) }}</small>
+    </header>
+    @if (inside.length) {
+      <div class="vis-inside__list">
+        @for (v of inside; track v.id) {
+          <article class="vis-pass" [class.is-over]="service.isOverstay(v)">
+            <span class="vis-avatar vis-avatar--green">{{ initials(v.name) }}</span>
+            <div class="vis-pass__body">
+              <button type="button" class="vis-pass__name" (click)="openView(v)">{{ v.name }}@if (v.count > 1) { <small> +{{ v.count - 1 }}</small> }</button>
+              <span class="vis-pass__sub">Visiting {{ residentName(v) }} · {{ service.location(v.residentId) }}</span>
+              <span class="vis-pass__time">
+                <mat-icon fontSet="material-icons-outlined">login</mat-icon>{{ fmt.date(v.checkInAt!, 'time') }}
+                <span class="vis-pass__dur">{{ insideFor(v) }}</span>
+                @if (service.isOverstay(v)) { <span class="vis-pass__warn">Past visiting hours</span> }
+              </span>
+            </div>
+            <app-button variant="danger-outline" size="sm" icon="logout" (clicked)="checkOut(v)">Check Out</app-button>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="vis-inside__empty"><mat-icon fontSet="material-icons-outlined">check_circle</mat-icon>No visitors inside right now.</p>
+    }
+  </section>
+
+  <!-- Filter card -->
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input type="text" placeholder="Search ID, visitor, mobile or resident" aria-label="Search visitors"
+        [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+      }
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Visit status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+          <option value="All">All Visit Status</option>
+          @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Approval" [(ngModel)]="filters.approval" (ngModelChange)="currentPage = 0">
+          <option value="All">All Approval</option>
+          @for (a of approvals; track a) { <option [value]="a">{{ a }}</option> }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    @if (hasFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    <span class="filter-card__add vis-buttons">
+      <app-button variant="secondary" icon="tune" (clicked)="openRules()">Visitor Rules</app-button>
+      <app-button icon="person_add" (clicked)="openNew()">New Visitor</app-button>
+    </span>
+  </div>
+
+  <app-table-card
+    class="visitors-table-card"
+    [empty]="filtered.length === 0"
+    [emptyIcon]="hasFilters ? 'search_off' : 'badge'"
+    [emptyMessage]="hasFilters ? 'No visitors match your filters' : 'No visitors here'"
+    [emptyHint]="hasFilters ? 'Try a different search, status or approval.' : 'Register a visitor with New Visitor.'"
+    [clearable]="hasFilters"
+    (clear)="clearFilters()"
+    [page]="safePage"
+    [totalPages]="totalPages"
+    [pageSize]="pageSize"
+    (pageChange)="currentPage = $event"
+    (pageSizeChange)="onPageSizeChange($event)"
+  >
+    <nav class="vis-tabs" role="tablist" tableToolbar>
+      @for (t of tabs; track t.id) {
+        <button type="button" role="tab" class="vis-tab" [class.is-active]="tab === t.id" [attr.aria-selected]="tab === t.id" (click)="setTab(t.id)">
+          <mat-icon fontSet="material-icons-outlined">{{ t.icon }}</mat-icon>{{ t.label }}
+          <span class="vis-tab__count">{{ tabCount(t.id) }}</span>
+        </button>
+      }
+    </nav>
+
+    <table mat-table [dataSource]="paged" class="saas-table visitors-table">
+      <ng-container matColumnDef="visitor">
+        <th mat-header-cell *matHeaderCellDef> Visitor </th>
+        <td mat-cell *matCellDef="let v">
+          <span class="with-icon">
+            <span class="vis-avatar">{{ initials(v.name) }}</span>
+            <span class="list-entity__text">
+              <span class="list-entity__name vis-clip" [title]="v.name">{{ v.name }}</span>
+              <span class="list-entity__sub">{{ v.id }}{{ v.mobile ? ' · +91 ' + v.mobile : '' }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="resident">
+        <th mat-header-cell *matHeaderCellDef> Resident </th>
+        <td mat-cell *matCellDef="let v">
+          <span class="with-icon">
+            <span class="vis-dot"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+            <span class="list-entity__text">
+              <span class="list-entity__name">{{ residentName(v) }}</span>
+              <span class="list-entity__sub">{{ service.location(v.residentId) }}</span>
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="purpose">
+        <th mat-header-cell *matHeaderCellDef> Purpose </th>
+        <td mat-cell *matCellDef="let v">
+          <span class="list-entity__text">
+            <span class="vis-clip">{{ v.purpose }}</span>
+            <span class="list-entity__sub">
+              {{ v.count }} visitor{{ v.count === 1 ? '' : 's' }}
+              @if (v.walkIn) { <span class="vis-tag">Walk-in</span> }
+            </span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="expected">
+        <th mat-header-cell *matHeaderCellDef> Expected </th>
+        <td mat-cell *matCellDef="let v" class="date-cell">
+          <span class="list-entity__text">
+            <span>{{ fmt.date(v.expectedAt) }}</span>
+            <span class="list-entity__sub">{{ fmt.date(v.expectedAt, 'time') }}</span>
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="entry">
+        <th mat-header-cell *matHeaderCellDef> Entry / Exit </th>
+        <td mat-cell *matCellDef="let v" class="date-cell">
+          @if (v.checkInAt) {
+            <span class="list-entity__text">
+              <span class="vis-io"><mat-icon class="vis-io--in">login</mat-icon>{{ fmt.date(v.checkInAt, 'time') }}</span>
+              <span class="vis-io list-entity__sub">
+                <mat-icon class="vis-io--out">logout</mat-icon>{{ v.checkOutAt ? fmt.date(v.checkOutAt, 'time') : 'Inside' }}
+              </span>
+            </span>
+          } @else {
+            <span class="muted">—</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="approval">
+        <th mat-header-cell *matHeaderCellDef> Approval </th>
+        <td mat-cell *matCellDef="let v"><span class="status-badge status-badge--{{ approvalTone(v) }}">{{ v.approval }}</span></td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef> Visit Status </th>
+        <td mat-cell *matCellDef="let v"><span class="status-badge status-badge--{{ statusTone(v) }}">{{ statusLabel(v) }}</span></td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let v" class="actions-cell">
+          <span class="vis-actions">
+            <app-button class="vis-act" variant="icon" size="sm" icon="visibility" matTooltip="View" [ariaLabel]="'View ' + v.id" (clicked)="openView(v)"></app-button>
+            @if (v.approval === 'Pending' && canCancel(v)) {
+              <app-button class="vis-act vis-act--ok" variant="icon" size="sm" icon="check_circle" matTooltip="Approve" [ariaLabel]="'Approve ' + v.id" (clicked)="openAction(v, 'approve')"></app-button>
+              <app-button class="vis-act vis-act--danger" variant="icon" size="sm" icon="block" matTooltip="Reject" [ariaLabel]="'Reject ' + v.id" (clicked)="openAction(v, 'reject')"></app-button>
+            }
+            @if (canCheckIn(v)) {
+              <app-button class="vis-act vis-act--ok" variant="icon" size="sm" icon="login" matTooltip="Check in" [ariaLabel]="'Check in ' + v.id" (clicked)="openAction(v, 'checkin')"></app-button>
+            }
+            @if (v.status === 'Checked In') {
+              <app-button class="vis-act vis-act--danger" variant="icon" size="sm" icon="logout" matTooltip="Check out" [ariaLabel]="'Check out ' + v.id" (clicked)="checkOut(v)"></app-button>
+            }
+            @if (canCancel(v) && v.approval !== 'Pending') {
+              <app-button class="vis-act vis-act--danger" variant="icon" size="sm" icon="event_busy" matTooltip="Cancel visit" [ariaLabel]="'Cancel ' + v.id" (clicked)="openAction(v, 'cancel')"></app-button>
+            }
+          </span>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="row.status === 'Cancelled'"></tr>
+    </table>
+  </app-table-card>
+</div>

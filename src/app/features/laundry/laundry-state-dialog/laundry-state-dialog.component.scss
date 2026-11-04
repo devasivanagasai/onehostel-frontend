@@ -1,0 +1,12 @@
+// Maintenance / deactivate confirmation. Frame from <app-dialog>.
+@use '../../../../styles/dialog-kit' as *;
+@include form-fields;
+
+.ls__field { margin-bottom: 16px; }
+.ls__label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: #1e293b; }
+.ls__list { margin: 0; padding: 0; list-style: none; border: 1px solid #e8edf3; border-radius: 10px; max-height: 220px; overflow-y: auto; }
+.ls__list li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 13px; color: #334155; }
+.ls__list li + li { border-top: 1px solid #f1f5f9; }
+.ls__list mat-icon { font-size: 18px; width: 18px; height: 18px; color: #d97706; }
+.ls__list small { margin-left: auto; color: #64748b; white-space: nowrap; }
+.ls__note { margin: 10px 0 0; font-size: 12.5px; color: #64748b; }

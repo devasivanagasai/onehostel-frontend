@@ -61,12 +61,69 @@ export class MainLayoutComponent {
         this.pageSubtitle = 'View and update your personal details';
       } else if (url.includes('hostel-onboarding/new')) {
         this.pageTitle = 'Onboard New Hostel';
-        this.pageSubtitle = 'Complete all 7 steps to add a new hostel and its admin to the platform.';
+        this.pageSubtitle = 'Complete all 7 steps to add a new hostel and its owner to the platform.';
       } else if (url.includes('hostel-onboarding') && url.includes('/edit')) {
         this.pageTitle = 'Edit Hostel';
-        this.pageSubtitle = 'Update this hostel and its admin details across all 7 steps.';
+        this.pageSubtitle = 'Update this hostel and its owner details across all 7 steps.';
       } else if (url.includes('dashboard')) {
         this.pageTitle = 'Dashboard';
+      } else if (url.startsWith('/laundry')) {
+        this.pageTitle = 'Laundry & Washing Machines';
+        this.pageSubtitle = 'Configure services and machines, manage slots, bookings and charges';
+      } else if (url.startsWith('/visitors')) {
+        this.pageTitle = 'Visitor Management';
+        this.pageSubtitle = 'Register visitors, approve requests and record entry and exit';
+      } else if (url.startsWith('/mess')) {
+        this.pageTitle = 'Mess & Food Management';
+        this.pageSubtitle = 'Plan and publish menus, track meal attendance and dietary notes';
+      } else if (url.startsWith('/leave-outpass')) {
+        this.pageTitle = 'Leave & Outpass';
+        this.pageSubtitle = 'Review leave and outpass requests and record resident movement';
+      } else if (url.startsWith('/attendance')) {
+        this.pageTitle = 'Attendance & Check-in';
+        this.pageSubtitle = 'Daily attendance, check-ins, check-outs and corrections';
+      } else if (url.startsWith('/staff')) {
+        this.pageTitle = 'Staff Management';
+        this.pageSubtitle = 'Staff profiles, shifts, duties and task assignments';
+      } else if (url.startsWith('/guardians')) {
+        this.pageTitle = 'Parent / Guardian Management';
+        this.pageSubtitle = 'Guardian contacts, verification, consent and access scope';
+      } else if (url.startsWith('/academic-years')) {
+        this.pageTitle = 'Academic Year Management';
+        this.pageSubtitle = 'Academic years, allocation windows and year rollover for college hostels';
+      } else if (url.startsWith('/disciplinary')) {
+        this.pageTitle = 'Disciplinary Records';
+        this.pageSubtitle = 'Restricted incident records with review status and audit history';
+      } else if (url.startsWith('/analytics')) {
+        this.pageTitle = 'Advanced Analytics';
+        this.pageSubtitle = 'Occupancy, movement, revenue, complaints and service utilisation';
+      } else if (url.startsWith('/permissions')) {
+        this.pageTitle = 'Permissions & Audit History';
+        this.pageSubtitle = 'Role templates, approval limits, export controls and audit trail';
+      } else if (url.startsWith('/parcels')) {
+        this.pageTitle = 'Parcel Management';
+        this.pageSubtitle = 'Log parcels, notify residents and record pickups';
+      } else if (url.startsWith('/announcements')) {
+        this.pageTitle = 'Announcements & Communication';
+        this.pageSubtitle = 'Compose, schedule and publish notices to your residents';
+      } else if (url.startsWith('/hostel-reports')) {
+        this.pageTitle = 'Reports';
+        this.pageSubtitle = 'Residents, occupancy, collections, dues and complaints for your hostel';
+      } else if (url.startsWith('/hostel-settings')) {
+        this.pageTitle = 'Hostel Profile & Settings';
+        this.pageSubtitle = 'Hostel details, rules, facilities, notifications and subscription';
+      } else if (url.startsWith('/complaints')) {
+        this.pageTitle = 'Complaints & Maintenance';
+        this.pageSubtitle = 'Review resident complaints, assign staff, track progress and resolve issues';
+      } else if (url.startsWith('/fees')) {
+        this.pageTitle = 'Fees & Payments';
+        this.pageSubtitle = 'Configure resident fees, generate charges, record payments and send reminders';
+      } else if (url.includes('residents')) {
+        this.pageTitle = 'Residents';
+        this.pageSubtitle = 'Add residents, allocate beds, send activation invites and manage check-outs';
+      } else if (url.includes('rooms')) {
+        this.pageTitle = 'Rooms & Beds Management';
+        this.pageSubtitle = 'Configure floors, room types, monitor bed allocations, and manage tenant check-ins';
       } else if (url.includes('hostel-onboarding')) {
         this.pageTitle = 'Onboard Hostel';
       } else if (url.includes('subscription-plans')) {
@@ -90,7 +147,7 @@ export class MainLayoutComponent {
         this.pageTitle = 'Institution';
       } else if (url.startsWith('/admins')) {
         this.pageTitle = 'Admin Management';
-        this.pageSubtitle = 'Manage hostel admins and residents across all onboarded hostels';
+        this.pageSubtitle = 'Manage hostel owners and tenants across all onboarded hostels';
       } else if (url.includes('reports')) {
         this.pageTitle = 'Reports';
       } else if (url.includes('audit-logs')) {

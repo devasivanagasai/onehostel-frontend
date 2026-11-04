@@ -1,0 +1,75 @@
+<div class="onboarding-page mess-page">
+  <!-- KPI Summary -->
+  @if (stats$ | async; as s) {
+    <section class="kpi-row" aria-label="Mess summary">
+      <div class="kpi-card ms-kpi--teal">
+        <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">restaurant_menu</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Published This Week</span>
+          <span class="kpi-card__value">{{ s.published }}<small> / 28</small></span>
+          <span class="kpi-card__sub">Meals visible to residents</span>
+          <span class="kpi-card__bar"><span [style.width.%]="(s.published / 28) * 100"></span></span>
+        </div>
+      </div>
+
+      <div class="kpi-card ms-kpi--indigo">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">edit_note</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Drafts This Week</span>
+          <span class="kpi-card__value">{{ s.drafts }}</span>
+          <span class="kpi-card__sub">Not visible until published</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ms-kpi--blue">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">how_to_reg</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Served Today</span>
+          @if (service.settings.attendanceEnabled) {
+            <span class="kpi-card__value">{{ s.presentToday }}</span>
+            <span class="kpi-card__sub">of {{ s.expectedToday }} expected across meals</span>
+          } @else {
+            <span class="kpi-card__value">—</span>
+            <span class="kpi-card__sub">Attendance tracking is off</span>
+          }
+        </div>
+      </div>
+
+      <div class="kpi-card ms-kpi--green">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">groups</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">On a Meal Plan</span>
+          <span class="kpi-card__value">{{ s.onPlan }}</span>
+          <span class="kpi-card__sub">{{ s.perMeal }} pay per meal</span>
+        </div>
+      </div>
+
+      <div class="kpi-card ms-kpi--orange">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">receipt_long</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Per-meal · {{ s.lastMonth }}</span>
+          <span class="kpi-card__value">{{ fmt.money(s.lastMonthAmount, 0) }}</span>
+          <span class="kpi-card__sub">{{ s.lastMonthAmount === 0 ? 'Nothing to bill' : s.lastMonthBilled ? 'Billed' : 'Not billed yet' }}</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <nav class="ms-tabs" role="tablist">
+    <button type="button" role="tab" class="ms-tab" [class.is-active]="tab === 'menu'" [attr.aria-selected]="tab === 'menu'" (click)="tab = 'menu'">
+      <mat-icon fontSet="material-icons-outlined">calendar_view_week</mat-icon>Weekly Menu
+    </button>
+    <button type="button" role="tab" class="ms-tab" [class.is-active]="tab === 'attendance'" [attr.aria-selected]="tab === 'attendance'" (click)="tab = 'attendance'">
+      <mat-icon fontSet="material-icons-outlined">fact_check</mat-icon>Meal Attendance
+    </button>
+    <button type="button" role="tab" class="ms-tab" [class.is-active]="tab === 'plans'" [attr.aria-selected]="tab === 'plans'" (click)="tab = 'plans'">
+      <mat-icon fontSet="material-icons-outlined">badge</mat-icon>Meal Plans &amp; Dietary Notes
+    </button>
+  </nav>
+
+  @switch (tab) {
+    @case ('menu') { <app-mess-week /> }
+    @case ('attendance') { <app-mess-attendance /> }
+    @case ('plans') { <app-mess-plans /> }
+  }
+</div>

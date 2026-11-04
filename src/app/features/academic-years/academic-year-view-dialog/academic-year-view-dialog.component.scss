@@ -1,0 +1,139 @@
+// Academic year detail and resident assignment. Frame comes from <app-dialog>.
+@use '../ay-kit';
+
+$line: #e8edf3;
+
+.av-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.av-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  strong { font-size: 14.5px; color: #0f172a; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.av-wide { grid-column: span 2; @media (max-width: 720px) { grid-column: auto; } }
+
+.av-label { font-size: 12.5px; color: #64748b; }
+.av-muted { color: #94a3b8 !important; font-weight: 500 !important; }
+.av-warn { color: #b45309 !important; }
+
+.av-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.av-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e6f7f5;
+  color: #0f766e;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.av-section {
+  margin-top: 16px;
+
+  h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 700; color: #0f172a; }
+}
+
+.av-note { margin: 0 0 10px; font-size: 12.5px; color: #64748b; }
+
+.av-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.av-search {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #fff;
+
+  &:focus-within { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12); }
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; }
+  input { flex: 1; min-width: 0; border: none; outline: none; font: inherit; font-size: 14px; background: transparent; }
+}
+
+.av-seg {
+  display: inline-flex;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  overflow: hidden;
+
+  &__btn {
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    color: #475569;
+    cursor: pointer;
+
+    &.is-on { background: #e6f7f5; color: #0f766e; font-weight: 600; }
+    &:focus-visible { outline: 2px solid #0d9488; outline-offset: -2px; }
+  }
+}
+
+.av-rows,
+.av-history {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.av-rows { max-height: 280px; overflow-y: auto; border: 1px solid $line; border-radius: 10px; }
+
+.av-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid $line;
+
+  &:last-child { border-bottom: none; }
+  &.is-assigned { background: #f6fdfb; }
+
+  &__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  strong { font-size: 14px; color: #0f172a; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.av-empty { padding: 18px; text-align: center; color: #94a3b8; font-size: 13.5px; }
+
+.av-history li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid $line;
+  font-size: 13.5px;
+
+  small { color: #64748b; margin-left: 4px; }
+  .av-notes { display: block; margin: 2px 0 0; }
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; gap: 2px; }
+}
+
+.av-when { font-size: 12.5px; color: #64748b; }

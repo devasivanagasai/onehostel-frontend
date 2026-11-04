@@ -1,0 +1,141 @@
+// Mark collected / return to sender. Frame comes from <app-dialog>; fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.ph {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.ph__summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 14px; color: #0f172a; overflow-wrap: anywhere; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.ph__for {
+  margin-left: auto;
+  text-align: right;
+}
+
+.ph__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff1e6;
+  color: #ea580c;
+
+  mat-icon { @include icon(20px); }
+}
+
+.ph__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.ph__wide { grid-column: 1 / -1; }
+
+.ph__opts,
+.ph__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ph__chips { gap: 8px; margin-bottom: 8px; }
+
+.ph__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  > mat-icon:first-child { @include icon(18px); color: #64748b; }
+  &:hover { border-color: $teal; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+
+    > mat-icon:first-child { color: $teal; }
+  }
+}
+
+.ph__check { @include icon(20px); margin-right: -4px; color: $teal; }
+
+.ph__chip {
+  padding: 5px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 12.5px;
+  color: #475569;
+  cursor: pointer;
+
+  &:hover { border-color: $teal; color: #0f766e; }
+}
+
+.ph__confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+
+  input { width: 16px; height: 16px; margin: 1px 0 0; accent-color: $teal; }
+  &.is-invalid { border-color: #f87171; }
+}
+
+.ph__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  font-size: 12.5px;
+  color: #b91c1c;
+
+  mat-icon { @include icon(17px); }
+}

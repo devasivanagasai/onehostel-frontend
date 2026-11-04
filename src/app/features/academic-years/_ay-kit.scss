@@ -1,0 +1,40 @@
+// Pieces shared by the academic-year dialogs: pills and banners.
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.ay-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0369a1; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}
+
+.ay-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; margin-top: 1px; }
+
+  &--error { background: #fef2f2; color: #b91c1c; }
+  &--info { background: #eff6ff; color: #1d4ed8; }
+  &--warn { background: #fffbeb; color: #b45309; }
+}

@@ -1,0 +1,87 @@
+// Check-in / check-out / correction. Frame comes from <app-dialog>; fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.ae {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.ae-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ae-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+
+  > mat-icon:first-child { @include icon(18px); color: #64748b; }
+
+  &:hover { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+
+    > mat-icon:first-child { color: $teal; }
+  }
+}
+
+.ae-check { @include icon(20px); margin-right: -4px; color: $teal; }
+
+.ae-session {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ae-arrow { @include icon(18px); margin-top: 11px; color: #94a3b8; }
+
+.ae-add { align-self: flex-start; }
+
+.ae-time { max-width: 200px; }
+
+.ae-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; margin-top: 1px; }
+
+  &--leave { background: #fffbeb; color: #92400e; }
+  &--warn { background: #fff7ed; color: #c2410c; }
+  &--error { margin-top: 12px; background: #fef2f2; color: #b91c1c; }
+}

@@ -1,0 +1,389 @@
+// Compose announcement. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+$teal-dark: #0f766e;
+$line: #e8edf3;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.ac__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 28px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ac__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.ac__heading {
+  margin: 4px 0 -6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ac__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.ac__gap { margin-top: 8px; }
+.ac__sub { margin-top: 10px; }
+
+.ac__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ac__count {
+  margin: 4px 0 0 auto;
+  font-size: 12px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+
+  &.is-near { color: #ea580c; font-weight: 600; }
+
+  // Inside the title box, on the right
+  &--inline {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0 12px 0 4px;
+    font-size: 13px;
+    color: #64748b;
+  }
+}
+
+/* ---- Attachment drop zone ---- */
+.ac__drop {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 8px 16px 8px 20px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &:hover { border-color: $teal; background: #f5fbfa; }
+
+  &--file {
+    border-style: solid;
+    border-color: $line;
+    background: #f8fafc;
+    cursor: default;
+  }
+}
+
+.ac__drop-icon { @include icon(26px); color: $teal; }
+.ac__drop-clip { @include icon(20px); margin-left: auto; color: #64748b; }
+
+.ac__drop-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13.5px;
+    color: #1e293b;
+  }
+
+  small { font-size: 12px; color: #64748b; }
+}
+
+/* ---- Option chips (audience, channels, publish) ---- */
+.ac__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ac__opt,
+.ac__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe3ec;
+  background: #ffffff;
+  font: inherit;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover:not(:disabled) { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: $teal-dark;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: #94a3b8;
+    background: #f8fafc;
+    border-style: dashed;
+  }
+}
+
+.ac__opt {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+
+  > mat-icon:first-child { @include icon(18px); color: #64748b; }
+  &.is-on > mat-icon:first-child { color: $teal; }
+
+  // Publish Now / Schedule: tinted fill, no check
+  &--fill.is-on { background: #d9f2ee; }
+}
+
+.ac__opt-check { @include icon(20px); margin-right: -4px; color: $teal; }
+
+.ac__chip {
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+
+  mat-icon { @include icon(16px); }
+  small { color: #64748b; font-size: 11.5px; }
+}
+
+.ac__reach {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #64748b;
+
+  mat-icon { @include icon(17px); color: $teal; }
+}
+
+/* ---- Resident picker ---- */
+.ac__picker {
+  border: 1px solid $line;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ac__picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid $line;
+  background: #f8fafc;
+
+  .fk-control { flex: 1; }
+}
+
+.ac__list {
+  max-height: 190px;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    font-size: 13.5px;
+    cursor: pointer;
+
+    &:hover { background: #f5fbfa; }
+  }
+
+  input { accent-color: $teal; width: 16px; height: 16px; }
+  small { margin-left: auto; color: #64748b; font-size: 12px; }
+}
+
+.ac__list-name { color: #1e293b; font-weight: 500; }
+.ac__list-empty { padding: 12px; color: #94a3b8; font-size: 13px; }
+
+/* ---- Preview ---- */
+.ac__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-self: start;
+  position: sticky;
+  top: 0;
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8fafb;
+}
+
+.ac__preview-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $teal-dark;
+}
+
+.ac__card {
+  padding: 18px 18px 6px;
+  border: 4px solid #1f6f63;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+
+  h4 { margin: 16px 0 8px; font-size: 18px; font-weight: 700; color: #0f172a; overflow-wrap: anywhere; }
+  p { margin: 0; font-size: 14px; line-height: 1.55; color: #334155; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow-y: auto; }
+  .is-empty { color: #94a3b8; }
+}
+
+.ac__card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ac__logo {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1f6f63;
+  color: #ffffff;
+
+  mat-icon { @include icon(20px); }
+}
+
+.ac__card-from {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #0f172a;
+
+  small { color: #64748b; font-size: 12px; }
+}
+
+.ac__card-more { color: #475569; }
+
+.ac__card-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  font-size: 12px;
+  color: #334155;
+
+  mat-icon { @include icon(15px); }
+}
+
+.ac__card-exp { display: block; margin-top: 8px; font-size: 11.5px; color: #64748b; }
+
+.ac__card-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 12px 10px;
+  border-top: 1px solid $line;
+  font-size: 13.5px;
+  color: #475569;
+
+  span { display: inline-flex; align-items: center; gap: 6px; }
+  mat-icon { @include icon(19px); }
+}
+
+.ac__summary {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 16px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #ffffff;
+
+  div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13.5px;
+
+    &:last-child { border-bottom: none; }
+  }
+
+  dt {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+
+    mat-icon { @include icon(18px); color: #64748b; }
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    text-align: right;
+    color: #64748b;
+
+    &.is-now { color: $teal; font-weight: 600; }
+  }
+}
+
+.ac__note,
+.ac__banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+
+  mat-icon { @include icon(17px); }
+}
+
+.ac__note { color: #64748b; }
+
+.ac__banner {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}

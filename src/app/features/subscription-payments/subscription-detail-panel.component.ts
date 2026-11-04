@@ -1,8 +1,7 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import {
   HostelSubscription,
@@ -11,921 +10,600 @@ import {
   hasInvoice,
   nextExpiryDate,
   subscriptionsFor,
-} from './subscription-payment.models';
+} from '../../core/models/subscription-payment.models';
 import { InvoiceService } from './invoice.service';
-import { AmountDue, SubscriptionPaymentService } from './subscription-payment.service';
+import { AmountDue, SubscriptionPaymentService } from '../../core/services/subscription-payment.service';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-subscription-detail-panel',
   standalone: true,
-  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, MatTooltipModule, AppButtonComponent],
   template: `
-    <!-- Overlay Backdrop -->
-    <div class="panel-backdrop" *ngIf="isOpen" (click)="closePanel.emit()"></div>
+    @if (isOpen && subscription; as sub) {
+      <div class="sd-backdrop" (click)="closePanel.emit()"></div>
 
-    <!-- Side Panel Drawer -->
-    <div class="side-panel-drawer" [class.side-panel-drawer--open]="isOpen">
-      <div class="panel-header">
-        <div class="identity">
-          <span class="identity__icon"><mat-icon>card_membership</mat-icon></span>
-          <div>
-            <h2 class="panel-title">Subscription Details</h2>
-            <div class="panel-subtitle" *ngIf="subscription">{{ subscription.subscriptionId }}</div>
+      <div class="sd-modal" role="dialog" aria-modal="true" aria-labelledby="sd-title">
+        <!-- Header -->
+        <header class="sd-header">
+          <h2 class="sd-title" id="sd-title">Subscription Details — {{ sub.subscriptionId }}</h2>
+          <app-button variant="icon" icon="close" ariaLabel="Close" (clicked)="closePanel.emit()"></app-button>
+        </header>
+
+        <div class="sd-body" #panelBody>
+          <!-- Hostel, plan and current period -->
+          <section class="hero">
+            <div class="hero__identity">
+              <span class="hero__icon"><mat-icon>apartment</mat-icon></span>
+              <div class="hero__text">
+                <div class="hero__name">{{ sub.hostelName }}</div>
+                <div class="hero__plan">
+                  <span class="hero__plan-name">{{ sub.planName }}</span>
+                  <span class="hero__sep" aria-hidden="true">•</span>
+                  {{ sub.billingCycle }}
+                </div>
+                <span class="status-badge status-badge--{{ tone(sub.status) }}">{{ sub.status }}</span>
+              </div>
+            </div>
+
+            <div class="hero__period">
+              <div class="hero__dates">
+                <div class="hero__date">
+                  <span class="hero__date-label">Start Date</span>
+                  <span class="hero__date-value"><mat-icon fontSet="material-icons-outlined">calendar_today</mat-icon>{{ sub.startDate | appDate }}</span>
+                </div>
+                <div class="hero__date">
+                  <span class="hero__date-label">Expiry Date</span>
+                  <span class="hero__date-value"><mat-icon fontSet="material-icons-outlined">event</mat-icon>{{ sub.expiryDate | appDate }}</span>
+                </div>
+                <div class="hero__remaining hero__remaining--{{ periodTone }}">
+                  @if (daysRemaining > 0) {
+                    <strong>{{ daysRemaining }}</strong> {{ daysRemaining === 1 ? 'day' : 'days' }} remaining
+                  } @else {
+                    {{ periodCaption }}
+                  }
+                </div>
+              </div>
+
+              <div
+                class="hero__bar"
+                role="progressbar"
+                aria-label="Subscription period elapsed"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                [attr.aria-valuenow]="periodElapsedPercent | number: '1.0-0'"
+              >
+                <div class="hero__fill hero__fill--{{ periodTone }}" [style.width.%]="periodElapsedPercent"></div>
+              </div>
+              <div class="hero__bar-labels">
+                <span>{{ sub.startDate | appDate }}</span>
+                <span>{{ sub.expiryDate | appDate }}</span>
+              </div>
+            </div>
+          </section>
+
+          <div class="sd-grid">
+            <!-- Plan & Billing -->
+            <section class="card">
+              <h3 class="card__title"><mat-icon fontSet="material-icons-outlined">credit_card</mat-icon> Plan &amp; Billing</h3>
+              <dl class="rows">
+                <div><dt>Total Paid</dt><dd>{{ totalPaid | appCurrency: '1.2-2' }}</dd></div>
+                <div><dt>Last Payment</dt><dd>{{ lastPayment ? (lastPayment.paymentDate | appDate) : '—' }}</dd></div>
+                <div><dt>Plan</dt><dd class="link-text">{{ sub.planName }}</dd></div>
+                <div><dt>Billing Cycle</dt><dd>{{ sub.billingCycle }}</dd></div>
+                <div>
+                  <dt>Amount</dt>
+                  <dd>{{ sub.amount > 0 ? (sub.amount | appCurrency: '1.0-2') + ' ' + gstHint : 'Free' }}</dd>
+                </div>
+                <div>
+                  <dt>Payment Status</dt>
+                  <dd><span class="status-badge status-badge--{{ tone(sub.paymentStatus) }}">{{ sub.paymentStatus }}</span></dd>
+                </div>
+              </dl>
+            </section>
+
+            <!-- Next payment (with any late fee from System Defaults → Fees) -->
+            <section class="card">
+              <h3 class="card__title"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon> Next Payment</h3>
+              @if (amountDue; as due) {
+                <div class="due__label">{{ due.daysLate > 0 ? 'Overdue — payable now' : 'Payable Now' }}</div>
+                <div class="due__amount" [class.due__amount--late]="due.daysLate > 0">{{ due.payable | appCurrency: '1.2-2' }}</div>
+
+                <dl class="rows rows--compact">
+                  <div><dt>{{ due.taxRate > 0 ? 'Plan Amount' : 'Plan' }}</dt><dd>{{ due.amount | appCurrency: '1.2-2' }}</dd></div>
+                  @if (due.taxRate > 0) {
+                    <div><dt>GST ({{ due.taxRate }}%)</dt><dd>{{ due.tax | appCurrency: '1.2-2' }}</dd></div>
+                  }
+                  @if (due.lateFee > 0) {
+                    <div class="rows__late"><dt>Late payment fee</dt><dd>{{ due.lateFee | appCurrency: '1.2-2' }}</dd></div>
+                  }
+                  <div class="rows__due">
+                    <dt>Due Date</dt>
+                    <dd class="link-text"><mat-icon fontSet="material-icons-outlined">event</mat-icon>{{ due.dueDate | appDate }}</dd>
+                  </div>
+                </dl>
+
+                @if (lateFeeRule; as rule) {
+                  <p class="note" [class.note--warn]="due.daysLate > 0">
+                    <mat-icon>info</mat-icon>
+                    @if (due.lateFee > 0) {
+                      Late fee applied: {{ rule }}.
+                    } @else if (due.daysLate > 0) {
+                      Overdue by {{ due.daysLate }} day{{ due.daysLate === 1 ? '' : 's' }} — still within the grace period. Late fee: {{ rule }}.
+                    } @else {
+                      A late fee of {{ rule }} applies to overdue payments.
+                    }
+                  </p>
+                }
+              } @else {
+                <div class="due-empty">
+                  <mat-icon>task_alt</mat-icon>
+                  <span>No payment due for this subscription.</span>
+                </div>
+              }
+            </section>
+
+            <!-- Payment history: year · timeline dot · payment card -->
+            <section class="card card--history">
+              <h3 class="card__title"><mat-icon>history</mat-icon> Payment History</h3>
+
+              @if (payments.length === 0) {
+                <div class="due-empty">
+                  <mat-icon>receipt_long</mat-icon>
+                  <span>No payments yet. Payments for this subscription will appear here.</span>
+                </div>
+              } @else {
+                <ol class="timeline">
+                  @for (group of paymentYears; track group.year) {
+                    @for (p of group.items; track p.transactionId; let first = $first) {
+                      <li class="timeline__item">
+                        <span class="timeline__year">
+                          @if (first) {
+                            <span class="year-chip">{{ group.year }}</span>
+                          }
+                        </span>
+                        <span class="timeline__dot" aria-hidden="true"></span>
+
+                        <div class="pay-card">
+                          <div class="pay-card__main">
+                            <div class="pay-card__top">
+                              <span class="pay-card__amount">{{ p.totalAmount | appCurrency: '1.2-2' }}</span>
+                              <span class="status-badge status-badge--{{ tone(p.paymentStatus) }}">{{ p.paymentStatus }}</span>
+                              @if (p.lateFee) {
+                                <span class="late-chip" [matTooltip]="p.daysLate + ' days late'">+ late fee {{ p.lateFee | appCurrency: '1.0-2' }}</span>
+                              }
+                            </div>
+                            <div class="pay-card__sub">{{ p.planName }} • {{ p.billingCycle }}</div>
+                            <div class="pay-card__sub">{{ p.paymentDate | appDate }} to {{ periodEnd(p) | appDate }}</div>
+                            @if (p.subscriptionId !== sub.subscriptionId) {
+                              <div class="pay-card__older" matTooltip="Earlier subscription for this hostel">{{ p.subscriptionId }}</div>
+                            }
+                          </div>
+
+                          <div class="pay-card__meta">
+                            <span>{{ p.paymentDate | appDate }}</span>
+                            <span>{{ p.paymentGateway || p.paymentMethod }}</span>
+                          </div>
+
+                          <div class="pay-card__actions">
+                            @if (hasInvoice(p)) {
+                              <button type="button" class="action-link" (click)="invoices.viewInvoice(p)">
+                                <span class="action-link__icon"><mat-icon>visibility</mat-icon></span>
+                                View Receipt
+                              </button>
+                              <button type="button" class="action-link" (click)="invoices.downloadReceipt(p)">
+                                <span class="action-link__icon"><mat-icon>download</mat-icon></span>
+                                Download
+                              </button>
+                            } @else {
+                              <span class="pay-card__no-receipt">No receipt</span>
+                            }
+                          </div>
+                        </div>
+                      </li>
+                    }
+                  }
+                </ol>
+              }
+            </section>
           </div>
         </div>
-        <button mat-icon-button type="button" class="close-btn" (click)="closePanel.emit()" aria-label="Close panel">
-          <mat-icon>close</mat-icon>
-        </button>
+
+        <footer class="sd-footer">
+          <app-button variant="secondary" (clicked)="closePanel.emit()">Close</app-button>
+        </footer>
       </div>
-
-      <div class="panel-body" #panelBody *ngIf="subscription as sub">
-        <!-- Hostel & period -->
-        <section class="hero-card">
-          <div class="hero-card__top">
-            <span class="hero-card__icon"><mat-icon>apartment</mat-icon></span>
-            <div class="hero-card__text">
-              <div class="hero-card__hostel">{{ sub.hostelName }}</div>
-              <div class="hero-card__plan">
-                <span class="hero-card__id" matTooltip="Hostel ID">{{ sub.hostelId }}</span>
-                {{ sub.planName }} · {{ sub.billingCycle }}
-              </div>
-            </div>
-            <span class="status-badge status-badge--{{ tone(sub.status) }}">{{ sub.status }}</span>
-          </div>
-
-          <div class="period">
-            <div class="period__dates">
-              <div>
-                <div class="period__label">Start</div>
-                <div class="period__date">{{ sub.startDate | appDate }}</div>
-              </div>
-              <span
-                class="period__pill"
-                [class.period__pill--warn]="daysRemaining >= 0 && daysRemaining <= 7"
-                [class.period__pill--ended]="daysRemaining < 0"
-              >
-                <mat-icon>{{ daysRemaining < 0 ? 'event_busy' : 'hourglass_bottom' }}</mat-icon>
-                {{ periodCaption }}
-              </span>
-              <div class="period__end">
-                <div class="period__label">Expiry</div>
-                <div class="period__date">{{ sub.expiryDate | appDate }}</div>
-              </div>
-            </div>
-            <div class="period__bar" role="progressbar" [attr.aria-valuenow]="periodElapsedPercent | number: '1.0-0'" aria-valuemin="0" aria-valuemax="100">
-              <div
-                class="period__fill"
-                [class.period__fill--warn]="daysRemaining >= 0 && daysRemaining <= 7"
-                [class.period__fill--ended]="daysRemaining < 0"
-                [style.width.%]="periodElapsedPercent"
-              ></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Plan & billing -->
-        <section class="info-card">
-          <div class="info-card__header">
-            <span class="info-card__icon"><mat-icon>receipt</mat-icon></span>
-            <h3 class="info-card__title">Plan &amp; Billing</h3>
-          </div>
-          <!-- Key figures -->
-          <div class="kpis">
-            <div class="kpi kpi--teal">
-              <span class="kpi__icon"><mat-icon>account_balance_wallet</mat-icon></span>
-              <div>
-                <div class="kpi__label">Total Paid</div>
-                <div class="kpi__value">{{ totalPaid | appCurrency: '1.2-2' }}</div>
-              </div>
-            </div>
-            <div class="kpi kpi--blue">
-              <span class="kpi__icon"><mat-icon>event_available</mat-icon></span>
-              <div>
-                <div class="kpi__label">Last Payment</div>
-                <div class="kpi__value">{{ lastPayment ? (lastPayment.paymentDate | appDate) : '—' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <dl class="detail-grid">
-            <div><dt>Plan</dt><dd>{{ sub.planName }}</dd></div>
-            <div><dt>Billing Cycle</dt><dd>{{ sub.billingCycle }}</dd></div>
-            <div>
-              <dt>Amount</dt>
-              <dd>
-                {{ sub.amount > 0 ? (sub.amount | appCurrency: '1.0-2') : 'Free' }}
-                <span class="detail-hint" *ngIf="sub.amount > 0">{{ gstHint }} / {{ cycleUnit }}</span>
-              </dd>
-            </div>
-            <div>
-              <dt>Payment Status</dt>
-              <dd><span class="status-badge status-badge--{{ tone(sub.paymentStatus) }}">{{ sub.paymentStatus }}</span></dd>
-            </div>
-          </dl>
-
-          <!-- Next payment, with the late fee from Settings → Fees once it is overdue -->
-          @if (amountDue; as due) {
-            <div class="due-box" [class.due-box--late]="due.lateFee > 0" [class.due-box--overdue]="due.daysLate > 0">
-              <div class="due-box__head">
-                <span class="due-box__title">{{ sub.paymentStatus === 'Pending' ? 'Amount due' : 'Next payment' }}</span>
-                <span class="due-box__date">
-                  @if (due.daysLate > 0) {
-                    Overdue by {{ due.daysLate }} day{{ due.daysLate === 1 ? '' : 's' }} · was due {{ due.dueDate | appDate }}
-                  } @else {
-                    Due {{ due.dueDate | appDate }}
-                  }
-                </span>
-              </div>
-              <dl class="due-box__rows">
-                <div><dt>{{ due.taxRate > 0 ? 'Plan (excl. GST)' : 'Plan' }}</dt><dd>{{ due.amount | appCurrency: '1.2-2' }}</dd></div>
-                @if (due.taxRate > 0) {
-                  <div><dt>GST ({{ due.taxRate }}%)</dt><dd>{{ due.tax | appCurrency: '1.2-2' }}</dd></div>
-                }
-                @if (due.lateFee > 0) {
-                  <div class="due-box__late"><dt>Late payment fee</dt><dd>{{ due.lateFee | appCurrency: '1.2-2' }}</dd></div>
-                }
-                <div class="due-box__total"><dt>Payable now</dt><dd>{{ due.payable | appCurrency: '1.2-2' }}</dd></div>
-              </dl>
-              @if (lateFeeRule; as rule) {
-                <p class="due-box__note">
-                  <mat-icon>info</mat-icon>
-                  @if (due.lateFee > 0) {
-                    Late fee applied: {{ rule }} (System Defaults → Fees).
-                  } @else if (due.daysLate > 0) {
-                    Still within the grace period. Late fee: {{ rule }}.
-                  } @else {
-                    Late fee if unpaid: {{ rule }}.
-                  }
-                </p>
-              }
-            </div>
-          }
-        </section>
-
-        <!-- Payment history -->
-        <section class="info-card">
-          <div class="info-card__header">
-            <span class="info-card__icon"><mat-icon>history</mat-icon></span>
-            <h3 class="info-card__title">Payment History</h3>
-            <span class="count-pill">{{ payments.length }} {{ payments.length === 1 ? 'payment' : 'payments' }}</span>
-          </div>
-
-          <div class="history-empty" *ngIf="payments.length === 0">
-            <mat-icon>receipt_long</mat-icon>
-            <div class="history-empty__title">No payments yet</div>
-            <div class="history-empty__hint">Payments for this subscription will appear here.</div>
-          </div>
-
-          @if (payments.length > 0) {
-            <div class="history">
-              @for (group of paymentYears; track group.year) {
-                <div class="history-year">
-                  <span>{{ group.year }}</span>
-                  <span class="history-year__count">{{ group.items.length }}</span>
-                </div>
-
-                <ul class="history-list">
-                  @for (p of group.items; track p.transactionId) {
-                    <li class="history-item">
-                      <span class="history-item__icon history-item__icon--{{ tone(p.paymentStatus) }}">
-                        <mat-icon>{{ methodIcon(p.paymentMethod) }}</mat-icon>
-                      </span>
-
-                      <div class="history-item__main">
-                        <div class="history-item__row">
-                          <span class="history-amount">{{ p.totalAmount | appCurrency: '1.2-2' }}</span>
-                          @if (p.lateFee) {
-                            <span class="late-chip" [matTooltip]="p.daysLate + ' days late'">incl. late fee {{ p.lateFee | appCurrency: '1.0-2' }}</span>
-                          }
-                          <span class="status-badge status-badge--{{ tone(p.paymentStatus) }}">{{ p.paymentStatus }}</span>
-                        </div>
-                        <div class="history-tags">
-                          <span class="tag tag--plan">
-                            <mat-icon>workspace_premium</mat-icon>{{ p.planName }} · {{ p.billingCycle }}
-                          </span>
-                          <span class="tag tag--period">
-                            <mat-icon>date_range</mat-icon>
-                            {{ p.paymentDate | appDate }}
-                            <span class="tag__arrow">→</span>
-                            {{ periodEnd(p) | appDate }}
-                          </span>
-                        </div>
-                        <div class="history-meta">
-                          <span class="meta-item">
-                            <mat-icon>event_available</mat-icon>Paid {{ p.paymentDate | appDate }}
-                          </span>
-                          <span class="meta-dot" aria-hidden="true"></span>
-                          <span class="meta-item">
-                            <mat-icon>{{ methodIcon(p.paymentMethod) }}</mat-icon>{{ p.paymentMethod }} via {{ p.paymentGateway }}
-                          </span>
-                        </div>
-                        @if (p.subscriptionId !== sub.subscriptionId) {
-                          <div class="history-chips">
-                            <span class="chip chip--older" matTooltip="Earlier subscription for this hostel">
-                              <mat-icon>history</mat-icon>{{ p.subscriptionId }}
-                            </span>
-                          </div>
-                        }
-                      </div>
-
-                      @if (hasInvoice(p)) {
-                        <div class="history-actions">
-                          <button type="button" class="row-action-btn" matTooltip="View Invoice" aria-label="View invoice" (click)="invoices.viewInvoice(p)">
-                            <mat-icon>visibility</mat-icon>
-                          </button>
-                          <button type="button" class="row-action-btn" matTooltip="Download Receipt" aria-label="Download receipt" (click)="invoices.downloadReceipt(p)">
-                            <mat-icon>download</mat-icon>
-                          </button>
-                        </div>
-                      }
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          }
-        </section>
-      </div>
-
-      <div class="panel-footer">
-        <button type="button" class="btn-secondary" (click)="closePanel.emit()">Close</button>
-      </div>
-    </div>
+    }
   `,
   styles: [`
-    .panel-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.12);
-      z-index: 1050;
-      animation: fadeIn 0.2s ease-out forwards;
+    :host {
+      display: contents;
     }
 
-    @keyframes fadeIn {
+    /* Sits below the CDK overlay (z-index 1000) so tooltips and the invoice dialog open on top. */
+    .sd-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 990;
+      background: rgba(15, 23, 42, 0.45);
+      animation: sd-fade 0.18s ease-out;
+    }
+
+    .sd-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 991;
+      width: min(1240px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+      overflow: hidden;
+      animation: sd-pop 0.2s ease-out;
+    }
+
+    @keyframes sd-fade {
       from { opacity: 0; }
       to { opacity: 1; }
     }
 
-    .side-panel-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 540px;
-      max-width: 100vw;
-      height: 100vh;
-      background: #ffffff;
-      z-index: 1060;
-      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
-      display: flex;
-      flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    @keyframes sd-pop {
+      from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
-    .side-panel-drawer--open {
-      transform: translateX(0);
-    }
-
-    /* Header */
-    .panel-header {
+    .sd-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid #e2e8f0;
+      gap: 16px;
+      padding: 18px 24px;
+      border-bottom: 1px solid #eef2f7;
       flex-shrink: 0;
     }
 
-    .identity {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .identity__icon {
-      width: 40px;
-      height: 40px;
-      flex-shrink: 0;
-      border-radius: 10px;
-      background: #e6f7f5;
-      color: #0d9488;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-      }
-    }
-
-    .panel-title {
+    .sd-title {
       margin: 0;
-      font-size: 17px;
+      font-size: 20px;
       font-weight: 700;
       color: #0f172a;
-      line-height: 1.2;
     }
 
-    .panel-subtitle {
-      margin-top: 2px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .close-btn {
-      color: #64748b;
-
-      &:hover {
-        color: #0f172a;
-        background: #f1f5f9;
-      }
-    }
-
-    /* Body: light backdrop so the white cards stand out */
-    .panel-body {
+    .sd-body {
       flex: 1;
-      min-height: 0;
-      padding: 18px 20px 24px;
       overflow-y: auto;
+      padding: 20px 24px 24px;
       background: #f8fafc;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+    }
 
-      /* Cards keep their full height and the body scrolls. Without this the flex
-         column squeezed the cards to fit, and their overflow:hidden clipped content
-         (Total Paid / Last Payment and the end of Payment History were cut off). */
-      > * {
-        flex-shrink: 0;
+    .sd-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 14px 24px;
+      border-top: 1px solid #eef2f7;
+      background: #ffffff;
+      flex-shrink: 0;
+    }
+
+    /* ---- Hero: hostel + period ---- */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+      gap: 32px;
+      align-items: center;
+      padding: 20px 24px;
+      margin-bottom: 18px;
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 0 0 1px #eef2f7;
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
       }
     }
 
-    /* Hero: hostel + subscription period */
-    .hero-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      padding: 16px;
-    }
-
-    .hero-card__top {
+    .hero__identity {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 18px;
     }
 
-    .hero-card__icon {
-      width: 42px;
-      height: 42px;
+    .hero__icon {
+      width: 88px;
+      height: 88px;
       flex-shrink: 0;
-      border-radius: 10px;
-      background: #eff6ff;
-      color: #0057e7;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #e0ecff, #f1f6ff);
+      color: #2563eb;
       display: flex;
       align-items: center;
       justify-content: center;
 
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 46px;
+        width: 46px;
+        height: 46px;
       }
     }
 
-    .hero-card__text {
-      flex: 1;
+    .hero__text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
       min-width: 0;
     }
 
-    .hero-card__hostel {
-      font-size: 16px;
+    .hero__name {
+      font-size: 22px;
       font-weight: 700;
       color: #0f172a;
     }
 
-    .hero-card__plan {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 3px;
-      font-size: 13px;
-      color: #64748b;
+    .hero__plan {
+      font-size: 15px;
+      color: #334155;
     }
 
-    .hero-card__id {
-      padding: 1px 6px;
-      border-radius: 5px;
-      background: #f1f5f9;
-      color: #475569;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 11px;
+    .hero__plan-name {
+      color: #2563eb;
       font-weight: 600;
     }
 
-    /* Plan & Billing: key figures */
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      padding: 14px 16px 0;
-    }
-
-    .kpi {
-      --kpi: #0d9488;
-      --kpi-tint: #e6f7f5;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: var(--kpi-tint);
-    }
-
-    .kpi--blue {
-      --kpi: #0057e7;
-      --kpi-tint: #eff6ff;
-    }
-
-    .kpi__icon {
-      width: 32px;
-      height: 32px;
-      flex-shrink: 0;
-      border-radius: 8px;
-      background: #ffffff;
-      color: var(--kpi);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
-
-    .kpi__label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #64748b;
-    }
-
-    .kpi__value {
-      font-size: 15.5px;
-      font-weight: 800;
-      color: #0f172a;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .period__dates {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .period__end {
-      text-align: right;
-    }
-
-    .period__label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+    .hero__sep {
+      margin: 0 6px;
       color: #94a3b8;
     }
 
-    .period__date {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .period__pill {
-      display: inline-flex;
+    .hero__dates {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
       align-items: center;
+      gap: 28px;
+      margin-bottom: 14px;
+    }
+
+    .hero__date {
+      display: flex;
+      flex-direction: column;
       gap: 4px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: #e6f7f5;
-      color: #0f766e;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-
-      mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
-      }
+      padding-right: 28px;
+      border-right: 1px solid #e5eaf1;
     }
 
-    .period__pill--warn {
-      background: #fff7ed;
-      color: #b45309;
-    }
-
-    .period__pill--ended {
-      background: #f1f5f9;
+    .hero__date-label {
+      font-size: 12.5px;
       color: #64748b;
     }
 
-    .period__bar {
-      height: 8px;
-      border-radius: 4px;
-      background: #e2e8f0;
-      overflow: hidden;
-    }
-
-    .period__fill {
-      height: 100%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, #14b8a6, #0d9488);
-      transition: width 0.4s ease;
-    }
-
-    .period__fill--warn {
-      background: linear-gradient(90deg, #fbbf24, #d97706);
-    }
-
-    .period__fill--ended {
-      background: #94a3b8;
-    }
-
-    /* Info cards (green header, same as the Admin details panel) */
-    .info-card {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      overflow: hidden;
-    }
-
-    .info-card__header {
-      display: flex;
+    .hero__date-value {
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      background: #e6f7f0;
-      border-bottom: 1px solid #d1eee3;
-    }
-
-    .info-card__icon {
-      width: 30px;
-      height: 30px;
-      flex-shrink: 0;
-      border-radius: 8px;
-      background: #ffffff;
-      color: #0d9488;
-      box-shadow: 0 0 0 1px #c6e9dc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      gap: 8px;
+      font-size: 17px;
+      font-weight: 600;
+      color: #0f172a;
 
       mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+        color: #64748b;
       }
     }
 
-    .info-card__title {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 700;
-      color: #0f172a;
+    .hero__remaining {
+      font-size: 17px;
+      color: #16a34a;
+      text-align: center;
+
+      strong {
+        font-size: 20px;
+        font-weight: 700;
+      }
     }
 
-    .count-pill {
-      margin-left: auto;
-      padding: 2px 8px;
+    .hero__remaining--warn { color: #d97706; }
+    .hero__remaining--ended { color: #dc2626; }
+
+    .hero__bar {
+      height: 12px;
       border-radius: 999px;
-      background: #ffffff;
-      color: #0d9488;
-      font-size: 11.5px;
-      font-weight: 700;
-      box-shadow: 0 0 0 1px #c6e9dc;
+      background: #e8eef8;
+      overflow: hidden;
     }
 
-    .detail-grid {
+    .hero__fill {
+      height: 100%;
+      border-radius: inherit;
+      background: #2563eb;
+      transition: width 0.3s ease;
+    }
+
+    .hero__fill--warn { background: #f59e0b; }
+    .hero__fill--ended { background: #ef4444; }
+
+    .hero__bar-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: #475569;
+    }
+
+    /* ---- Three cards ---- */
+    .sd-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 18px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.75fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      .sd-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .card--history {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .sd-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 0 0 1px #eef2f7;
+    }
+
+    .card__title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #0f172a;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        color: #2563eb;
+      }
+    }
+
+    .rows {
       margin: 0;
-      padding: 14px 16px 16px;
+
+      > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #eef2f7;
+      }
+
+      > div:last-child {
+        border-bottom: none;
+      }
 
       dt {
-        margin-bottom: 3px;
-        font-size: 11.5px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #64748b;
+        font-size: 13.5px;
+        color: #475569;
       }
 
       dd {
         margin: 0;
         font-size: 13.5px;
-        font-weight: 600;
+        font-weight: 500;
         color: #0f172a;
-      }
-
-      .amount {
-        font-size: 15px;
-        font-weight: 800;
+        text-align: right;
       }
     }
 
-    .detail-hint {
-      font-size: 12px;
-      font-weight: 500;
-      color: #64748b;
+    .rows--compact > div {
+      padding: 10px 0;
     }
 
-    /* Payment history */
-    .history {
-      padding: 4px 16px 6px;
+    .rows__late dt,
+    .rows__late dd {
+      color: #b45309;
     }
 
-    /* Year divider: "2026 ───── 3" */
-    .history-year {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 10px 0 2px;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      color: #0f766e;
-
-      &::after {
-        content: '';
-        order: 1;
-        flex: 1;
-        height: 1px;
-        background: #e2e8f0;
-      }
-    }
-
-    .history-year__count {
-      order: 2;
-      padding: 1px 7px;
-      border-radius: 999px;
-      background: #f1f5f9;
-      color: #64748b;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .history-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    /* Plan + billing period as two small tags */
-    .history-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin: 6px 0;
-    }
-
-    .tag {
+    .link-text {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      height: 24px;
-      padding: 0 9px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
+      gap: 6px;
+      color: #2563eb !important;
 
       mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
-      }
-    }
-
-    .tag--plan {
-      background: #e6f7f5;
-      color: #0f766e;
-
-      mat-icon {
-        color: #0d9488;
-      }
-    }
-
-    .tag--period {
-      background: #f1f5f9;
-      color: #334155;
-      font-variant-numeric: tabular-nums;
-
-      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
         color: #64748b;
       }
     }
 
-    .tag__arrow {
-      color: #94a3b8;
-      font-weight: 500;
+    .due__label {
+      font-size: 13px;
+      color: #64748b;
     }
 
-    .chip--older {
-      background: #fff7ed;
-      color: #b45309;
+    .due__amount {
+      margin: 6px 0 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #eef2f7;
+      font-size: 30px;
+      font-weight: 700;
+      color: #16a34a;
+    }
+
+    .due__amount--late {
+      color: #dc2626;
+    }
+
+    .note {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 14px 0 0;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: #ecfbf2;
+      color: #166534;
+      font-size: 12.5px;
+      line-height: 1.5;
+
+      mat-icon {
+        flex-shrink: 0;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #16a34a;
+      }
+    }
+
+    .note--warn {
+      background: #fff7e6;
+      color: #92400e;
 
       mat-icon {
         color: #d97706;
       }
     }
 
-    .history-item {
-      position: relative;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin: 0 -8px;
-      padding: 12px 8px;
-      border-radius: 10px;
-      transition: background 0.15s ease;
-
-      &:hover {
-        background: #f8fafc;
-      }
-
-      /* Timeline line joining payments within a year */
-      &:not(:last-child)::before {
-        content: '';
-        position: absolute;
-        left: 24px;
-        top: 46px;
-        bottom: -12px;
-        width: 2px;
-        border-radius: 1px;
-        background: #e2e8f0;
-      }
-    }
-
-    .history-item__icon {
-      position: relative;
-      z-index: 1; /* sit above the timeline line */
-      width: 34px;
-      height: 34px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
-      }
-    }
-
-    .history-item__icon--success { background: #e6f7f5; color: #0d9488; }
-    .history-item__icon--warning { background: #fff7ed; color: #d97706; }
-    .history-item__icon--danger { background: #ffebf0; color: #e11d48; }
-    .history-item__icon--info { background: #f0f9ff; color: #0284c7; }
-    .history-item__icon--neutral { background: #f1f5f9; color: #64748b; }
-
-    .history-item__main {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .history-item__row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .history-amount {
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      color: #0f172a;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* "Paid on · method via gateway" — softer, with small icons */
-    .history-meta {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px 8px;
-      font-size: 12px;
-      color: #64748b;
-    }
-
-    .meta-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-
-      mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
-        color: #94a3b8;
-      }
-    }
-
-    .meta-dot {
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      background: #cbd5e1;
-    }
-
-    .history-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 6px;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: #f1f5f9;
-      color: #475569;
-      font-size: 11.5px;
-      font-weight: 500;
-
-      mat-icon {
-        font-size: 13px;
-        width: 13px;
-        height: 13px;
-        color: #64748b;
-      }
-    }
-
-    .history-actions {
-      display: flex;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .row-action-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      padding: 0; /* default button padding would squeeze (and clip) the icon */
-      border-radius: 6px;
-      background: transparent;
-      border: none;
-      color: #0d9488;
-      cursor: pointer;
-      transition: background 0.15s ease;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-
-      &:hover {
-        background: #e6f7f5;
-      }
-    }
-
-    .history-empty {
+    .due-empty {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 28px 16px;
+      gap: 8px;
+      padding: 28px 12px;
       text-align: center;
+      font-size: 13px;
+      color: #64748b;
 
       mat-icon {
-        margin-bottom: 8px;
         font-size: 30px;
         width: 30px;
         height: 30px;
@@ -933,128 +611,233 @@ const DAY_MS = 24 * 60 * 60 * 1000;
       }
     }
 
-    .history-empty__title {
-      font-size: 13.5px;
+    /* ---- Payment history timeline ---- */
+    .timeline {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .timeline__item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 56px 20px minmax(0, 1fr);
+      align-items: center;
+      column-gap: 10px;
+      padding-bottom: 12px;
+
+      /* Line through the dots */
+      &::before {
+        content: '';
+        position: absolute;
+        left: calc(56px + 10px + 9px);
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #dbe6fb;
+      }
+
+      &:first-child::before {
+        top: 50%;
+      }
+
+      &:last-child::before {
+        bottom: 50%;
+      }
+
+      &:only-child::before {
+        display: none;
+      }
+    }
+
+    .year-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #eef2f7;
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .timeline__dot {
+      position: relative;
+      z-index: 1;
+      width: 12px;
+      height: 12px;
+      margin-left: 4px;
+      border-radius: 50%;
+      background: #2563eb;
+      box-shadow: 0 0 0 3px #ffffff;
+    }
+
+    .pay-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06), 0 0 0 1px #eef2f7;
+    }
+
+    .pay-card__main {
+      min-width: 0;
+    }
+
+    .pay-card__top {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .pay-card__amount {
+      font-size: 14.5px;
       font-weight: 700;
       color: #0f172a;
     }
 
-    .history-empty__hint {
-      margin-top: 2px;
+    .pay-card__sub {
       font-size: 12.5px;
+      line-height: 1.6;
       color: #64748b;
     }
 
-    /* Status badges */
-    /* Next payment box (late fee from Settings → Fees) */
-    .due-box {
-      margin-top: 14px;
-      padding: 14px 16px;
-      border-radius: 12px;
-      border: 1px solid #e2e8f0;
-      background: #f8fafc;
-    }
-    .due-box--overdue { border-color: #fde68a; background: #fffbeb; }
-    .due-box--late { border-color: #fecaca; background: #fef2f2; }
-    .due-box__head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 10px;
-    }
-    .due-box__title { font-size: 13.5px; font-weight: 700; color: #0f172a; }
-    .due-box__date { font-size: 12.5px; font-weight: 600; color: #64748b; }
-    .due-box--overdue .due-box__date { color: #b45309; }
-    .due-box--late .due-box__date { color: #b91c1c; }
-    .due-box__rows { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-    .due-box__rows > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
-    .due-box__rows dt { color: #475569; }
-    .due-box__rows dd { margin: 0; font-variant-numeric: tabular-nums; color: #0f172a; }
-    .due-box__late dt, .due-box__late dd { color: #b91c1c; font-weight: 600; }
-    .due-box__total { margin-top: 4px; padding-top: 8px; border-top: 1px dashed #cbd5e1; }
-    .due-box__total dt, .due-box__total dd { font-weight: 700; color: #0f172a; font-size: 14px; }
-    .due-box__note {
-      display: flex;
-      align-items: flex-start;
-      gap: 6px;
-      margin: 10px 0 0;
-      font-size: 12px;
-      color: #64748b;
-    }
-    .due-box__note mat-icon { flex-shrink: 0; font-size: 15px; width: 15px; height: 15px; margin-top: 1px; }
-    .late-chip {
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      font-size: 11px;
-      font-weight: 600;
-      color: #b91c1c;
-      white-space: nowrap;
-    }
-
-    .status-badge {
+    .pay-card__older {
       display: inline-block;
-      padding: 3px 10px;
+      margin-top: 4px;
+      padding: 1px 8px;
       border-radius: 6px;
+      background: #f1f5f9;
+      color: #475569;
       font-size: 11.5px;
-      font-weight: 600;
-      border: 1px solid currentColor;
+    }
+
+    .pay-card__meta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #334155;
+      text-align: center;
       white-space: nowrap;
     }
 
-    .status-badge--success { background: #e6f7f5; color: #0d9488; }
-    .status-badge--warning { background: #fff7ed; color: #d97706; }
-    .status-badge--danger { background: #ffebf0; color: #e11d48; }
-    .status-badge--info { background: #f0f9ff; color: #0284c7; }
-    .status-badge--neutral { background: #f1f5f9; color: #64748b; }
-
-    /* Footer */
-    .panel-footer {
-      padding: 14px 20px;
-      border-top: 1px solid #e2e8f0;
-      background: #ffffff;
+    .pay-card__actions {
       display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      flex-shrink: 0;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 16px;
+      border-left: 1px solid #eef2f7;
     }
 
-    .btn-secondary {
-      height: var(--btn-height);
+    .pay-card__no-receipt {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .action-link {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
+      gap: 8px;
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
+      font-size: 13px;
+      color: #0f172a;
       cursor: pointer;
+      white-space: nowrap;
 
       &:hover {
-        background: #f1f5f9;
-        color: #0f172a;
+        color: #2563eb;
+      }
+
+      &:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
       }
     }
 
-    @media (max-width: 520px) {
-      .detail-grid,
-      .kpis {
+    .action-link__icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 17px;
+        width: 17px;
+        height: 17px;
+      }
+    }
+
+    .action-link:hover .action-link__icon {
+      background: #e8f0ff;
+      color: #2563eb;
+    }
+
+    .late-chip {
+      padding: 1px 8px;
+      border-radius: 6px;
+      background: #fff7e6;
+      color: #b45309;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    /* Status tags (same look as the list tables) */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+
+      &::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+    }
+
+    .status-badge--success { background: #dcfce7; color: #16a34a; }
+    .status-badge--warning { background: #ffedd5; color: #ea580c; }
+    .status-badge--danger { background: #fee2e2; color: #dc2626; }
+    .status-badge--info { background: #e0f2fe; color: #0284c7; }
+    .status-badge--neutral { background: #f1f5f9; color: #64748b; }
+
+    @media (max-width: 700px) {
+      .pay-card {
         grid-template-columns: 1fr;
       }
 
-      .period__pill {
-        display: none;
+      .pay-card__actions {
+        flex-direction: row;
+        padding-left: 0;
+        border-left: none;
+      }
+
+      .hero__dates {
+        grid-template-columns: 1fr 1fr;
       }
     }
   `],
 })
-export class SubscriptionDetailPanelComponent implements OnChanges {
+export class SubscriptionDetailPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isOpen = false;
   @Input() subscription?: HostelSubscription;
   /** All payments; filtered down to this subscription's history. */
@@ -1072,6 +855,17 @@ export class SubscriptionDetailPanelComponent implements OnChanges {
   @ViewChild('panelBody') panelBody?: ElementRef<HTMLElement>;
 
   private readonly fmt = inject(AppFormatService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  ngOnInit(): void {
+    // The page area is its own stacking context, so a fixed dialog inside it would sit under the
+    // side menu. Living on <body> keeps it above the app (and below the invoice dialog overlay).
+    document.body.appendChild(this.host.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.host.nativeElement.remove();
+  }
 
   readonly hasInvoice = hasInvoice;
   readonly tone = statusTone;
@@ -1175,6 +969,12 @@ export class SubscriptionDetailPanelComponent implements OnChanges {
     const end = new Date(`${this.subscription.expiryDate}T00:00:00`).getTime();
     const pct = ((Date.now() - start) / Math.max(end - start, DAY_MS)) * 100;
     return Math.min(100, Math.max(0, pct));
+  }
+
+  /** Colour of the period bar and "days remaining": blue/green normally, amber in the last week, red once ended. */
+  get periodTone(): 'ok' | 'warn' | 'ended' {
+    const days = this.daysRemaining;
+    return days < 0 ? 'ended' : days <= 7 ? 'warn' : 'ok';
   }
 
   get periodCaption(): string {

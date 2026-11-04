@@ -15,6 +15,7 @@ import {
   MatAutocompleteTrigger,
 } from '@angular/material/autocomplete';
 import { AppNotification, NotificationService, relativeTime } from '../../../core/services/notification.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 export interface AppUser {
   name: string;
@@ -85,9 +86,9 @@ export class AppHeaderComponent {
   /** Emits the route to navigate to when a global-search result is selected. */
   @Output() navigateTo = new EventEmitter<string>();
 
-  /** Up to two initials for the profile menu avatar, e.g. "Super Admin" → "SA". */
+  /** Up to two initials for the profile menu avatar, e.g. "Admin User" → "AU". */
   get initials(): string {
-    const parts = (this.user?.name || 'Super Admin').trim().split(/\s+/);
+    const parts = (this.user?.name || 'Admin').trim().split(/\s+/);
     return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
   }
 
@@ -97,16 +98,40 @@ export class AppHeaderComponent {
   readonly searchControl = new FormControl('', { nonNullable: true });
   searchFocused = false;
 
-  private readonly searchItems: SearchableItem[] = [
+  /** Search results: only pages the signed-in user may open (Admin modules are Admin-only). */
+  private get searchItems(): SearchableItem[] {
+    return this.allSearchItems.filter((i) => this.auth.canAccess(i.route));
+  }
+
+  private readonly allSearchItems: SearchableItem[] = [
     // Quick actions
-    { label: 'Onboard New Hostel', route: '/hostel-onboarding/new', icon: 'domain_add', group: 'Quick Actions', description: 'Add a hostel and its admin', keywords: ['add', 'create', 'new hostel'] },
+    { label: 'Onboard New Hostel', route: '/hostel-onboarding/new', icon: 'domain_add', group: 'Quick Actions', description: 'Add a hostel and its owner', keywords: ['add', 'create', 'new hostel'] },
     { label: 'Create Template', route: '/communication-templates/new', icon: 'post_add', group: 'Quick Actions', description: 'New email, SMS or push template', keywords: ['add', 'new template', 'message'] },
     // Pages
     { label: 'Dashboard', route: '/dashboard', icon: 'home', group: 'Pages', description: 'Overview and key metrics', keywords: ['home', 'overview', 'stats'] },
+    { label: 'Laundry & Washing Machines', route: '/laundry', icon: 'local_laundry_service', group: 'Pages', description: 'Laundry services, machines, slots & bookings', keywords: ['laundry', 'washing', 'machine', 'slot', 'booking', 'dryer', 'clothes'] },
+    { label: 'Visitor Management', route: '/visitors', icon: 'badge', group: 'Pages', description: 'Visitor requests, approvals, entry & exit', keywords: ['visitors', 'guest', 'entry', 'exit', 'gate', 'security', 'walk-in'] },
+    { label: 'Mess & Food', route: '/mess', icon: 'restaurant_menu', group: 'Pages', description: 'Daily / weekly menus, meal attendance & dietary notes', keywords: ['mess', 'food', 'menu', 'meal', 'breakfast', 'lunch', 'dinner', 'diet'] },
+    { label: 'Leave & Outpass', route: '/leave-outpass', icon: 'exit_to_app', group: 'Pages', description: 'Leave and outpass requests, approvals & movement', keywords: ['leave', 'outpass', 'out pass', 'permission', 'exit', 'return', 'home'] },
+    { label: 'Attendance', route: '/attendance', icon: 'fact_check', group: 'Pages', description: 'Daily attendance, check-in & check-out', keywords: ['attendance', 'present', 'absent', 'check in', 'check out', 'roll call'] },
+    { label: 'Staff', route: '/staff', icon: 'badge', group: 'Pages', description: 'Staff profiles, shifts and tasks', keywords: ['staff', 'warden', 'security', 'housekeeping', 'task', 'shift'] },
+    { label: 'Guardians', route: '/guardians', icon: 'family_restroom', group: 'Pages', description: 'Parent and guardian contacts', keywords: ['guardian', 'parent', 'consent'] },
+    { label: 'Academic Years', route: '/academic-years', icon: 'school', group: 'Pages', description: 'College hostel academic years', keywords: ['academic', 'year', 'semester', 'rollover'] },
+    { label: 'Disciplinary Records', route: '/disciplinary', icon: 'gavel', group: 'Pages', description: 'Restricted incident records', keywords: ['disciplinary', 'incident', 'misconduct'] },
+    { label: 'Analytics', route: '/analytics', icon: 'insights', group: 'Pages', description: 'Occupancy, revenue and utilisation analytics', keywords: ['analytics', 'trend', 'kpi', 'utilisation'] },
+    { label: 'Permissions & Audit', route: '/permissions', icon: 'admin_panel_settings', group: 'Pages', description: 'Role templates, approval limits and audit history', keywords: ['permission', 'role', 'audit', 'approval'] },
+    { label: 'Parcels', route: '/parcels', icon: 'inventory_2', group: 'Pages', description: 'Parcel log, notifications & pickups', keywords: ['parcel', 'courier', 'package', 'delivery', 'pickup', 'amazon'] },
+    { label: 'Announcements', route: '/announcements', icon: 'campaign', group: 'Pages', description: 'Notices to residents: publish, schedule & drafts', keywords: ['announcements', 'notice', 'broadcast', 'message', 'communication', 'push', 'circular'] },
+    { label: 'Hostel Reports', route: '/hostel-reports', icon: 'bar_chart', group: 'Pages', description: 'Residents, occupancy, collections, dues & complaints', keywords: ['reports', 'register', 'occupancy', 'collection', 'outstanding', 'dues', 'export'] },
+    { label: 'Hostel Settings', route: '/hostel-settings', icon: 'settings', group: 'Pages', description: 'Hostel profile, rules, facilities, notifications & subscription', keywords: ['settings', 'profile', 'hostel', 'rules', 'facilities', 'logo', 'subscription', 'plan', 'notifications'] },
+    { label: 'Complaints & Maintenance', route: '/complaints', icon: 'build_circle', group: 'Pages', description: 'Resident complaints, assignment & resolution', keywords: ['complaints', 'maintenance', 'repair', 'issue', 'plumbing', 'electrical', 'wifi', 'cleaning', 'tickets'] },
+    { label: 'Fees & Payments', route: '/fees', icon: 'payments', group: 'Pages', description: 'Resident fees, charges, payments & receipts', keywords: ['fees', 'rent', 'payments', 'receipts', 'invoice', 'charges', 'dues', 'collection', 'refund'] },
+    { label: 'Residents', route: '/residents', icon: 'groups', group: 'Pages', description: 'Resident list, allocation, invites & check-outs', keywords: ['residents', 'tenants', 'students', 'check out', 'invite', 'allocate'] },
+    { label: 'Rooms & Beds', route: '/rooms', icon: 'meeting_room', group: 'Pages', description: 'Manage rooms, bed allocation & occupancy', keywords: ['rooms', 'beds', 'floors', 'occupancy', 'tenants', 'sharing'] },
     { label: 'Onboard Hostel', route: '/hostel-onboarding', icon: 'apartment', group: 'Pages', description: 'All onboarded hostels', keywords: ['hostels', 'institution', 'property'] },
     { label: 'Subscription Plans', route: '/subscription-plans', icon: 'credit_card', group: 'Pages', description: 'Pricing plans and features', keywords: ['pricing', 'plans', 'features'] },
     { label: 'Communication Templates', route: '/communication-templates', icon: 'campaign', group: 'Pages', description: 'Email, SMS and push messages', keywords: ['email', 'sms', 'push', 'notification', 'message'] },
-    { label: 'Admin Management', route: '/admins', icon: 'manage_accounts', group: 'Pages', description: 'Hostel admins and residents', keywords: ['users', 'residents', 'students', 'admins', 'user management', 'block', 'lock', 'unlock', 'reset'] },
+    { label: 'Admin Management', route: '/admins', icon: 'manage_accounts', group: 'Pages', description: 'Hostel owners and tenants', keywords: ['users', 'owners', 'tenants', 'residents', 'students', 'admins', 'user management', 'block', 'lock', 'unlock', 'reset'] },
     { label: 'Subscription & Payment', route: '/subscription-payments', icon: 'payments', group: 'Pages', description: 'Billing, invoices and renewals', keywords: ['billing', 'invoice', 'renewal', 'payment'] },
     { label: 'Reports', route: '/reports', icon: 'bar_chart', group: 'Pages', description: 'Analytics and exports', keywords: ['analytics', 'export', 'charts'] },
     { label: 'Audit Logs', route: '/audit-logs', icon: 'assignment', group: 'Pages', description: 'Who changed what, and when', keywords: ['logs', 'history', 'activity', 'audit'] },
@@ -120,6 +145,7 @@ export class AppHeaderComponent {
 
   /** Shared with the dashboard's Recent Notifications card. */
   private readonly notificationService = inject(NotificationService);
+  private readonly auth = inject(AuthService);
   readonly relativeTime = relativeTime;
 
   get notifications(): AppNotification[] {

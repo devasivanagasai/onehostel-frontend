@@ -1,661 +1,508 @@
 import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { PaymentTransaction } from './subscription-payment.models';
+import { PaymentTransaction } from '../../core/models/subscription-payment.models';
 import { statusTone } from '../../shared/constants/status.constants';
+import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppDialogComponent } from '../../shared/components/dialog/app-dialog.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 @Component({
   selector: 'app-invoice-dialog',
   standalone: true,
-  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatDialogModule, MatIconModule],
+  imports: [AppDatePipe, AppCurrencyPipe, CommonModule, MatIconModule, AppDialogComponent, AppButtonComponent],
   template: `
-    <div class="invoice">
-      <!-- Header -->
+    <app-dialog title="Invoice" [subtitle]="payment.invoiceNumber" icon="receipt_long">
+      <!-- Issuer -->
       <header class="inv-head">
         <div class="brand">
-          <span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-          <div>
-            <div class="brand__name">OneHostel</div>
+          <span class="brand__logo" aria-hidden="true"><mat-icon>home</mat-icon></span>
+          <div class="brand__text">
+            <div class="brand__name">{{ appName }}</div>
             <div class="brand__tagline">Hostel Management Platform</div>
             @if (payment.gstin) {
-              <div class="brand__gstin">GSTIN <span>{{ payment.gstin }}</span></div>
+              <div class="brand__gstin">GSTIN: {{ payment.gstin }}</div>
             }
           </div>
-        </div>
-
-        <div class="inv-pill">
-          <h2 class="inv-pill__label">Invoice</h2>
-          <div class="inv-pill__number">{{ payment.invoiceNumber }}</div>
         </div>
       </header>
 
-      <div class="inv-body">
-        <!-- Billed to | Payment -->
-        <section class="card parties">
-          <div class="party">
-            <div class="label">Billed To</div>
-            <div class="party__name">{{ payment.hostelName }}</div>
-            <div class="party__sub">Subscription {{ payment.subscriptionId }}</div>
-            <div class="party__meta">
-              <span class="issued"><mat-icon>calendar_today</mat-icon>Issued {{ payment.paymentDate | appDate }}</span>
-              <span class="status status--{{ tone }}">{{ payment.paymentStatus }}</span>
+      <!-- Billed to | Payment info -->
+      <section class="card parties">
+        <div class="party">
+          <div class="label">Billed To</div>
+          <div class="party__name">{{ payment.hostelName }}</div>
+          <dl class="info-rows">
+            <div>
+              <dt><span class="info-icon"><mat-icon fontSet="material-icons-outlined">badge</mat-icon></span>Subscription ID</dt>
+              <dd>{{ payment.subscriptionId }}</dd>
+            </div>
+            <div>
+              <dt><span class="info-icon"><mat-icon fontSet="material-icons-outlined">calendar_today</mat-icon></span>Issued Date</dt>
+              <dd>{{ payment.paymentDate | appDate }}</dd>
+            </div>
+            <div>
+              <dt><span class="info-icon info-icon--{{ tone }}"><mat-icon>{{ statusIcon }}</mat-icon></span>Payment Status</dt>
+              <dd><span class="status status--{{ tone }}">{{ payment.paymentStatus }}</span></dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="parties__divider" aria-hidden="true"></div>
+
+        <div class="party">
+          <div class="label">Payment Info</div>
+          <div class="pay-box">
+            <div class="pay-box__method">
+              <span class="info-icon"><mat-icon fontSet="material-icons-outlined">{{ methodIcon }}</mat-icon></span>
+              {{ payment.paymentMethod }} • {{ payment.paymentGateway }}
+            </div>
+            <div class="pay-box__txn">
+              <div>
+                <div class="pay-box__label">Transaction ID</div>
+                <div class="pay-box__value">{{ payment.transactionId }}</div>
+              </div>
+              <app-button
+                variant="icon"
+                [icon]="copied ? 'check' : 'content_copy'"
+                [iconOutlined]="true"
+                [ariaLabel]="copied ? 'Copied' : 'Copy transaction ID'"
+                (clicked)="copyTxn()"
+              ></app-button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div class="parties__divider" aria-hidden="true"></div>
+      <!-- Line item + totals -->
+      <section class="card items">
+        <div class="items__head">
+          <span>Description</span>
+          <span>Amount</span>
+        </div>
+        <div class="item">
+          <span>{{ payment.planName }} Plan - {{ payment.billingCycle }} Subscription</span>
+          <span class="item__amount">{{ payment.amount | appCurrency: '1.2-2' }}</span>
+        </div>
 
-          <div class="party">
-            <div class="label">Payment</div>
-            <div class="party__name">{{ payment.paymentMethod }} · {{ payment.paymentGateway }}</div>
-            <div class="party__sub txn">
-              <span class="txn__label">TXN ID</span>
-              <span class="txn__value">{{ payment.transactionId }}</span>
+        <div class="totals-wrap">
+          @if (stampLabel) {
+            <div class="stamp stamp--{{ tone }}" aria-hidden="true">{{ stampLabel }}</div>
+          }
+          <dl class="totals">
+            <div class="totals__row">
+              <dt>{{ payment.taxRate > 0 ? 'Subtotal (excl. GST)' : 'Subtotal' }}</dt>
+              <dd>{{ payment.amount | appCurrency: '1.2-2' }}</dd>
             </div>
-          </div>
-        </section>
-
-        <!-- Items + totals -->
-        <section class="card items">
-          <div class="items__head">
-            <span>Description</span>
-            <span>Amount</span>
-          </div>
-
-          <div class="item">
-            <span class="item__icon"><mat-icon>workspace_premium</mat-icon></span>
-            <div class="item__text">
-              <div class="item__name">{{ payment.planName }} Plan</div>
-              <div class="item__sub">{{ payment.billingCycle }} subscription</div>
-            </div>
-            <div class="item__amount">{{ payment.amount | appCurrency: '1.2-2' }}</div>
-          </div>
-
-          <!-- Receipt tear line -->
-          <div class="tear" aria-hidden="true"></div>
-
-          <div class="totals-wrap">
-            @if (stampLabel) {
-              <div class="stamp stamp--{{ tone }}" aria-hidden="true">{{ stampLabel }}</div>
-            }
-            <dl class="totals">
+            @if (payment.taxRate > 0) {
               <div class="totals__row">
-                <dt>{{ payment.taxRate > 0 ? 'Subtotal (excl. GST)' : 'Subtotal' }}</dt>
-                <dd>{{ payment.amount | appCurrency: '1.2-2' }}</dd>
+                <dt>GST ({{ payment.taxRate }}%)</dt>
+                <dd>{{ payment.tax | appCurrency: '1.2-2' }}</dd>
               </div>
-              @if (payment.taxRate > 0) {
-                <div class="totals__row">
-                  <dt>GST ({{ payment.taxRate }}%)</dt>
-                  <dd>{{ payment.tax | appCurrency: '1.2-2' }}</dd>
-                </div>
-              }
-              @if (payment.lateFee) {
-                <div class="totals__row">
-                  <dt>Late payment fee ({{ payment.daysLate }} days late)</dt>
-                  <dd>{{ payment.lateFee | appCurrency: '1.2-2' }}</dd>
-                </div>
-              }
-              <div class="totals__grand">
-                <dt>Total</dt>
-                <dd>{{ payment.totalAmount | appCurrency: '1.2-2' }}</dd>
+            }
+            @if (payment.lateFee) {
+              <div class="totals__row">
+                <dt>Late payment fee ({{ payment.daysLate }} days late)</dt>
+                <dd>{{ payment.lateFee | appCurrency: '1.2-2' }}</dd>
               </div>
-              <div class="tax-note">
-                @if (payment.taxRate === 0) {
-                  No GST applied
-                } @else if (payment.taxInclusive) {
-                  Plan price includes GST
-                } @else {
-                  GST added on the plan price
-                }
-              </div>
-            </dl>
-          </div>
-        </section>
+            }
+            <div class="totals__grand">
+              <dt>Total Amount</dt>
+              <dd>{{ payment.totalAmount | appCurrency: '1.2-2' }}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
 
-        @if (payment.paymentStatus === 'Refunded') {
-          <div class="refund-note">
-            <mat-icon>info</mat-icon>
-            <span>This payment has been refunded to the original payment method.</span>
-          </div>
-        }
-      </div>
+      @if (payment.paymentStatus === 'Refunded') {
+        <div class="refund-note">
+          <mat-icon>info</mat-icon>
+          <span>This payment has been refunded to the original payment method.</span>
+        </div>
+      }
 
-      <div class="inv-actions">
-        <button type="button" class="btn-secondary" mat-dialog-close>Close</button>
-        <button type="button" class="btn-primary" (click)="dialogRef.close('download')">
-          <mat-icon>download</mat-icon>
-          <span>Download Receipt</span>
-        </button>
-      </div>
-    </div>
+      <ng-container dialogFooter>
+        <app-button variant="secondary" (clicked)="dialogRef.close()">Close</app-button>
+        <app-button icon="download" (clicked)="dialogRef.close('download')">Download Receipt</app-button>
+      </ng-container>
+    </app-dialog>
   `,
   styles: [`
     :host {
       display: block;
     }
 
-    /* Rounder dialog shell for the invoice (panelClass set in InvoiceService). */
-    ::ng-deep .invoice-dialog-panel .mat-mdc-dialog-surface {
-      border-radius: 20px !important;
-      background: #f8fafc !important;
-      box-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.35) !important;
-    }
-
-    .invoice {
-      display: flex;
-      flex-direction: column;
-      max-height: 90vh;
-      background: #f8fafc;
-      border-radius: inherit;
-      overflow: hidden;
-    }
-
-    /* ---- Header ---- */
+    /* Issuer */
     .inv-head {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 24px 24px 18px;
-      flex-shrink: 0;
+      margin-bottom: 24px;
+      color: #0f172a;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 14px;
-      min-width: 0;
+      gap: 16px;
     }
 
-    /* Four-square logo mark */
-    .brand__mark {
-      display: grid;
-      grid-template-columns: repeat(2, 16px);
-      gap: 4px;
+    .brand__logo {
+      width: 60px;
+      height: 60px;
       flex-shrink: 0;
+      border-radius: 50%;
+      background: #2563eb;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
 
-      i {
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
-        background: linear-gradient(135deg, #2f7bff, #0057e7);
-      }
+    .brand__logo mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
     }
 
     .brand__name {
-      font-size: 22px;
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.01em;
-      color: #0f172a;
+      font-size: 26px;
+      font-weight: 700;
+      color: #2563eb;
+      line-height: 1.1;
     }
 
     .brand__tagline {
-      margin-top: 2px;
-      font-size: 13px;
-      color: #475569;
+      margin-top: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #334155;
     }
 
     .brand__gstin {
-      margin-top: 3px;
-      font-size: 11.5px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      color: #64748b;
-
-      span {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        color: #334155;
-      }
-    }
-
-    /* How GST was applied to this payment */
-    .tax-note {
-      margin-top: 6px;
-      text-align: right;
-      font-size: 11.5px;
+      margin-top: 2px;
+      font-size: 13px;
       color: #64748b;
     }
 
-    .inv-pill {
-      flex-shrink: 0;
-      padding: 4px 0;
-      text-align: right;
-    }
-
-    .inv-pill__label {
-      margin: 0;
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #334155;
-    }
-
-    .inv-pill__number {
-      font-size: 15px;
-      font-weight: 800;
-      color: #0f172a;
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ---- Body ---- */
-    .inv-body {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      padding: 0 24px 4px;
-      overflow-y: auto;
-
-      > * {
-        flex-shrink: 0;
-      }
-    }
-
+    /* Cards */
     .card {
       background: #ffffff;
-      border: 1px solid #e2e8f0;
       border-radius: 14px;
-      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06), 0 0 0 1px #eef2f7;
     }
 
     .label {
-      margin-bottom: 6px;
-      font-size: 11.5px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       color: #475569;
     }
 
-    /* Billed to | Payment */
     .parties {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-      gap: 18px;
-      padding: 18px 20px;
+      gap: 24px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
     }
 
     .parties__divider {
-      background: #e2e8f0;
-    }
-
-    .party {
-      min-width: 0;
+      background: repeating-linear-gradient(180deg, #e2e8f0 0 6px, transparent 6px 10px);
     }
 
     .party__name {
-      font-size: 15.5px;
-      font-weight: 800;
+      margin-bottom: 12px;
+      font-size: 19px;
+      font-weight: 700;
       color: #0f172a;
-      word-break: break-word;
     }
 
-    .party__sub {
-      margin-top: 4px;
+    .info-rows {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .info-rows > div {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .info-rows dt {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #334155;
+    }
+
+    .info-rows dd {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: #0f172a;
+    }
+
+    .info-icon {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      background: #eef4ff;
+      color: #2563eb;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .info-icon mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+
+    .info-icon--success { background: #e7f8ee; color: #16a34a; }
+    .info-icon--warning { background: #fff4e0; color: #d97706; }
+    .info-icon--danger { background: #fee2e2; color: #dc2626; }
+    .info-icon--info { background: #e0f2fe; color: #0284c7; }
+
+    .status {
+      display: inline-block;
+      padding: 4px 16px;
+      border-radius: 999px;
       font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status--success { background: #dcfce7; color: #16a34a; }
+    .status--warning { background: #ffedd5; color: #ea580c; }
+    .status--danger { background: #fee2e2; color: #dc2626; }
+    .status--info { background: #e0f2fe; color: #0284c7; }
+    .status--neutral { background: #f1f5f9; color: #64748b; }
+
+    .pay-box {
+      padding: 14px 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06), 0 0 0 1px #eef2f7;
+    }
+
+    .pay-box__method {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #eef2f7;
+      font-size: 14.5px;
+      font-weight: 600;
+    }
+
+    .pay-box__txn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 12px;
+    }
+
+    .pay-box__label {
+      font-size: 13.5px;
       color: #475569;
     }
 
-    .party__meta {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px 12px;
-      margin-top: 12px;
-    }
-
-    .issued {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: #334155;
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-        color: #475569;
-      }
-    }
-
-    /* Solid status pill */
-    .status {
-      --status: #64748b;
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 12px;
-      border-radius: 999px;
-      background: var(--status);
-      color: #ffffff;
-      font-size: 12.5px;
-      font-weight: 700;
-    }
-
-    .status--success { --status: #16a34a; }
-    .status--info { --status: #0284c7; }
-    .status--warning { --status: #d97706; }
-    .status--danger { --status: #e11d48; }
-    .status--neutral { --status: #64748b; }
-
-    .txn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .txn__label {
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .txn__value {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12.5px;
-      color: #334155;
+    .pay-box__value {
+      margin-top: 4px;
+      font-size: 14.5px;
+      font-weight: 500;
+      word-break: break-all;
     }
 
     /* Items + totals */
     .items {
-      padding: 14px 16px 16px;
+      overflow: hidden;
     }
 
     .items__head {
       display: flex;
       justify-content: space-between;
-      padding: 0 4px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      padding: 12px 22px;
+      background: #f8fafc;
+      border-bottom: 1px solid #eef2f7;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: #334155;
+      color: #475569;
     }
 
     .item {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      background: #ffffff;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-
-    .item__icon {
-      width: 40px;
-      height: 40px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      background: #fff4e6;
-      color: #f97316;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-      }
-    }
-
-    .item__text {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .item__name {
-      font-size: 14.5px;
-      font-weight: 700;
-      color: #0f172a;
-    }
-
-    .item__sub {
-      margin-top: 2px;
-      font-size: 13px;
-      color: #475569;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 0 22px;
+      padding: 16px 0;
+      border-bottom: 1px solid #eef2f7;
+      font-size: 15px;
     }
 
     .item__amount {
-      font-size: 15px;
-      font-weight: 800;
-      color: #0f172a;
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
-    }
-
-    /* Dashed "receipt tear" with notches */
-    .tear {
-      position: relative;
-      height: 1px;
-      margin: 18px -16px 14px;
-      background: repeating-linear-gradient(90deg, #cbd5e1 0 8px, transparent 8px 14px);
-
-      &::before,
-      &::after {
-        content: '';
-        position: absolute;
-        top: -9px;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: #f8fafc;
-        box-shadow: inset 0 0 0 1px #e2e8f0;
-      }
-
-      &::before { left: -10px; }
-      &::after { right: -10px; }
     }
 
     .totals-wrap {
       position: relative;
       display: flex;
       justify-content: flex-end;
+      padding: 14px 22px 18px;
     }
 
-    /* Faint tilted stamp behind the totals */
     .stamp {
       position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%) rotate(-12deg);
-      padding: 4px 14px;
-      border: 2px solid currentColor;
-      border-radius: 8px;
-      font-size: 22px;
-      font-weight: 900;
-      letter-spacing: 0.18em;
-      opacity: 0.18;
+      left: 34%;
+      top: -34px;
+      padding: 6px 22px;
+      border: 4px double currentColor;
+      border-radius: 12px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 46px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      transform: rotate(-14deg);
+      opacity: 0.5;
       pointer-events: none;
-      user-select: none;
     }
 
-    .stamp--success { color: #0d9488; }
-    .stamp--info { color: #0284c7; }
+    .stamp--success { color: #22c55e; }
+    .stamp--info { color: #0ea5e9; }
 
     .totals {
-      width: min(100%, 300px);
+      width: min(100%, 320px);
       margin: 0;
     }
 
-    .totals__row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 4px;
-      font-size: 14px;
-      color: #334155;
-
-      dd {
-        margin: 0;
-        font-weight: 600;
-        color: #0f172a;
-        font-variant-numeric: tabular-nums;
-      }
-    }
-
-    /* Teal total bar */
+    .totals__row,
     .totals__grand {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      gap: 16px;
+    }
+
+    .totals__row {
+      padding: 5px 0;
+      font-size: 14.5px;
+      color: #334155;
+    }
+
+    .totals__row dd {
+      margin: 0;
+      color: #0f172a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .totals__grand {
+      align-items: center;
       margin-top: 8px;
-      padding: 12px 14px;
-      border-radius: 10px;
-      background: #e6f7f5;
+      padding-top: 12px;
+      border-top: 1px solid #e5eaf1;
+    }
 
-      dt {
-        font-size: 14px;
-        font-weight: 800;
-        color: #0f766e;
-      }
+    .totals__grand dt {
+      font-size: 15px;
+      font-weight: 600;
+    }
 
-      dd {
-        margin: 0;
-        font-size: 19px;
-        font-weight: 800;
-        color: #0f172a;
-        font-variant-numeric: tabular-nums;
-      }
+    .totals__grand dd {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      color: #2563eb;
+      font-variant-numeric: tabular-nums;
     }
 
     .refund-note {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 12.5px;
-      color: #0369a1;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 10px;
       background: #f0f9ff;
       border: 1px solid #bae6fd;
-      border-radius: 10px;
-      padding: 10px 12px;
-
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
+      color: #0369a1;
+      font-size: 13px;
     }
 
-    /* ---- Actions ---- */
-    .inv-actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      padding: 16px 24px 22px;
-      flex-shrink: 0;
+    .refund-note mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
-    .btn-secondary,
-    .btn-primary {
-      padding: 0 var(--btn-padding-x);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      height: var(--btn-height);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      &:focus-visible {
-        outline: 2px solid #0057e7;
-        outline-offset: 2px;
-      }
-
-      &:active {
-        transform: translateY(1px);
-      }
-    }
-
-    .btn-secondary {
-      min-width: 140px;
-      padding: 0 var(--btn-padding-x);
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #0f172a;
-
-      &:hover {
-        background: #f1f5f9;
-      }
-    }
-
-    .btn-primary {
-      height: var(--btn-height);
-      font-size: var(--btn-font-size);
-      border-radius: var(--btn-radius);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 200px;
-      padding: 0 var(--btn-padding-x);
-      background: #0057e7;
-      border: 1px solid #0057e7;
-      color: #ffffff;
-      box-shadow: 0 6px 16px -6px rgba(0, 87, 231, 0.6);
-
-      &:hover {
-        background: #0045b5;
-        border-color: #0045b5;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .inv-head {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .inv-pill {
-        text-align: left;
-      }
-
+    @media (max-width: 640px) {
       .parties {
         grid-template-columns: 1fr;
       }
 
       .parties__divider {
-        height: 1px;
+        display: none;
       }
 
-      .inv-actions {
-        flex-direction: column-reverse;
-
-        > * {
-          width: 100%;
-        }
+      .stamp {
+        display: none;
       }
     }
   `],
 })
 export class InvoiceDialogComponent {
+  /** App name from System Defaults → General (falls back to OneHostel). */
+  readonly appName: string;
+  copied = false;
 
   constructor(
     public dialogRef: MatDialogRef<InvoiceDialogComponent, 'download' | undefined>,
     @Inject(MAT_DIALOG_DATA) public payment: PaymentTransaction,
-  ) {}
+    settings: SystemSettingsService,
+  ) {
+    this.appName = settings.settings.general.applicationName || 'OneHostel';
+  }
 
   get tone(): string {
     return statusTone(this.payment.paymentStatus);
   }
 
-  /** Decorative stamp behind the totals; only for settled invoices. */
+  get statusIcon(): string {
+    return { Paid: 'check_circle', Refunded: 'replay', Pending: 'schedule', Failed: 'cancel' }[this.payment.paymentStatus] ?? 'info';
+  }
+
+  get methodIcon(): string {
+    return { UPI: 'qr_code_2', Card: 'credit_card', 'Net Banking': 'account_balance', 'Bank Transfer': 'account_balance' }[this.payment.paymentMethod] ?? 'payments';
+  }
+
+  /** Decorative stamp beside the totals; only for settled invoices. */
   get stampLabel(): string | null {
     if (this.payment.paymentStatus === 'Paid') return 'PAID';
     if (this.payment.paymentStatus === 'Refunded') return 'REFUNDED';
     return null;
+  }
+
+  copyTxn(): void {
+    navigator.clipboard?.writeText(this.payment.transactionId).then(
+      () => {
+        this.copied = true;
+        setTimeout(() => (this.copied = false), 1500);
+      },
+      () => {
+        // Clipboard blocked (e.g. insecure context) — nothing to do.
+      },
+    );
   }
 }

@@ -1,0 +1,124 @@
+// Allocate / Transfer / Check out. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+$teal: #0d9488;
+
+.rb__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.rb__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 520px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Current bed card ---- */
+.rb__current {
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+}
+
+.rb__current-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.rb__current-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  strong {
+    font-size: 15px;
+    color: #0f172a;
+  }
+
+  span {
+    font-size: 13px;
+    color: #64748b;
+  }
+}
+
+.rb__current-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: $teal;
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  &.is-empty {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+}
+
+/* ---- Banners ---- */
+.rb__banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #ccebe6;
+  border-radius: 10px;
+  background: #ecf8f6;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #134e4a;
+
+  mat-icon {
+    flex-shrink: 0;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: $teal;
+  }
+
+  strong {
+    color: #0f766e;
+  }
+
+  &--warn {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+
+    mat-icon,
+    strong {
+      color: #c2410c;
+    }
+  }
+}

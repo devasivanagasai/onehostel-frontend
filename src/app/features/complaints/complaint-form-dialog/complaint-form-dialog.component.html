@@ -1,0 +1,127 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    title="New Complaint"
+    subtitle="Log a complaint on a resident's behalf. Residents can also raise them from the Resident App."
+    icon="report_problem"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <!-- Resident -->
+    <div class="cf__field">
+      <label class="cf__label" for="cf-resident">Resident<span class="req">*</span></label>
+      <span class="cf__control" [class.is-invalid]="invalid('residentId')">
+        <select id="cf-resident" formControlName="residentId" required [class.is-placeholder]="!form.value.residentId">
+          <option value="" disabled>Select resident</option>
+          @for (r of residents; track r.id) { <option [value]="r.id">{{ r.label }}</option> }
+        </select>
+        <mat-icon class="cf__caret">expand_more</mat-icon>
+      </span>
+      @if (invalid('residentId')) { <span class="cf__error">Select the resident reporting the issue</span> }
+    </div>
+
+    <div class="cf__row">
+      <!-- Category -->
+      <div class="cf__field">
+        <label class="cf__label" for="cf-category">Category<span class="req">*</span></label>
+        <span class="cf__control cf__control--icon">
+          <span class="cf__lead cf__lead--cat"><mat-icon fontSet="material-icons-outlined">{{ categoryIcons[form.controls.category.value] }}</mat-icon></span>
+          <select id="cf-category" formControlName="category" required>
+            @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+          <mat-icon class="cf__caret">expand_more</mat-icon>
+        </span>
+      </div>
+
+      <!-- Priority -->
+      <div class="cf__field">
+        <label class="cf__label" for="cf-priority">Priority<span class="req">*</span></label>
+        <span class="cf__control cf__control--icon">
+          <span class="cf__lead"><span class="prio-dot prio-dot--{{ form.controls.priority.value.toLowerCase() }}"></span></span>
+          <select id="cf-priority" formControlName="priority" required>
+            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+          </select>
+          <mat-icon class="cf__caret">expand_more</mat-icon>
+        </span>
+        @if (form.controls.priority.value === 'Urgent') { <span class="cf__note cf__note--urgent">Highlighted at the top of the list</span> }
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="cf__field">
+      <label class="cf__label" for="cf-title">Title<span class="req">*</span></label>
+      <span class="cf__control" [class.is-invalid]="invalid('title')">
+        <input id="cf-title" formControlName="title" maxlength="80" placeholder="Enter a short title" required />
+      </span>
+      @if (invalid('title')) { <span class="cf__error">Title is required</span> }
+    </div>
+
+    <!-- Description -->
+    <div class="cf__field">
+      <label class="cf__label" for="cf-description">Description<span class="req">*</span></label>
+      <span class="cf__control cf__control--area" [class.is-invalid]="invalid('description')">
+        <textarea id="cf-description" formControlName="description" rows="3" maxlength="1000" placeholder="Provide full details of the issue..." required></textarea>
+      </span>
+      <span class="cf__meta">
+        @if (invalid('description')) { <span class="cf__error">Describe the issue</span> }
+        <span class="cf__count">{{ form.controls.description.value.length }}/1000</span>
+      </span>
+    </div>
+
+    <div class="cf__row">
+      <!-- Assign -->
+      <div class="cf__field">
+        <label class="cf__label" for="cf-assign">Assign to</label>
+        <span class="cf__control cf__control--icon">
+          <span class="cf__lead cf__lead--person"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+          <select id="cf-assign" formControlName="assignedTo" (change)="onAssigneePicked()">
+            <option value="">Unassigned</option>
+            @for (s of staff; track s.id) { <option [value]="s.id">{{ s.name }} · {{ s.role }}</option> }
+          </select>
+          <mat-icon class="cf__caret">expand_more</mat-icon>
+        </span>
+      </div>
+
+      <!-- Target -->
+      <div class="cf__field">
+        <label class="cf__label" for="cf-target">Target resolution <span class="opt">(optional)</span></label>
+        <span class="cf__control" [class.is-invalid]="targetInPast">
+          <input id="cf-target" type="date" formControlName="targetDate" [min]="today" />
+        </span>
+        @if (targetInPast) { <span class="cf__error">Can't be in the past</span> }
+      </div>
+    </div>
+
+    @if (!form.controls.assignedTo.value) {
+      <button type="button" class="cf__suggest" (click)="suggestAssignee()">
+        <mat-icon fontSet="material-icons-outlined">lightbulb</mat-icon>Suggest for {{ form.controls.category.value }}
+      </button>
+    }
+
+    <!-- Attachments -->
+    <label class="cf__drop" [class.is-disabled]="attachments.length >= maxFiles">
+      <mat-icon fontSet="material-icons-outlined">cloud_upload</mat-icon>
+      <span>
+        <strong>Attach photos / files</strong>
+        <small>Up to {{ maxFiles }} · JPG, PNG, WebP or PDF · 2 MB each</small>
+      </span>
+      <input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" (change)="onFiles($event)" hidden [disabled]="attachments.length >= maxFiles" />
+    </label>
+    @if (attachmentError) { <p class="cf__error">{{ attachmentError }}</p> }
+    @if (attachments.length) {
+      <ul class="cf__files">
+        @for (a of attachments; track a.id) {
+          <li>
+            @if (isImage(a)) { <img [src]="a.url" [alt]="a.name" /> } @else { <mat-icon>picture_as_pdf</mat-icon> }
+            <span>{{ a.name }}</span>
+            <app-button variant="icon" size="sm" icon="close" [ariaLabel]="'Remove ' + a.name" (clicked)="removeAttachment(a.id)"></app-button>
+          </li>
+        }
+      </ul>
+    }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button variant="accent" type="submit">Log complaint</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

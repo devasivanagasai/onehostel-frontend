@@ -14,15 +14,16 @@ import {
   PaymentTransaction,
   SUBSCRIPTION_STATUSES,
   hasInvoice,
-} from './subscription-payment.models';
+} from '../../core/models/subscription-payment.models';
 import { SubscriptionDetailPanelComponent } from './subscription-detail-panel.component';
 import { InvoiceService } from './invoice.service';
-import { SubscriptionPaymentService } from './subscription-payment.service';
-import { AppPaginationComponent } from '../../shared/components/pagination/app-pagination.component';
-import { AppEmptyStateComponent } from '../../shared/components/empty-state/app-empty-state.component';
+import { SubscriptionPaymentService } from '../../core/services/subscription-payment.service';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { isOnboardedHostel } from '../../core/models/onboarded-hostels';
 
 type TabKey = 'subscriptions' | 'payments';
 
@@ -44,44 +45,77 @@ const EXPIRING_WINDOW_DAYS = 30;
     MatTableModule,
     MatTooltipModule,
     SubscriptionDetailPanelComponent,
-    AppPaginationComponent,
-    AppEmptyStateComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   template: `
     <div class="onboarding-page">
       <!-- Summary tiles -->
       <div class="stat-row">
-        <button type="button" class="stat-tile" (click)="applyQuickFilter('subscriptions', 'Active')">
-          <div class="stat-tile__icon stat-tile__icon--success"><mat-icon>verified</mat-icon></div>
-          <div>
-            <div class="stat-tile__value">{{ countByStatus('Active') }}</div>
-            <div class="stat-tile__label">Active Subscriptions</div>
-          </div>
-        </button>
-        <button type="button" class="stat-tile" (click)="applyQuickFilter('subscriptions', 'Payment Pending')">
-          <div class="stat-tile__icon stat-tile__icon--warning"><mat-icon>pending_actions</mat-icon></div>
-          <div>
-            <div class="stat-tile__value">{{ countByStatus('Payment Pending') }}</div>
-            <div class="stat-tile__label">Payment Pending</div>
-          </div>
-        </button>
-        <div class="stat-tile stat-tile--static">
-          <div class="stat-tile__icon stat-tile__icon--danger"><mat-icon>event_busy</mat-icon></div>
-          <div>
-            <div class="stat-tile__value">{{ expiringSoonCount }}</div>
-            <div class="stat-tile__label">Expiring in {{ expiringWindowDays }} days</div>
-          </div>
+        <div class="stat-tile stat-tile--green">
+          <span class="stat-tile__icon"><mat-icon fontSet="material-icons-outlined">inventory_2</mat-icon></span>
+          <span class="stat-tile__text">
+            <span class="stat-tile__label">Active Subscriptions</span>
+            <span class="stat-tile__value">{{ countByStatus('Active') }}</span>
+            <span class="stat-tile__sub">
+              @if (countByStatus('Trial')) {
+                <strong>+{{ countByStatus('Trial') }}</strong> on trial
+              } @else {
+                No trials running
+              }
+            </span>
+          </span>
         </div>
-        <button type="button" class="stat-tile" (click)="applyQuickFilter('payments', 'Paid')">
-          <div class="stat-tile__icon stat-tile__icon--info"><mat-icon>account_balance_wallet</mat-icon></div>
-          <div>
-            <div class="stat-tile__value">{{ totalCollected | appCurrency: '1.0-0' }}</div>
-            <div class="stat-tile__label">Total Collected</div>
-          </div>
-        </button>
+
+        <div class="stat-tile stat-tile--orange">
+          <span class="stat-tile__icon"><mat-icon fontSet="material-icons-outlined">schedule</mat-icon></span>
+          <span class="stat-tile__text">
+            <span class="stat-tile__label">Payment Pending</span>
+            <span class="stat-tile__value">{{ countByStatus('Payment Pending') }}</span>
+            <span class="stat-tile__sub stat-tile__sub--tone">
+              {{ countByStatus('Payment Pending') ? 'Needs attention' : 'All caught up' }}
+            </span>
+          </span>
+        </div>
+
+        <div class="stat-tile stat-tile--blue">
+          <span class="stat-tile__icon"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon></span>
+          <span class="stat-tile__text">
+            <span class="stat-tile__label">Expiring in {{ expiringWindowDays }} days</span>
+            <span class="stat-tile__value">{{ expiringSoonCount }}</span>
+            <span class="stat-tile__sub stat-tile__sub--tone">
+              {{ expiringSoonCount ? 'Renew before they lapse' : 'No subscriptions' }}
+            </span>
+          </span>
+        </div>
+
+        <div class="stat-tile stat-tile--indigo">
+          <span class="stat-tile__icon"><mat-icon>currency_rupee</mat-icon></span>
+          <span class="stat-tile__text">
+            <span class="stat-tile__label">Total Collected</span>
+            <span class="stat-tile__value">{{ totalCollected | appCurrency: '1.0-0' }}</span>
+            <span class="stat-tile__sub">
+              <mat-icon class="stat-tile__trend">trending_up</mat-icon>
+              <strong class="stat-tile__good">{{ paidCount }}</strong> paid {{ paidCount === 1 ? 'payment' : 'payments' }}
+            </span>
+          </span>
+        </div>
       </div>
 
-      <div class="saas-card">
+      <app-table-card
+        class="subscription-table-card"
+        [empty]="activeCount === 0"
+        [emptyMessage]="emptyMessage"
+        [emptyHint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
+        [clearable]="hasFilters"
+        (clear)="resetFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="setPage($event)"
+        (pageSizeChange)="pageSize = $event; setPage(0)"
+      >
+        <div tableToolbar>
         <!-- Tabs -->
         <div class="tabs" role="tablist">
           <button
@@ -92,7 +126,6 @@ const EXPIRING_WINDOW_DAYS = 30;
             [attr.aria-selected]="activeTab === 'subscriptions'"
             (click)="activeTab = 'subscriptions'"
           >
-            <mat-icon>card_membership</mat-icon>
             Subscriptions
           </button>
           <button
@@ -103,20 +136,20 @@ const EXPIRING_WINDOW_DAYS = 30;
             [attr.aria-selected]="activeTab === 'payments'"
             (click)="activeTab = 'payments'"
           >
-            <mat-icon>receipt_long</mat-icon>
             Payments
           </button>
         </div>
 
-        <!-- Filters -->
-        <div class="saas-card__header">
+        <!-- Filters: search + dropdowns -->
+        <div class="filter-bar">
           <mat-form-field appearance="outline" class="filter-field filter-field--search">
             <mat-icon matPrefix>search</mat-icon>
             <input
               matInput
               type="text"
-              [placeholder]="activeTab === 'subscriptions' ? 'Search subscription, hostel, plan...' : 'Search transaction, hostel, invoice...'"
+              [placeholder]="activeTab === 'subscriptions' ? 'Search by Subscription ID, Hostel or Plan' : 'Search by Transaction ID, Hostel or Invoice'"
               [(ngModel)]="search[activeTab]"
+              (ngModelChange)="setPage(0)"
             />
             <button
               *ngIf="search[activeTab]"
@@ -132,50 +165,87 @@ const EXPIRING_WINDOW_DAYS = 30;
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="filter-field">
-            <mat-select [(ngModel)]="statusFilter[activeTab]" aria-label="Filter by status">
-              <mat-option value="All">All Statuses</mat-option>
-              <mat-option *ngFor="let s of statusOptions" [value]="s">
-                {{ s }}
-              </mat-option>
+            <mat-icon matPrefix fontSet="material-icons-outlined">apartment</mat-icon>
+            <mat-select [(ngModel)]="hostelFilter[activeTab]" (ngModelChange)="setPage(0)" aria-label="Filter by hostel">
+              <mat-option value="All">All</mat-option>
+              @for (h of hostelOptions; track h) {
+                <mat-option [value]="h">{{ h }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-icon matPrefix fontSet="material-icons-outlined">sell</mat-icon>
+            <mat-select [(ngModel)]="planFilter[activeTab]" (ngModelChange)="setPage(0)" aria-label="Filter by plan">
+              <mat-option value="All">All</mat-option>
+              @for (pl of planOptions; track pl) {
+                <mat-option [value]="pl">{{ pl }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-icon matPrefix fontSet="material-icons-outlined">{{ activeTab === 'subscriptions' ? 'event_repeat' : 'account_balance_wallet' }}</mat-icon>
+            <mat-select [(ngModel)]="extraFilter[activeTab]" (ngModelChange)="setPage(0)" [attr.aria-label]="activeTab === 'subscriptions' ? 'Filter by billing cycle' : 'Filter by payment method'">
+              <mat-option value="All">All</mat-option>
+              @for (o of extraOptions; track o) {
+                <mat-option [value]="o">{{ o }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-icon matPrefix fontSet="material-icons-outlined">toggle_on</mat-icon>
+            <mat-select [ngModel]="statusFilter[activeTab]" (ngModelChange)="setStatus($event)" aria-label="Filter by status">
+              <mat-option value="All">All</mat-option>
+              @for (st of statusOptions; track st) {
+                <mat-option [value]="st">{{ st }}</mat-option>
+              }
             </mat-select>
           </mat-form-field>
 
           @if (hasFilters) {
-            <button type="button" class="filter-reset" (click)="resetFilters()">
-              <mat-icon>restart_alt</mat-icon> Reset
-            </button>
+            <app-button variant="text" size="sm" icon="restart_alt" (clicked)="resetFilters()">Reset</app-button>
           }
         </div>
+        </div>
 
-        <!-- Subscriptions table -->
-        <ng-container *ngIf="activeTab === 'subscriptions'">
-          <div class="table-responsive" *ngIf="filteredSubscriptions.length > 0">
+        <!-- Subscriptions table (header stays visible when empty) -->
+        @if (activeTab === 'subscriptions') {
             <table mat-table [dataSource]="pagedSubscriptions" class="saas-table">
               <ng-container matColumnDef="subscriptionId">
                 <th mat-header-cell *matHeaderCellDef> Subscription ID </th>
-                <td mat-cell *matCellDef="let el" class="font-semibold"> {{ el.subscriptionId }} </td>
+                <td mat-cell *matCellDef="let el">
+                  <button type="button" class="id-link" (click)="openSubscription(el)">{{ el.subscriptionId }}</button>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="hostel">
                 <th mat-header-cell *matHeaderCellDef> Hostel </th>
-                <td mat-cell *matCellDef="let el" class="font-medium"> {{ el.hostelName }} </td>
+                <td mat-cell *matCellDef="let el">
+                  <div class="list-entity">
+                    <span class="list-entity__avatar list-avatar--{{ hostelTone(el.hostelName) }}">{{ initials(el.hostelName) }}</span>
+                    <span class="list-entity__name">{{ el.hostelName }}</span>
+                  </div>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="plan">
                 <th mat-header-cell *matHeaderCellDef> Plan </th>
-                <td mat-cell *matCellDef="let el"> {{ el.planName }} </td>
+                <td mat-cell *matCellDef="let el"><span class="plan-tag plan-tag--{{ el.planName.toLowerCase() }}">{{ el.planName }}</span></td>
               </ng-container>
 
-              <ng-container matColumnDef="startDate">
-                <th mat-header-cell *matHeaderCellDef> Start Date </th>
-                <td mat-cell *matCellDef="let el"> {{ el.startDate | appDate }} </td>
-              </ng-container>
-
-              <ng-container matColumnDef="expiryDate">
-                <th mat-header-cell *matHeaderCellDef> Expiry Date </th>
+              <!-- Start and expiry stacked in one column so every column fits beside the sidebar -->
+              <ng-container matColumnDef="period">
+                <th mat-header-cell *matHeaderCellDef> Period </th>
                 <td mat-cell *matCellDef="let el">
-                  <span [class.expiring-soon]="isExpiringSoon(el)" [matTooltip]="isExpiringSoon(el) ? 'Expires within ' + expiringWindowDays + ' days' : ''">
-                    {{ el.expiryDate | appDate }}
+                  <span class="list-entity__text">
+                    <span>{{ el.startDate | appDate }}</span>
+                    <span
+                      class="list-entity__sub"
+                      [class.expiring-soon]="isExpiringSoon(el)"
+                      [matTooltip]="isExpiringSoon(el) ? 'Expires within ' + expiringWindowDays + ' days' : ''"
+                    >to {{ el.expiryDate | appDate }}</span>
                   </span>
                 </td>
               </ng-container>
@@ -187,7 +257,7 @@ const EXPIRING_WINDOW_DAYS = 30;
 
               <ng-container matColumnDef="amount">
                 <th mat-header-cell *matHeaderCellDef class="num"> Amount </th>
-                <td mat-cell *matCellDef="let el" class="num">
+                <td mat-cell *matCellDef="let el" class="num amount">
                   {{ el.amount > 0 ? (el.amount | appCurrency: '1.0-2') : 'Free' }}
                 </td>
               </ng-container>
@@ -209,42 +279,29 @@ const EXPIRING_WINDOW_DAYS = 30;
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
                 <td mat-cell *matCellDef="let el" class="actions-cell">
-                  <button type="button" class="row-action" [attr.aria-label]="'View ' + el.subscriptionId" (click)="openSubscription(el)">
-                    <mat-icon>visibility</mat-icon>
+                  <app-button variant="outline" size="sm" icon="visibility" [ariaLabel]="'View ' + el.subscriptionId" (clicked)="openSubscription(el)">
                     View
-                  </button>
+                  </app-button>
                 </td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="subscriptionColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: subscriptionColumns;" class="table-row"></tr>
             </table>
-          </div>
+        }
 
-          @if (filteredSubscriptions.length === 0) {
-            <app-empty-state
-              [headers]="subscriptionHeaders"
-              [message]="emptyMessage"
-              [hint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
-              [clearable]="hasFilters"
-              (clear)="resetFilters()"
-            ></app-empty-state>
-          }
-        </ng-container>
-
-        <!-- Payments table -->
-        <ng-container *ngIf="activeTab === 'payments'">
-          <div class="table-responsive" *ngIf="filteredPayments.length > 0">
+        <!-- Payments table (header stays visible when empty) -->
+        @if (activeTab === 'payments') {
             <table mat-table [dataSource]="pagedPayments" class="saas-table">
               <ng-container matColumnDef="transactionId">
                 <th mat-header-cell *matHeaderCellDef> Transaction ID </th>
-                <td mat-cell *matCellDef="let el" class="font-semibold"> {{ el.transactionId }} </td>
+                <td mat-cell *matCellDef="let el" class="font-medium"> {{ el.transactionId }} </td>
               </ng-container>
 
               <ng-container matColumnDef="subscriptionId">
                 <th mat-header-cell *matHeaderCellDef> Subscription ID </th>
                 <td mat-cell *matCellDef="let el">
-                  <button type="button" class="link-cell" (click)="openSubscriptionById(el.subscriptionId)">
+                  <button type="button" class="id-link" (click)="openSubscriptionById(el.subscriptionId)">
                     {{ el.subscriptionId }}
                   </button>
                 </td>
@@ -252,17 +309,22 @@ const EXPIRING_WINDOW_DAYS = 30;
 
               <ng-container matColumnDef="hostel">
                 <th mat-header-cell *matHeaderCellDef> Hostel </th>
-                <td mat-cell *matCellDef="let el" class="font-medium"> {{ el.hostelName }} </td>
+                <td mat-cell *matCellDef="let el">
+                  <div class="list-entity">
+                    <span class="list-entity__avatar list-avatar--{{ hostelTone(el.hostelName) }}">{{ initials(el.hostelName) }}</span>
+                    <span class="list-entity__name">{{ el.hostelName }}</span>
+                  </div>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="plan">
                 <th mat-header-cell *matHeaderCellDef> Plan </th>
-                <td mat-cell *matCellDef="let el"> {{ el.planName }} </td>
+                <td mat-cell *matCellDef="let el"><span class="plan-tag plan-tag--{{ el.planName.toLowerCase() }}">{{ el.planName }}</span></td>
               </ng-container>
 
               <ng-container matColumnDef="totalAmount">
                 <th mat-header-cell *matHeaderCellDef class="num"> Total Amount </th>
-                <td mat-cell *matCellDef="let el" class="num font-medium"> {{ el.totalAmount | appCurrency: '1.2-2' }} </td>
+                <td mat-cell *matCellDef="let el" class="num amount"> {{ el.totalAmount | appCurrency: '1.2-2' }} </td>
               </ng-container>
 
               <ng-container matColumnDef="paymentDate">
@@ -272,7 +334,9 @@ const EXPIRING_WINDOW_DAYS = 30;
 
               <ng-container matColumnDef="paymentMethod">
                 <th mat-header-cell *matHeaderCellDef> Payment Method </th>
-                <td mat-cell *matCellDef="let el"> {{ el.paymentMethod }} </td>
+                <td mat-cell *matCellDef="let el">
+                  <span class="method"><mat-icon class="method__icon">{{ methodIcon(el.paymentMethod) }}</mat-icon>{{ el.paymentMethod }}</span>
+                </td>
               </ng-container>
 
               <ng-container matColumnDef="paymentGateway">
@@ -289,61 +353,38 @@ const EXPIRING_WINDOW_DAYS = 30;
 
               <ng-container matColumnDef="invoiceNumber">
                 <th mat-header-cell *matHeaderCellDef> Invoice Number </th>
-                <td mat-cell *matCellDef="let el"> {{ el.invoiceNumber || '—' }} </td>
+                <td mat-cell *matCellDef="let el" class="invoice-no"> {{ el.invoiceNumber || '—' }} </td>
               </ng-container>
 
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
                 <td mat-cell *matCellDef="let el" class="actions-cell">
-                  <button
-                    type="button"
-                    class="row-edit-btn"
+                  <app-button
+                    variant="icon-outline"
+                    size="sm"
+                    icon="description"
                     [disabled]="!hasInvoice(el)"
                     [matTooltip]="hasInvoice(el) ? 'View Invoice' : 'No invoice for ' + el.paymentStatus.toLowerCase() + ' payments'"
-                    aria-label="View invoice"
-                    (click)="invoices.viewInvoice(el)"
-                  >
-                    <mat-icon>description</mat-icon>
-                  </button>
-                  <button
-                    type="button"
-                    class="row-edit-btn"
+                    ariaLabel="View invoice"
+                    (clicked)="invoices.viewInvoice(el)"
+                  ></app-button>
+                  <app-button
+                    variant="icon-outline"
+                    size="sm"
+                    icon="download"
                     [disabled]="!hasInvoice(el)"
                     [matTooltip]="hasInvoice(el) ? 'Download Receipt' : ''"
-                    aria-label="Download receipt"
-                    (click)="invoices.downloadReceipt(el)"
-                  >
-                    <mat-icon>download</mat-icon>
-                  </button>
+                    ariaLabel="Download receipt"
+                    (clicked)="invoices.downloadReceipt(el)"
+                  ></app-button>
                 </td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="paymentColumns"></tr>
               <tr mat-row *matRowDef="let row; columns: paymentColumns;" class="table-row"></tr>
             </table>
-          </div>
-
-          @if (filteredPayments.length === 0) {
-            <app-empty-state
-              [headers]="paymentHeaders"
-              [message]="emptyMessage"
-              [hint]="hasFilters ? 'Try a different search or status, or clear the filters.' : ''"
-              [clearable]="hasFilters"
-              (clear)="resetFilters()"
-            ></app-empty-state>
-          }
-        </ng-container>
-
-        @if (activeCount > 0) {
-          <app-pagination
-            [page]="safePage"
-            [totalPages]="totalPages"
-            [pageSize]="pageSize"
-            (pageChange)="setPage($event)"
-            (pageSizeChange)="pageSize = $event; setPage(0)"
-          ></app-pagination>
         }
-      </div>
+      </app-table-card>
     </div>
 
     <app-subscription-detail-panel
@@ -357,11 +398,11 @@ const EXPIRING_WINDOW_DAYS = 30;
   styles: [`
     /* Card, table, badges, empty state and pagination: src/styles/_table.scss */
 
-    /* Summary tiles */
+    /* Summary tiles: round icon, label, big coloured number, short status line */
     .stat-row {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
+      gap: 20px;
       margin-bottom: 20px;
     }
 
@@ -378,101 +419,110 @@ const EXPIRING_WINDOW_DAYS = 30;
     }
 
     .stat-tile {
+      --tone: #2563eb;
+      --tone-bg: #eaf1ff;
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 16px 18px;
+      gap: 18px;
+      padding: 20px 22px;
       background: #ffffff;
       border: none;
       border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(15, 34, 74, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+      box-shadow: 0 8px 24px rgba(15, 34, 74, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.04);
       text-align: left;
-      font: inherit;
-      cursor: pointer;
-      transition: box-shadow 0.15s ease, transform 0.15s ease;
-
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 30px rgba(15, 34, 74, 0.08), 0 0 0 1px rgba(13, 148, 136, 0.25);
-      }
     }
 
-    .stat-tile--static {
-      cursor: default;
-
-      &:hover {
-        transform: none;
-        box-shadow: 0 10px 30px rgba(15, 34, 74, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
-      }
-    }
+    .stat-tile--green { --tone: #16a34a; --tone-bg: #e8f7ee; }
+    .stat-tile--orange { --tone: #ea580c; --tone-bg: #fff1e6; }
+    .stat-tile--blue { --tone: #2563eb; --tone-bg: #eaf1ff; }
+    .stat-tile--indigo { --tone: #2563eb; --tone-bg: #e8eeff; }
 
     .stat-tile__icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--tone-bg);
+      color: var(--tone);
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
 
       mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
+        font-size: 26px;
+        width: 26px;
+        height: 26px;
       }
     }
 
-    .stat-tile__icon--success { background: #e6f7f5; color: #0d9488; }
-    .stat-tile__icon--warning { background: #fff7ed; color: #d97706; }
-    .stat-tile__icon--danger { background: #ffebf0; color: #e11d48; }
-    .stat-tile__icon--info { background: #eff6ff; color: #0057e7; }
-
-    .stat-tile__value {
-      font-size: 20px;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1.2;
+    .stat-tile__text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
     }
 
     .stat-tile__label {
-      font-size: 12.5px;
-      font-weight: 600;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .stat-tile__value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--tone);
+      white-space: nowrap;
+    }
+
+    .stat-tile__sub {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
       color: #64748b;
+
+      strong {
+        font-weight: 600;
+        color: #16a34a;
+      }
+    }
+
+    .stat-tile__sub--tone {
+      color: var(--tone);
+    }
+
+    .stat-tile__trend {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      color: #16a34a;
     }
 
     /* Tabs sit above the filters, so the card needs less top padding. */
-    .onboarding-page .saas-card {
-      padding-top: 20px;
+    .subscription-table-card {
+      padding-top: 14px;
     }
 
-    /* Tabs */
+    /* Tabs: blue underline on the active one */
     .tabs {
       display: flex;
-      gap: 4px;
-      border-bottom: 1px solid #e2e8f0;
-      margin-bottom: 20px;
+      gap: 8px;
+      margin-bottom: 18px;
     }
 
     .tab {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 14px;
+      padding: 12px 16px;
       background: none;
       border: none;
       border-bottom: 2px solid transparent;
       margin-bottom: -1px;
-      color: #64748b;
+      color: #475569;
+      font: inherit;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
       transition: color 0.15s ease, border-color 0.15s ease;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
 
       &:hover {
         color: #0f172a;
@@ -480,12 +530,98 @@ const EXPIRING_WINDOW_DAYS = 30;
     }
 
     .tab--active {
-      color: #0d9488;
-      border-bottom-color: #0d9488;
+      color: #2563eb;
+      font-weight: 600;
+      border-bottom-color: #2563eb;
 
       &:hover {
-        color: #0d9488;
+        color: #2563eb;
       }
+    }
+
+    /* Filters */
+    /* Compact filters: fixed widths instead of stretching across the card */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+
+      .filter-field {
+        width: 160px;
+        max-width: 100%;
+      }
+
+      .filter-field--search {
+        width: 280px;
+      }
+
+      @media (max-width: 600px) {
+        .filter-field,
+        .filter-field--search {
+          width: 100%;
+        }
+      }
+    }
+
+    .filter-bar mat-icon[matPrefix] {
+      color: #64748b;
+    }
+
+    /* Payments: method with icon, invoice number */
+    .method {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    .method__icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #2563eb;
+    }
+
+    .invoice-no {
+      color: #334155 !important;
+      white-space: nowrap;
+    }
+
+    /* Table cells */
+    .id-link {
+      padding: 0;
+      border: none;
+      background: none;
+      font: inherit;
+      font-weight: 500;
+      color: #2563eb;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .plan-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .plan-tag--premium { background: #e8f0ff; color: #1d4ed8; }
+    .plan-tag--standard { background: #e6f7ef; color: #15803d; }
+    .plan-tag--basic { background: #f3eefe; color: #6d28d9; }
+
+    .amount {
+      font-weight: 700;
+      color: #0f172a !important;
     }
 
     .saas-table .num {
@@ -519,44 +655,39 @@ export class SubscriptionPaymentsComponent {
   /** Search, status filter and page are kept per tab so switching tabs doesn't lose them. */
   search: Record<TabKey, string> = { subscriptions: '', payments: '' };
   statusFilter: Record<TabKey, string> = { subscriptions: 'All', payments: 'All' };
+  hostelFilter: Record<TabKey, string> = { subscriptions: 'All', payments: 'All' };
+  planFilter: Record<TabKey, string> = { subscriptions: 'All', payments: 'All' };
+  /** Billing cycle (Subscriptions) or payment method (Payments). */
+  extraFilter: Record<TabKey, string> = { subscriptions: 'All', payments: 'All' };
   currentPage: Record<TabKey, number> = { subscriptions: 0, payments: 0 };
 
   readonly expiringWindowDays = EXPIRING_WINDOW_DAYS;
   readonly hasInvoice = hasInvoice;
   readonly tone = statusTone;
 
-  /** Live lists from the shared store, so recorded payments show up everywhere at once. */
+  /**
+   * Live lists from the shared store, so recorded payments show up everywhere at once.
+   * Only onboarded hostels (the Onboard Hostel list) are shown; payments follow their subscription's hostel.
+   */
   get subscriptions(): HostelSubscription[] {
-    return this.store.subscriptions;
+    return this.store.subscriptions.filter((s) => isOnboardedHostel(s.hostelId));
   }
 
   get payments(): PaymentTransaction[] {
-    return this.store.payments;
+    const ids = new Set(this.subscriptions.map((s) => s.subscriptionId));
+    return this.store.payments.filter((p) => ids.has(p.subscriptionId));
   }
 
   subscriptionColumns = [
     'subscriptionId',
     'hostel',
     'plan',
-    'startDate',
-    'expiryDate',
+    'period',
     'billingCycle',
     'amount',
     'paymentStatus',
     'status',
     'actions',
-  ];
-  subscriptionHeaders = [
-    'Subscription ID',
-    'Hostel',
-    'Plan',
-    'Start Date',
-    'Expiry Date',
-    'Billing Cycle',
-    'Amount',
-    'Payment Status',
-    'Subscription Status',
-    'Actions',
   ];
 
   paymentColumns = [
@@ -571,19 +702,6 @@ export class SubscriptionPaymentsComponent {
     'paymentStatus',
     'invoiceNumber',
     'actions',
-  ];
-  paymentHeaders = [
-    'Transaction ID',
-    'Subscription ID',
-    'Hostel',
-    'Plan',
-    'Total Amount',
-    'Payment Date',
-    'Payment Method',
-    'Payment Gateway',
-    'Payment Status',
-    'Invoice Number',
-    'Actions',
   ];
 
   isPanelOpen = false;
@@ -603,10 +721,61 @@ export class SubscriptionPaymentsComponent {
     return this.activeTab === 'subscriptions' ? SUBSCRIPTION_STATUSES : PAYMENT_STATUSES;
   }
 
+  private get activeRows(): (HostelSubscription | PaymentTransaction)[] {
+    return this.activeTab === 'subscriptions' ? this.subscriptions : this.payments;
+  }
+
+  get hostelOptions(): string[] {
+    return [...new Set(this.activeRows.map((r) => r.hostelName))].sort();
+  }
+
+  get planOptions(): string[] {
+    return [...new Set(this.activeRows.map((r) => r.planName))].sort();
+  }
+
+  /** Billing cycles (Subscriptions) or payment methods (Payments) present in the data. */
+  get extraOptions(): string[] {
+    const values =
+      this.activeTab === 'subscriptions'
+        ? this.subscriptions.map((s) => s.billingCycle as string)
+        : this.payments.map((p) => p.paymentMethod as string);
+    return [...new Set(values)].filter(Boolean).sort();
+  }
+
+  setStatus(status: string): void {
+    this.statusFilter[this.activeTab] = status;
+    this.setPage(0);
+  }
+
+  /** "Grand Stay Hostel" → "GS" */
+  initials(name: string): string {
+    return name
+      .split(/\s+/)
+      .filter((w) => /^[A-Za-z]/.test(w))
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('');
+  }
+
+  /** A stable avatar colour per hostel name. */
+  hostelTone(name: string): string {
+    const tones = ['blue', 'purple', 'green', 'amber'];
+    return tones[[...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % tones.length];
+  }
+
   // ---- Summary tiles ----
 
   countByStatus(status: string): number {
     return this.subscriptions.filter((s) => s.status === status).length;
+  }
+
+  /** Icon per payment method (Payments table). */
+  methodIcon(method: string): string {
+    return { UPI: 'qr_code_2', Card: 'credit_card', 'Net Banking': 'account_balance', 'Bank Transfer': 'account_balance' }[method] ?? 'payments';
+  }
+
+  get paidCount(): number {
+    return this.payments.filter((p) => p.paymentStatus === 'Paid').length;
   }
 
   get totalCollected(): number {
@@ -626,23 +795,26 @@ export class SubscriptionPaymentsComponent {
     return this.subscriptions.filter((s) => this.isExpiringSoon(s)).length;
   }
 
-  /** True when the current tab has a search term or a status filter applied. */
+  /** True when the current tab has a search term or any filter applied. */
   get hasFilters(): boolean {
-    return !!this.search[this.activeTab].trim() || this.statusFilter[this.activeTab] !== 'All';
+    const t = this.activeTab;
+    return (
+      !!this.search[t].trim() ||
+      this.statusFilter[t] !== 'All' ||
+      this.hostelFilter[t] !== 'All' ||
+      this.planFilter[t] !== 'All' ||
+      this.extraFilter[t] !== 'All'
+    );
   }
 
-  /** Clears the current tab's search and status filter. */
+  /** Clears the current tab's search and filters. */
   resetFilters(): void {
     this.search[this.activeTab] = '';
     this.statusFilter[this.activeTab] = 'All';
+    this.hostelFilter[this.activeTab] = 'All';
+    this.planFilter[this.activeTab] = 'All';
+    this.extraFilter[this.activeTab] = 'All';
     this.currentPage[this.activeTab] = 0;
-  }
-
-  applyQuickFilter(tab: TabKey, status: string): void {
-    this.activeTab = tab;
-    this.search[tab] = '';
-    this.statusFilter[tab] = status;
-    this.currentPage[tab] = 0;
   }
 
   // ---- Filtering ----
@@ -654,9 +826,15 @@ export class SubscriptionPaymentsComponent {
   get filteredSubscriptions(): HostelSubscription[] {
     const term = this.search.subscriptions.trim().toLowerCase();
     const status = this.statusFilter.subscriptions;
+    const { subscriptions: hostel } = this.hostelFilter;
+    const { subscriptions: plan } = this.planFilter;
+    const { subscriptions: cycle } = this.extraFilter;
     return this.subscriptions.filter(
       (s) =>
         (status === 'All' || s.status === status) &&
+        (hostel === 'All' || s.hostelName === hostel) &&
+        (plan === 'All' || s.planName === plan) &&
+        (cycle === 'All' || s.billingCycle === cycle) &&
         (!term || this.matches(term, [s.subscriptionId, s.hostelName, s.planName, s.billingCycle])),
     );
   }
@@ -664,10 +842,16 @@ export class SubscriptionPaymentsComponent {
   get filteredPayments(): PaymentTransaction[] {
     const term = this.search.payments.trim().toLowerCase();
     const status = this.statusFilter.payments;
+    const { payments: hostel } = this.hostelFilter;
+    const { payments: plan } = this.planFilter;
+    const { payments: method } = this.extraFilter;
     return this.payments
       .filter(
         (p) =>
           (status === 'All' || p.paymentStatus === status) &&
+          (hostel === 'All' || p.hostelName === hostel) &&
+          (plan === 'All' || p.planName === plan) &&
+          (method === 'All' || p.paymentMethod === method) &&
           (!term ||
             this.matches(term, [
               p.transactionId,
@@ -694,7 +878,7 @@ export class SubscriptionPaymentsComponent {
   }
 
   get emptyMessage(): string {
-    return this.search[this.activeTab] || this.statusFilter[this.activeTab] !== 'All'
+    return this.hasFilters
       ? 'No records match your filters'
       : 'No Data Found';
   }

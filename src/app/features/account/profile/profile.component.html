@@ -1,6 +1,6 @@
 @if (profile) {
   <div class="profile-page">
-    <!-- ===== Left: Summary card ===== -->
+    <!-- ===== Left: summary card ===== -->
     <aside class="summary-card">
       <div class="summary-card__avatar-wrap">
         <div class="summary-card__avatar">
@@ -12,52 +12,61 @@
         </div>
         <button
           type="button"
-          class="summary-card__camera"
+          class="summary-card__edit"
           matTooltip="Change photo"
           aria-label="Change profile photo"
           (click)="choosePhoto()"
         >
-          <mat-icon>photo_camera</mat-icon>
+          <mat-icon>edit</mat-icon>
         </button>
         <input #photoInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onPhotoSelected($event)" />
       </div>
 
       <h2 class="summary-card__name">
         <span>{{ displayName }}</span>
-        <mat-icon class="summary-card__verified" [matTooltip]="profile.designation" aria-label="Verified">verified</mat-icon>
+        <mat-icon class="summary-card__verified" aria-label="Verified">verified</mat-icon>
       </h2>
-
-      <button type="button" class="btn-upload" (click)="choosePhoto()">
-        {{ preview.avatarDataUrl ? 'Change Photo' : 'Upload Photo' }}
-      </button>
-      @if (preview.avatarDataUrl) {
-        <button type="button" class="link-btn link-btn--danger" (click)="removePhoto()">Remove photo</button>
-      }
-      <p class="summary-card__hint">PNG, JPG or WEBP · max 1 MB</p>
+      <span class="summary-card__role">{{ profile.designation }}</span>
 
       <ul class="summary-card__meta">
         <li>
-          <mat-icon>mail_outline</mat-icon>
+          <span class="meta-icon"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon></span>
           <div class="meta-text">
-            <span class="meta-label">Email</span>
-            <span class="meta-value">{{ preview.email || '—' }}</span>
+            <span class="meta-label">Member Since</span>
+            <span class="meta-value">{{ profile.memberSince | appDate }}</span>
           </div>
         </li>
         <li>
-          <mat-icon>smartphone</mat-icon>
+          <span class="meta-icon"><mat-icon fontSet="material-icons-outlined">schedule</mat-icon></span>
           <div class="meta-text">
-            <span class="meta-label">Phone</span>
-            <span class="meta-value">{{ profile.mobileCode }} {{ profile.mobile }}</span>
+            <span class="meta-label">Last Login</span>
+            <span class="meta-value">{{ lastLoginAt ? (lastLoginAt | appDate: 'datetime') : '—' }}</span>
           </div>
         </li>
         <li>
-          <mat-icon>event</mat-icon>
+          <span class="meta-icon"><mat-icon fontSet="material-icons-outlined">badge</mat-icon></span>
           <div class="meta-text">
-            <span class="meta-label">Member since</span>
-            <span class="meta-value">{{ profile.memberSince | date: 'MMM y' }}</span>
+            <span class="meta-label">User ID</span>
+            <span class="meta-value">{{ profile.userId }}</span>
           </div>
         </li>
       </ul>
+
+      <div class="summary-card__actions">
+        <app-button icon="cloud_upload" [block]="true" (clicked)="choosePhoto()">
+          {{ preview.avatarDataUrl ? 'Change Photo' : 'Upload Photo' }}
+        </app-button>
+        @if (preview.avatarDataUrl) {
+          <app-button variant="danger-outline" icon="delete" [iconOutlined]="true" [block]="true" (clicked)="removePhoto()">
+            Remove Photo
+          </app-button>
+        }
+      </div>
+
+      <p class="summary-card__hint">
+        Supported formats: JPG, PNG, WEBP<br />
+        Max file size: 1 MB
+      </p>
     </aside>
 
     <!-- ===== Right column ===== -->
@@ -65,14 +74,15 @@
       <!-- Personal information -->
       <section class="card">
         <div class="card__header">
-          <mat-icon class="card__icon">person</mat-icon>
+          <span class="card__icon"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
           <h3 class="card__title">Personal Information</h3>
           @if (form.dirty) {
             <span class="unsaved-pill"><span class="unsaved-pill__dot"></span> Unsaved changes</span>
           }
         </div>
 
-        <form [formGroup]="form" (ngSubmit)="onSave()" id="profileForm" class="fields-grid" novalidate>
+        <form [formGroup]="form" (ngSubmit)="onSave()" id="profileForm" novalidate>
+          <div class="fields-grid">
           <div class="field-group">
             <label class="field-label" for="pf-first">First Name <span class="required-star">*</span></label>
             <mat-form-field appearance="outline" class="full-width">
@@ -139,7 +149,7 @@
               @if (hasError('mobile', 'required')) {
                 <mat-error>Mobile number is required</mat-error>
               } @else if (hasError('mobile', 'pattern')) {
-                <mat-error>Enter a 10-digit mobile number</mat-error>
+                <mat-error>Enter a 10-digit mobile number starting with 6-9</mat-error>
               }
             </mat-form-field>
           </div>
@@ -148,7 +158,7 @@
             <span class="field-label">Designation</span>
             <div class="readonly-value" matTooltip="This field can't be edited">
               <span>{{ profile.designation }}</span>
-              <mat-icon>lock_outline</mat-icon>
+              <span class="readonly-value__lock"><mat-icon>lock</mat-icon></span>
             </div>
           </div>
 
@@ -156,68 +166,86 @@
             <span class="field-label">User ID</span>
             <div class="readonly-value" matTooltip="This field can't be edited">
               <span>{{ profile.userId }}</span>
-              <mat-icon>lock_outline</mat-icon>
+              <span class="readonly-value__lock"><mat-icon>lock</mat-icon></span>
             </div>
           </div>
-        </form>
+          </div>
 
-        <div class="card__footer">
-          <button type="submit" form="profileForm" class="btn-primary" [disabled]="!form.dirty || form.invalid || saving">
-            @if (saving) {
-              <mat-spinner diameter="16"></mat-spinner>
-              <span>Saving…</span>
-            } @else {
-              <span>Save</span>
-            }
-          </button>
-        </div>
+          <!-- Footer sits inside the form so the shared submit button still submits it. -->
+          <div class="card__footer">
+            <app-button
+              type="submit"
+              icon="save"
+              [iconOutlined]="true"
+              [loading]="saving"
+              [disabled]="!form.dirty || form.invalid || saving"
+            >
+              {{ saving ? 'Saving…' : 'Save Changes' }}
+            </app-button>
+          </div>
+        </form>
       </section>
 
       <!-- Account security -->
       <section class="card">
-        <div class="card__header card__header--plain">
-          <mat-icon class="card__icon">verified_user</mat-icon>
-          <h3 class="card__title">Account Security</h3>
+        <div class="card__header">
+          <span class="card__icon"><mat-icon fontSet="material-icons-outlined">shield</mat-icon></span>
+          <div>
+            <h3 class="card__title">Account Security</h3>
+            <p class="card__subtitle">Manage your password and security settings</p>
+          </div>
         </div>
 
         <div class="security">
-          <div class="security__body">
-            <div class="security__title">Password</div>
-            <dl class="security__rows">
-              <div class="security__row">
-                <dt><mat-icon>info_outline</mat-icon> Last changed</dt>
-                <dd>
+          <div class="security__stats">
+            <div class="security__stat">
+              <span class="security__stat-icon"><mat-icon>lock</mat-icon></span>
+              <div>
+                <div class="security__stat-label">Password Last Changed</div>
+                <div class="security__stat-value">
                   @if (passwordChangedOn) {
                     {{ passwordChangedOn | appDate: 'datetime' }}
                   } @else {
                     {{ passwordAgeLabel }}
                   }
-                </dd>
+                </div>
               </div>
-              <div class="security__row">
-                <dt><mat-icon>info_outline</mat-icon> Expires on</dt>
-                <dd>
+            </div>
+
+            <div class="security__stat">
+              <span class="security__stat-icon"><mat-icon fontSet="material-icons-outlined">event</mat-icon></span>
+              <div>
+                <div class="security__stat-label">Password Expires On</div>
+                <div class="security__stat-value">
                   @if (passwordExpiresOn) {
-                    {{ passwordExpiresOn | appDate: 'datetime' }}
+                    {{ passwordExpiresOn | appDate }}
+                    @switch (passwordStatus) {
+                      @case ('expired') {
+                        <span class="pw-status pw-status--expired">• Expired</span>
+                      }
+                      @case ('soon') {
+                        <span class="pw-status pw-status--soon">• In {{ passwordExpiresInDays }} days</span>
+                      }
+                      @default {
+                        <span class="pw-status pw-status--ok">• In {{ passwordExpiresInDays }} days</span>
+                      }
+                    }
                   } @else {
                     Never
                   }
-                  @switch (passwordStatus) {
-                    @case ('expired') {
-                      <span class="pw-pill pw-pill--expired">Expired</span>
-                    }
-                    @case ('soon') {
-                      <span class="pw-pill pw-pill--soon">{{ passwordExpiresInDays }} days left</span>
-                    }
-                  }
-                </dd>
+                </div>
               </div>
-            </dl>
+            </div>
           </div>
-          <a routerLink="/change-password" class="btn-outline">
-            <mat-icon>lock_outline</mat-icon>
+
+          <app-button icon="lock" [block]="true" (clicked)="goToChangePassword()">
             Change Password
-          </a>
+          </app-button>
+        </div>
+
+        <div class="security-tip">
+          <mat-icon>gpp_good</mat-icon>
+          <span><strong>Security Tip:</strong> Use a strong password with a mix of letters, numbers, and symbols.</span>
         </div>
       </section>
     </div>

@@ -1,6 +1,6 @@
 import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
-/** The signed-in SuperAdmin's own profile (not a hostel admin). */
+/** The signed-in Admin's own profile (not a hostel admin). */
 export interface UserProfile {
   userId: string;
   firstName: string;

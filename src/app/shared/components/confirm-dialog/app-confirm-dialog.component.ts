@@ -1,6 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { AppButtonComponent, AppButtonVariant } from '../button/app-button.component';
 
 export type ConfirmDialogTone = 'primary' | 'danger' | 'success' | 'warning';
 
@@ -27,6 +28,13 @@ export interface ConfirmDialogData {
   note?: string;
 }
 
+const CONFIRM_VARIANTS: Record<ConfirmDialogTone, AppButtonVariant> = {
+  primary: 'primary',
+  danger: 'danger',
+  success: 'accent',
+  warning: 'warning',
+};
+
 const DEFAULT_ICONS: Record<ConfirmDialogTone, string> = {
   primary: 'help_outline',
   danger: 'warning_amber',
@@ -42,7 +50,7 @@ const DEFAULT_ICONS: Record<ConfirmDialogTone, string> = {
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatIconModule],
+  imports: [MatDialogModule, MatIconModule, AppButtonComponent],
   templateUrl: './app-confirm-dialog.component.html',
   styleUrl: './app-confirm-dialog.component.scss',
 })
@@ -54,6 +62,11 @@ export class AppConfirmDialogComponent {
 
   get tone(): ConfirmDialogTone {
     return this.data.tone ?? (this.data.danger ? 'danger' : 'primary');
+  }
+
+  /** Confirm button colour follows the dialog's tone. */
+  get confirmVariant(): AppButtonVariant {
+    return CONFIRM_VARIANTS[this.tone];
   }
 
   get icon(): string {

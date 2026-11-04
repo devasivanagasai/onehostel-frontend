@@ -1,0 +1,138 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.parcels-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.pcl-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.pcl-kpi--orange .kpi-card__value { color: #ea580c; }
+.pcl-kpi--green .kpi-card__value { color: #16a34a; }
+.pcl-kpi--red .kpi-card__value { color: #dc2626; }
+.pcl-kpi--indigo .kpi-card__value { color: #4f46e5; }
+.pcl-kpi-icon--red { background: #fee2e2; color: #dc2626; }
+
+.pcl-buttons {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.parcels-table-card {
+  padding-top: 8px;
+}
+
+.parcels-table {
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .pcl-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    object-fit: cover;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .pcl-dot {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff1e6;
+    color: #ea580c;
+
+    mat-icon { @include icon(17px); }
+  }
+
+  .pcl-clip {
+    display: block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pcl-storage {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 140px;
+    color: #334155;
+
+    mat-icon { @include icon(16px); flex-shrink: 0; color: #64748b; }
+  }
+
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  // Age since arrival: green today, amber 1–3 days, red overdue
+  .pcl-age {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &--green { background: #dcfce7; color: #15803d; }
+    &--amber { background: #fef3c7; color: #b45309; }
+    &--red { background: #fee2e2; color: #b91c1c; }
+    &--muted { color: #94a3b8; }
+  }
+
+  .list-entity__text .status-badge { align-self: flex-start; }
+
+  .pcl-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  // Plain icon actions: blue, green for collected, red for return
+  .pcl-act ::ng-deep button { color: #2563eb; }
+  .pcl-act--ok ::ng-deep button { color: #16a34a; }
+  .pcl-act--danger ::ng-deep button { color: #dc2626; }
+  .pcl-act ::ng-deep button:disabled { color: #cbd5e1; }
+
+  .is-overdue td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}
+
+.muted {
+  color: #94a3b8;
+}

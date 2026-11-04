@@ -1,0 +1,318 @@
+// KPI summary row and filter card shared by the hostel-owner list screens (Rooms & Beds, Residents).
+//
+//   <section class="kpi-row">
+//     <div class="kpi-card"> <span class="kpi-card__icon kpi-card__icon--teal">…</span> <div class="kpi-card__body">…</div> </div>
+//   </section>
+//   <div class="filter-card">
+//     <label class="filter-search">…</label>
+//     <label class="filter-select"><span class="filter-select__control"><select>…</select><mat-icon>expand_more</mat-icon></span></label>
+//     <div class="filter-toggle">…</div>
+//     <app-button variant="text" size="sm" icon="restart_alt">Reset</app-button>
+//     <app-button class="filter-card__add" icon="add">…</app-button>
+//   </div>
+
+$text: #0f172a;
+$text-2: #475569;
+$muted: #64748b;
+$line: #e8edf3;
+
+@mixin card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+}
+
+@mixin icon-size($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+/* ---- KPI row ---- */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 720px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.kpi-card {
+  @include card;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  min-width: 0;
+
+  &__icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      @include icon-size(26px);
+    }
+
+    &--teal { background: #e6f7f5; color: #0d9488; }
+    &--blue { background: #eaf1ff; color: #2563eb; }
+    &--indigo { background: #eef0ff; color: #4f46e5; }
+    &--green { background: #e9f9ef; color: #16a34a; }
+    &--orange { background: #fff1e6; color: #ea580c; }
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-2;
+  }
+
+  &__value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: $text;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: $muted;
+    margin-top: 2px;
+
+    &--accent {
+      color: #2563eb;
+      font-weight: 600;
+    }
+  }
+
+  &__bar {
+    display: block;
+    height: 4px;
+    margin-top: 8px;
+    border-radius: 4px;
+    background: #eef2f7;
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: #4f46e5;
+      transition: width 0.3s ease;
+    }
+  }
+}
+
+/* ---- Filter card ---- */
+.filter-card {
+  @include card;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  padding: 14px 16px;
+  min-width: 0;
+
+  // Primary action (e.g. Add Room) sits at the far right of the card
+  &__add {
+    margin-left: auto;
+  }
+}
+
+.filter-search {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 300px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+  border: 1px solid $line;
+  border-radius: 999px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus-within {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  }
+
+  > mat-icon {
+    @include icon-size(20px);
+    color: $muted;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    font-size: 13.5px;
+    color: $text;
+
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  &__clear {
+    display: flex;
+    padding: 2px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: $muted;
+    cursor: pointer;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    mat-icon {
+      @include icon-size(16px);
+    }
+  }
+}
+
+.filter-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 128px;
+
+  &__control {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 38px;
+    border: 1px solid $line;
+    border-radius: 10px;
+    background: #ffffff;
+
+    &:focus-within {
+      border-color: #0d9488;
+    }
+
+    select {
+      appearance: none;
+      width: 100%;
+      height: 100%;
+      padding: 0 30px 0 12px;
+      border: none;
+      outline: none;
+      background: transparent;
+      font: inherit;
+      font-size: 13px;
+      color: #334155;
+      cursor: pointer;
+    }
+
+    mat-icon {
+      position: absolute;
+      right: 8px;
+      pointer-events: none;
+      @include icon-size(18px);
+      color: $muted;
+    }
+  }
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+/* ---- Row / card action menus (rendered in the overlay, so global) ---- */
+.mat-mdc-menu-item.menu-item--danger,
+.mat-mdc-menu-item.menu-item--danger .mat-icon {
+  color: #dc2626;
+}
+
+/* ---- Compact card action menu (e.g. a room card's ⋮): outline icons, 40px rows ---- */
+.mat-mdc-menu-panel.room-actions-menu {
+  min-width: 210px;
+  border-radius: 12px;
+
+  .mat-mdc-menu-content {
+    padding: 6px 0;
+  }
+
+  .mat-mdc-menu-item {
+    min-height: 40px;
+    padding: 0 18px;
+
+    .mat-mdc-menu-item-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e293b;
+    }
+
+    .mat-icon {
+      margin-right: 14px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+
+    &.menu-item--danger .mat-mdc-menu-item-text,
+    &.menu-item--danger .mat-icon {
+      color: #dc2626;
+    }
+  }
+}
+
+// ---- Switches (mat-slide-toggle): teal track with a white handle when on ----------------
+// The Material theme's accent is orange; pages may still override this (System Defaults uses green).
+.mat-mdc-slide-toggle {
+  --mdc-switch-selected-handle-color: #ffffff;
+  --mdc-switch-selected-hover-handle-color: #ffffff;
+  --mdc-switch-selected-focus-handle-color: #ffffff;
+  --mdc-switch-selected-pressed-handle-color: #ffffff;
+  --mdc-switch-selected-track-color: #0d9488;
+  --mdc-switch-selected-hover-track-color: #0f766e;
+  --mdc-switch-selected-focus-track-color: #0f766e;
+  --mdc-switch-selected-pressed-track-color: #0f766e;
+  --mdc-switch-selected-icon-color: #0d9488;
+
+  // The theme sets the tokens with equal specificity, so paint the "on" state directly too
+  .mdc-switch.mdc-switch--selected:enabled .mdc-switch__track::after {
+    background: #0d9488 !important;
+  }
+
+  .mdc-switch.mdc-switch--selected:enabled:hover .mdc-switch__track::after {
+    background: #0f766e !important;
+  }
+
+  .mdc-switch.mdc-switch--selected:enabled .mdc-switch__handle::after {
+    background: #ffffff !important;
+  }
+}

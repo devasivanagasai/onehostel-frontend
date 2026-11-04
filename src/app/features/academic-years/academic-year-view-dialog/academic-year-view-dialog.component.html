@@ -1,0 +1,106 @@
+<app-dialog [eyebrow]="'Academic Year ID · ' + y.id" [title]="y.name" icon="school" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="ay-pill ay-pill--{{ tones[y.status] }}">{{ y.status }}</span>
+    @if (ready) { <span class="ay-pill ay-pill--warning">Ready to activate</span> }
+  </ng-container>
+
+  @if (ready) {
+    <p class="ay-banner ay-banner--warn"><mat-icon fontSet="material-icons-outlined">event_available</mat-icon>
+      The start date has arrived. Status is not changed automatically{{ y.status === 'Draft' ? ': mark it Upcoming, then activate it' : ': activate it when you are ready' }}.</p>
+  }
+  @if (y.status === 'Completed') {
+    <p class="ay-banner ay-banner--info"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>Completed years are read-only. Use an authorized correction (needs a reason).</p>
+  } @else if (y.status === 'Archived') {
+    <p class="ay-banner ay-banner--info"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>Archived years are read-only.</p>
+  }
+
+  <div class="av-facts">
+    <div class="av-tile">
+      <span class="av-label">Dates</span>
+      <strong>{{ fmt.date(y.startDate) }} → {{ fmt.date(y.endDate) }}</strong>
+      <small>{{ days }} days</small>
+    </div>
+    <div class="av-tile">
+      <span class="av-label">Applicable block</span>
+      <strong>{{ y.block || 'Whole hostel' }}</strong>
+    </div>
+    <div class="av-tile">
+      <span class="av-label">Allocation window</span>
+      @if (y.allocationWindow; as w) { <strong>{{ fmt.date(w.start) }} → {{ fmt.date(w.end) }}</strong> }
+      @else { <strong class="av-muted">Not set</strong> }
+    </div>
+    <div class="av-tile av-wide">
+      <span class="av-label">Resident eligibility</span>
+      @if (y.eligibility.length) {
+        <span class="av-chips">@for (c of y.eligibility; track c) { <span class="av-chip">{{ c }}</span> }</span>
+      } @else { <strong class="av-muted">Open to all residents</strong> }
+    </div>
+    <div class="av-tile">
+      <span class="av-label">Assigned residents</span>
+      <strong>{{ y.residentIds.length }} of {{ eligibleCount }}</strong>
+      <small>Bed allocations are not changed</small>
+    </div>
+  </div>
+
+  <!-- Residents -->
+  <section class="av-section" aria-label="Eligible residents">
+    <h3>Residents</h3>
+    <p class="av-note">Assigning a resident to a year only records the link. It never checks anyone out or moves their bed.</p>
+    <div class="av-tools">
+      <label class="av-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search name, ID or college" aria-label="Search residents" [(ngModel)]="search" name="search" />
+      </label>
+      <span class="av-seg" role="group" aria-label="Assignment filter">
+        @for (f of filters; track f) {
+          <button type="button" class="av-seg__btn" [class.is-on]="filter === f" [attr.aria-pressed]="filter === f" (click)="filter = f">{{ f }}</button>
+        }
+      </span>
+    </div>
+
+    @if (error) { <p class="ay-banner ay-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+
+    <ul class="av-rows">
+      @for (r of rows; track r.id) {
+        <li class="av-row" [class.is-assigned]="r.assigned">
+          <span class="av-row__main">
+            <strong>{{ r.name }}</strong>
+            <small>{{ r.id }} · {{ r.group }} · {{ r.status }} · {{ r.location }}</small>
+            @if (r.elsewhere) { <small class="av-warn">Already in {{ r.elsewhere.name }} ({{ r.elsewhere.id }})</small> }
+            @else if (!r.matches && !r.assigned) { <small class="av-muted">Outside the eligibility labels</small> }
+          </span>
+          @if (r.assigned) {
+            <span class="ay-pill ay-pill--success">Assigned</span>
+            @if (canAssign) { <app-button variant="danger-outline" size="sm" icon="person_remove" [ariaLabel]="'Unassign ' + r.name" (clicked)="toggle(r)">Unassign</app-button> }
+          } @else if (canAssign) {
+            <app-button variant="outline" size="sm" icon="person_add" [disabled]="!!r.elsewhere" [ariaLabel]="'Assign ' + r.name" (clicked)="toggle(r)">Assign</app-button>
+          }
+        </li>
+      } @empty {
+        <li class="av-empty">No residents match.</li>
+      }
+    </ul>
+  </section>
+
+  <section class="av-section" aria-label="History">
+    <h3>History</h3>
+    <ol class="av-history">
+      @for (h of history; track $index) {
+        <li>
+          <span class="av-when">{{ fmt.date(h.at, 'datetime') }}</span>
+          <span><strong>{{ h.action }}</strong> <small>by {{ h.by }}</small>@if (h.note) { <small class="av-notes">{{ h.note }}</small> }</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    <span class="app-dialog__spacer"></span>
+    @if (y.status === 'Completed') { <app-button variant="outline" icon="edit_note" (clicked)="act('correct')">Authorized Correction</app-button> }
+    @for (n of next; track n) {
+      <app-button [variant]="n === 'Archived' ? 'danger-outline' : 'outline'" [icon]="icons[n]" (clicked)="act(n)">{{ n === 'Archived' && y.status === 'Draft' ? 'Cancel (Archive)' : n === 'Archived' ? 'Archive' : 'Mark ' + n }}</app-button>
+    }
+    @if (editable) { <app-button variant="accent" icon="edit" (clicked)="act('edit')">Edit</app-button> }
+  </ng-container>
+</app-dialog>

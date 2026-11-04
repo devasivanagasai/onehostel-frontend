@@ -1,4 +1,4 @@
-import { LoginEvent, LogoutType } from '../admin-management/admin.models';
+import { LoginEvent, LogoutType } from '../../core/models/admin.models';
 
 export type ResidentStatus = 'Active' | 'Inactive' | 'Blocked';
 

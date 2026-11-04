@@ -1,0 +1,177 @@
+<div [formGroup]="group">
+  <!-- Pending identity change: the current name stays until SuperAdmin approves -->
+  @if (pending) {
+    <div class="pf-notice pf-notice--pending" role="status">
+      <mat-icon fontSet="material-icons-outlined">hourglass_top</mat-icon>
+      <div class="pf-notice__text">
+        <strong>Name change pending SuperAdmin approval</strong>
+        <span>
+          Requested “{{ pending.requestedName }}” on {{ fmt.date(pending.requestedAt, 'datetime') }}.
+          “{{ currentName }}” stays in use until it's approved.
+        </span>
+      </div>
+      <app-button variant="danger-outline" size="sm" icon="undo" (clicked)="withdraw.emit()">Withdraw request</app-button>
+    </div>
+  }
+
+  <!-- Logo -->
+  <h3 class="pf-subhead"><mat-icon fontSet="material-icons-outlined">image</mat-icon>Logo</h3>
+  <div class="pf-logo">
+    <div class="pf-logo__preview" [class.has-logo]="!!logo">
+      @if (logo) {
+        <img [src]="logo" alt="Hostel logo preview" />
+      } @else {
+        <span>{{ initials }}</span>
+      }
+    </div>
+    <div class="pf-logo__meta">
+      <div class="pf-logo__actions">
+        <input #logoInput type="file" hidden [accept]="logoAccept" (change)="onLogoPicked(logoInput)" />
+        <app-button variant="secondary" size="sm" icon="upload" (clicked)="logoInput.click()">
+          {{ logo ? 'Replace logo' : 'Upload logo' }}
+        </app-button>
+        @if (logo) {
+          <app-button variant="text" size="sm" icon="delete_outline" (clicked)="removeLogo()">Remove</app-button>
+        }
+      </div>
+      <span class="fk-hint">{{ logoName || 'No logo uploaded' }} · JPG, PNG, WebP or SVG, up to 2 MB. Square images work best.</span>
+    </div>
+  </div>
+
+  <!-- Identity -->
+  <h3 class="pf-subhead"><mat-icon fontSet="material-icons-outlined">badge</mat-icon>Identity</h3>
+  <div class="pf-grid">
+    <div class="fk-field">
+      <label class="fk-label" for="hs-name">Hostel Name<span class="req">*</span></label>
+      <span class="fk-control fk-control--lead" [class.is-invalid]="show('hostelName')" [class.is-locked]="group.get('hostelName')?.disabled">
+        <mat-icon class="fk-lead" fontSet="material-icons-outlined">apartment</mat-icon>
+        <input id="hs-name" formControlName="hostelName" maxlength="80" placeholder="Enter hostel name" />
+        @if (group.get('hostelName')?.disabled) {
+          <mat-icon class="pf-lock" fontSet="material-icons-outlined">lock</mat-icon>
+        }
+      </span>
+      @if (show('hostelName', 'required')) {
+        <span class="fk-error">Hostel name is required</span>
+      } @else if (show('hostelName', 'minlength')) {
+        <span class="fk-error">Use at least 3 characters</span>
+      } @else if (pending) {
+        <span class="fk-hint">Locked while your name change request is pending.</span>
+      } @else if (!permissions.canEditIdentity) {
+        <span class="fk-hint">You don't have permission to change the hostel name. Contact SuperAdmin.</span>
+      } @else if (nameChanged && permissions.identityChangeNeedsApproval) {
+        <span class="fk-hint pf-warn">On save, this is sent to SuperAdmin for approval. The current name stays until then.</span>
+      } @else if (permissions.identityChangeNeedsApproval) {
+        <span class="fk-hint">Renaming is an identity change and needs SuperAdmin approval.</span>
+      }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-type">Hostel Type</label>
+      <span class="fk-control fk-control--lead is-locked">
+        <mat-icon class="fk-lead" fontSet="material-icons-outlined">category</mat-icon>
+        <input id="hs-type" [value]="hostelType" readonly />
+        <mat-icon class="pf-lock" fontSet="material-icons-outlined" matTooltip="Only SuperAdmin can change the hostel type">lock</mat-icon>
+      </span>
+      <span class="fk-hint">Set during onboarding</span>
+    </div>
+  </div>
+
+  <!-- Address -->
+  <h3 class="pf-subhead"><mat-icon fontSet="material-icons-outlined">location_on</mat-icon>Address</h3>
+  @if (!permissions.canEditContact) {
+    <p class="fk-hint pf-readonly-note"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>Address and contact details are managed by SuperAdmin.</p>
+  }
+  <div class="pf-grid">
+    <div class="fk-field pf-span">
+      <label class="fk-label" for="hs-addr1">Address Line 1<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="show('addressLine1')" [class.is-locked]="!permissions.canEditContact">
+        <input id="hs-addr1" formControlName="addressLine1" maxlength="120" placeholder="Building, street, area" autocomplete="address-line1" />
+      </span>
+      @if (show('addressLine1')) { <span class="fk-error">Address is required</span> }
+    </div>
+
+    <div class="fk-field pf-span">
+      <label class="fk-label" for="hs-addr2">Address Line 2 <span class="opt">(optional)</span></label>
+      <span class="fk-control" [class.is-locked]="!permissions.canEditContact">
+        <input id="hs-addr2" formControlName="addressLine2" maxlength="120" placeholder="Landmark" autocomplete="address-line2" />
+      </span>
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-city">City<span class="req">*</span></label>
+      <span class="fk-control" [class.is-invalid]="show('city')" [class.is-locked]="!permissions.canEditContact">
+        <input id="hs-city" formControlName="city" maxlength="60" placeholder="City" autocomplete="address-level2" />
+      </span>
+      @if (show('city', 'required')) {
+        <span class="fk-error">City is required</span>
+      } @else if (show('city')) {
+        <span class="fk-error">Use letters only</span>
+      }
+    </div>
+
+    <div class="pf-grid pf-grid--inner">
+      <div class="fk-field">
+        <label class="fk-label" for="hs-state">State<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="show('state')" [class.is-locked]="!permissions.canEditContact">
+          <select id="hs-state" formControlName="state">
+            <option value="" disabled>Select state</option>
+            @for (s of states; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+        @if (show('state')) { <span class="fk-error">Select a state</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="hs-pin">PIN Code<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="show('pincode')" [class.is-locked]="!permissions.canEditContact">
+          <input id="hs-pin" formControlName="pincode" inputmode="numeric" maxlength="6" placeholder="6 digits" autocomplete="postal-code" />
+        </span>
+        @if (show('pincode', 'required')) {
+          <span class="fk-error">PIN code is required</span>
+        } @else if (show('pincode')) {
+          <span class="fk-error">Enter a valid 6-digit PIN code</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact -->
+  <h3 class="pf-subhead"><mat-icon fontSet="material-icons-outlined">contact_phone</mat-icon>Contact</h3>
+  <div class="pf-grid pf-grid--3">
+    <div class="fk-field">
+      <label class="fk-label" for="hs-phone">Contact Phone<span class="req">*</span></label>
+      <span class="fk-control fk-control--lead" [class.is-invalid]="show('phone')" [class.is-locked]="!permissions.canEditContact">
+        <span class="fk-lead">+91</span>
+        <input id="hs-phone" formControlName="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" autocomplete="tel-national" />
+      </span>
+      @if (show('phone', 'required')) {
+        <span class="fk-error">Contact phone is required</span>
+      } @else if (show('phone')) {
+        <span class="fk-error">Enter a 10-digit mobile number starting with 6–9</span>
+      }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-email">Contact Email<span class="req">*</span></label>
+      <span class="fk-control fk-control--lead" [class.is-invalid]="show('email')" [class.is-locked]="!permissions.canEditContact">
+        <mat-icon class="fk-lead" fontSet="material-icons-outlined">mail</mat-icon>
+        <input id="hs-email" type="email" formControlName="email" maxlength="120" placeholder="name@example.com" autocomplete="email" />
+      </span>
+      @if (show('email', 'required')) {
+        <span class="fk-error">Contact email is required</span>
+      } @else if (show('email')) {
+        <span class="fk-error">Enter a valid email address</span>
+      }
+    </div>
+
+    <div class="fk-field">
+      <label class="fk-label" for="hs-web">Website <span class="opt">(optional)</span></label>
+      <span class="fk-control fk-control--lead" [class.is-invalid]="show('website')" [class.is-locked]="!permissions.canEditContact">
+        <mat-icon class="fk-lead" fontSet="material-icons-outlined">language</mat-icon>
+        <input id="hs-web" formControlName="website" maxlength="120" placeholder="www.example.com" autocomplete="url" />
+      </span>
+      @if (show('website')) { <span class="fk-error">Enter a valid website address</span> }
+    </div>
+  </div>
+</div>

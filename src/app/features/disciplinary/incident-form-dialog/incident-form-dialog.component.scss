@@ -1,0 +1,80 @@
+// Report / edit incident. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+.inc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.inc__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+}
+
+.inc__count {
+  align-self: flex-end;
+
+  &.is-bad { color: #dc2626; }
+}
+
+.inc__drop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; color: #64748b; }
+  input { flex: 1 1 200px; min-width: 0; font-size: 12.5px; }
+  &:focus-within { border-color: #0d9488; }
+}
+
+.inc__files {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid #e8edf3;
+    border-radius: 8px;
+    font-size: 13px;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; }
+    small { margin-left: auto; color: #64748b; }
+  }
+}
+
+.inc__fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.inc__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  font-size: 12.5px;
+  color: #b91c1c;
+
+  mat-icon { font-size: 17px; width: 17px; height: 17px; }
+}

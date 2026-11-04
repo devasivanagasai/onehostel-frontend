@@ -1,0 +1,350 @@
+// Table look comes from styles/_table.scss; filter card from styles/_page-kit.scss; fields from styles/_dialog-kit.scss.
+@use '../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+$teal: #0d9488;
+
+.permissions-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.prm-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Tabs ---- */
+.prm-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.prm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); }
+  &:hover { color: #1e293b; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: -2px; }
+
+  &.is-active {
+    color: $teal;
+    border-bottom-color: $teal;
+  }
+}
+
+/* ---- Cards ---- */
+.prm-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+}
+
+.prm-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 16px; font-weight: 700; color: #0f172a; }
+  p { margin: 4px 0 0; font-size: 13px; color: #64748b; }
+}
+
+.prm-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---- Role chips ---- */
+.prm-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.prm-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 999px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+
+  &:hover { border-color: $teal; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+
+  &.is-on {
+    border-color: $teal;
+    background: #e6f7f5;
+    color: #0f766e;
+  }
+}
+
+.prm-role__count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.prm-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  font-size: 13px;
+  color: #c2410c;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; }
+}
+
+.prm-foot {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* ---- Matrix / tables ---- */
+.prm-table {
+  .prm-module {
+    text-align: left;
+    font-weight: 600;
+    color: #1e293b;
+
+    .prm-lock { @include icon(16px); margin-left: 6px; vertical-align: middle; color: #94a3b8; }
+  }
+
+  .prm-th-action,
+  .prm-td-action { text-align: center; width: 90px; }
+
+  .is-blocked { background: #f8fafc; }
+  .prm-nowrap { white-space: nowrap; }
+}
+
+.prm-check {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: $teal;
+  cursor: pointer;
+
+  &:disabled { cursor: not-allowed; opacity: 0.5; }
+}
+
+/* ---- Limits form ---- */
+.prm-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  max-width: 720px;
+
+  @media (max-width: 640px) { grid-template-columns: 1fr; }
+}
+
+.prm-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  cursor: pointer;
+
+  input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: $teal; }
+
+  span { display: flex; flex-direction: column; gap: 2px; }
+  strong { font-size: 13.5px; color: #1e293b; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+/* ---- Export switches ---- */
+.prm-switches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prm-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+
+  span { display: flex; flex-direction: column; gap: 2px; }
+  strong { font-size: 13.5px; color: #1e293b; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.prm-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 4px;
+  font-size: 13.5px;
+  color: #64748b;
+
+  mat-icon { @include icon(20px); }
+}
+
+/* ---- Session stats ---- */
+.prm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 520px) { grid-template-columns: 1fr; }
+}
+
+.prm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+
+  mat-icon { @include icon(24px); margin-bottom: 6px; color: $teal; }
+}
+
+.prm-stat__value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.prm-stat__label {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ---- Audit ---- */
+.prm-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+
+  input {
+    height: 42px;
+    padding: 0 10px;
+    border: 1px solid #e8edf3;
+    border-radius: 10px;
+    background: #ffffff;
+    font: inherit;
+    font-size: 13.5px;
+    color: #1e293b;
+
+    &:focus-visible { outline: 2px solid $teal; outline-offset: 1px; }
+  }
+}
+
+.prm-audit-card { padding-top: 8px; }
+
+.prm-audit {
+  .prm-entity {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .prm-changes { min-width: 160px; max-width: 320px; }
+
+  .prm-detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    color: #64748b;
+  }
+
+  .prm-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $teal;
+    cursor: pointer;
+
+    mat-icon { @include icon(18px); }
+    &:focus-visible { outline: 2px solid $teal; outline-offset: 2px; }
+  }
+
+  .prm-diff {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12.5px;
+    color: #334155;
+
+    li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 2px 0; }
+    mat-icon { @include icon(14px); color: #94a3b8; }
+  }
+
+  .prm-old { color: #b91c1c; text-decoration: line-through; }
+  .prm-new { color: #15803d; font-weight: 600; }
+}
+
+.muted { color: #94a3b8; }

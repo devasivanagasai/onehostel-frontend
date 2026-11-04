@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export type NotificationTone = 'success' | 'info' | 'warning' | 'danger';
 
@@ -36,7 +37,7 @@ export function relativeTime(iso: string): string {
 }
 
 /**
- * Platform notifications for the SuperAdmin, shared by the header bell and the
+ * Platform notifications for the Admin, shared by the header bell and the
  * dashboard's Recent Notifications card. UI-only build: in-memory mock data.
  */
 @Injectable({ providedIn: 'root' })
@@ -45,13 +46,13 @@ export class NotificationService {
     {
       id: 1, icon: 'domain_add', tone: 'success', unread: true, timestamp: minutesAgo(5),
       title: 'New hostel onboarded',
-      description: 'Grand Stay Hostel was onboarded and its admin account was created.',
+      description: 'Grand Stay Hostel was onboarded and its hostel owner account was created.',
       route: '/hostel-onboarding',
     },
     {
       id: 2, icon: 'person_add', tone: 'info', unread: true, timestamp: minutesAgo(120),
-      title: 'New admin account created',
-      description: 'An admin was added for Royal Palms Luxury Hostel.',
+      title: 'New hostel owner account created',
+      description: 'A hostel owner was added for Royal Palms Luxury Hostel.',
       route: '/admins',
     },
     {
@@ -62,8 +63,8 @@ export class NotificationService {
     },
     {
       id: 4, icon: 'lock', tone: 'danger', unread: false, timestamp: minutesAgo(22 * 60),
-      title: 'Admin account locked',
-      description: 'An admin account was locked after repeated failed sign-ins.',
+      title: 'Hostel owner account locked',
+      description: 'A hostel owner account was locked after repeated failed sign-ins.',
       route: '/admins',
     },
     {
@@ -80,14 +81,20 @@ export class NotificationService {
   ]);
 
   readonly notifications$ = this.subject.asObservable();
+  private readonly auth = inject(AuthService);
+
+  /** Notifications the signed-in user may act on: ones that lead to an Admin module are Admin-only. */
+  private get visible(): AppNotification[] {
+    return this.subject.value.filter((n) => !n.route || this.auth.canAccess(n.route));
+  }
 
   /** Newest first. */
   get notifications(): AppNotification[] {
-    return [...this.subject.value].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    return [...this.visible].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }
 
   get unreadCount(): number {
-    return this.subject.value.filter((n) => n.unread).length;
+    return this.visible.filter((n) => n.unread).length;
   }
 
   markRead(id: number): void {

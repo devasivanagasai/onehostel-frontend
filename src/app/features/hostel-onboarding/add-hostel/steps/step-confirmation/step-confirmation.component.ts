@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { PLAN_DETAILS, PlanName } from '../../plan-details';
+import { planDetailFor } from '../../plan-details';
+import { SubscriptionPlanService } from '../../../../../core/services/subscription-plan.service';
 import { AppDatePipe } from '../../../../../shared/pipes/app-date.pipe';
 
 /** "9876543210" → "98765 43210" (other lengths are shown as typed). */
@@ -38,15 +39,14 @@ function groupDigits(value: string | null | undefined): string {
         <section class="confirm-card">
           <header class="confirm-card__header">
             <span class="confirm-card__icon"><mat-icon>person</mat-icon></span>
-            <h3 class="confirm-card__title">Admin Details</h3>
+            <h3 class="confirm-card__title">Hostel Owner Details</h3>
           </header>
           <dl class="confirm-list">
             <div><dt>Name</dt><dd>{{ adminName || '—' }}</dd></div>
             <div><dt>Username</dt><dd>{{ value.admin.username || '—' }}</dd></div>
-            <div><dt>Login Method</dt><dd>{{ value.admin.loginMethod || '—' }}</dd></div>
             <div><dt>Email</dt><dd>{{ value.admin.email || '—' }}</dd></div>
             <div><dt>Mobile</dt><dd>{{ adminMobile || '—' }}</dd></div>
-            <div><dt>Role</dt><dd>Administrator</dd></div>
+            <div><dt>Role</dt><dd>Hostel Owner</dd></div>
             <div><dt>Send credentials via</dt><dd>{{ sendMethodsLabel }}</dd></div>
           </dl>
         </section>
@@ -62,7 +62,7 @@ function groupDigits(value: string | null | undefined): string {
             <div><dt>Billing Cycle</dt><dd>{{ value.subscription.billingCycle || '—' }}</dd></div>
             <div><dt>Start Date</dt><dd>{{ value.subscription.startDate ? (value.subscription.startDate | appDate) : '—' }}</dd></div>
             <div><dt>End Date</dt><dd>{{ value.subscription.endDate ? (value.subscription.endDate | appDate) : '—' }}</dd></div>
-            <div><dt>Resident Limit</dt><dd>{{ planDetail.residentLimit }}</dd></div>
+            <div><dt>Tenant Limit</dt><dd>{{ planDetail.residentLimit }}</dd></div>
           </dl>
         </section>
 
@@ -197,10 +197,11 @@ function groupDigits(value: string | null | undefined): string {
 })
 export class StepConfirmationComponent {
   @Input() value: any;
+  private readonly plans = inject(SubscriptionPlanService);
 
   get planDetail() {
-    const plan = (this.value?.subscription?.plan as PlanName) ?? 'Standard';
-    return PLAN_DETAILS[plan] ?? PLAN_DETAILS.Standard;
+    const name = (this.value?.subscription?.plan as string) ?? '';
+    return planDetailFor(this.plans.byName(name), name);
   }
 
   /** e.g. "+91 98765 43210" */

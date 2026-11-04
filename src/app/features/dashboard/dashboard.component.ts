@@ -9,15 +9,16 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { provideNativeDateAdapter } from '@angular/material/core';
-import { HOSTEL_TYPES, REPORT_HOSTELS, ReportHostel } from '../reports/report.models';
-import { MOCK_PAYMENTS, MOCK_SUBSCRIPTIONS } from '../subscription-payments/subscription-payment.models';
-import { AdminService } from '../admin-management/admin.service';
+import { HOSTEL_TYPES, REPORT_HOSTELS, ReportHostel } from '../../core/models/report.models';
+import { MOCK_PAYMENTS, MOCK_SUBSCRIPTIONS } from '../../core/models/subscription-payment.models';
+import { AdminService } from '../../core/services/admin.service';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { AuditEvent, AuditLog } from '../../core/models/audit.models';
 import { AuthService } from '../../core/services/auth.service';
 import { AppNotification, NotificationService, relativeTime } from '../../core/services/notification.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 const ALL = 'All';
 const DAY_MS = 86_400_000;
@@ -65,7 +66,7 @@ interface QuickAction {
   primary?: boolean;
 }
 
-/** Shortcuts to the most common SuperAdmin tasks. */
+/** Shortcuts to the most common Admin tasks. */
 const QUICK_ACTIONS: QuickAction[] = [
   { label: 'Onboard Hostel', icon: 'add', route: '/hostel-onboarding/new', primary: true },
   { label: 'Create Template', icon: 'post_add', route: '/communication-templates/new' },
@@ -98,12 +99,12 @@ const ACTIVITY_LABELS: Partial<Record<AuditEvent, string>> = {
   'Update Hostel': 'Hostel Updated',
   'Activate Hostel': 'Hostel Activated',
   'Deactivate Hostel': 'Hostel Deactivated',
-  'Create Admin': 'Admin Created',
-  'Update Admin': 'Admin Updated',
-  'Activate Admin': 'Admin Activated',
-  'Deactivate Admin': 'Admin Deactivated',
-  'Lock Admin': 'Admin Locked',
-  'Unlock Admin': 'Admin Unlocked',
+  'Create Admin': 'Hostel Owner Created',
+  'Update Admin': 'Hostel Owner Updated',
+  'Activate Admin': 'Hostel Owner Activated',
+  'Deactivate Admin': 'Hostel Owner Deactivated',
+  'Lock Admin': 'Hostel Owner Locked',
+  'Unlock Admin': 'Hostel Owner Unlocked',
   'Reset Password': 'Password Reset',
   'Create Plan': 'Plan Created',
   'Update Plan': 'Plan Updated',
@@ -118,7 +119,7 @@ const toIsoDate = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /**
- * SuperAdmin landing page: platform-wide counts, money and recent activity,
+ * Admin landing page: platform-wide counts, money and recent activity,
  * computed from the same data the individual modules use so every number here
  * matches the module it links to.
  */
@@ -128,6 +129,7 @@ const toIsoDate = (d: Date): string =>
   imports: [
     AppDatePipe,
     AppCurrencyPipe,
+    AppButtonComponent,
     CommonModule,
     FormsModule,
     RouterLink,
@@ -136,7 +138,7 @@ const toIsoDate = (d: Date): string =>
     MatSelectModule,
     MatDatepickerModule,
     MatIconModule,
-    MatTooltipModule,
+    MatTooltipModule,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './dashboard.component.html',
@@ -157,7 +159,15 @@ export class DashboardComponent {
   readonly statuses = ['Active', 'Inactive'];
   readonly expiringWindowDays = EXPIRING_WINDOW_DAYS;
 
-  readonly quickActions = QUICK_ACTIONS;
+  /** Shortcuts the signed-in user may open (they all lead to Admin modules). */
+  get quickActions(): QuickAction[] {
+    return QUICK_ACTIONS.filter((q) => this.auth.canAccess(q.route));
+  }
+
+  /** Admin modules are Admin-only; links to them are hidden or inactive for other roles. */
+  canAccess(route: string): boolean {
+    return this.auth.canAccess(route);
+  }
   readonly relativeTime = relativeTime;
   readonly today = new Date();
 
@@ -171,9 +181,9 @@ export class DashboardComponent {
 
   // ---- Greeting ----
 
-  /** First name of the signed-in SuperAdmin, for "Hello, Rakesh". */
+  /** First name of the signed-in Admin, for "Hello, Rakesh". */
   get firstName(): string {
-    return (this.auth.currentUser?.name || 'Super Admin').trim().split(/s+/)[0];
+    return (this.auth.currentUser?.name || 'Admin').trim().split(/\s+/)[0];
   }
 
   get greeting(): string {
@@ -279,14 +289,14 @@ export class DashboardComponent {
           { label: 'Total Hostels', tone: 'blue', value: hostels.length, format: 'count', icon: 'apartment', sub: `${plural(new Set(hostels.map((h) => h.city)).size, 'city')}`, route: '/hostel-onboarding' },
           { label: 'Active Hostels', tone: 'green', value: active, format: 'count', icon: 'check_circle', sub: hostels.length ? `${Math.round((active / hostels.length) * 100)}% of hostels` : '—', route: '/reports' },
           { label: 'Inactive Hostels', tone: 'amber', value: hostels.length - active, format: 'count', icon: 'pause_circle', sub: 'Suspended or cancelled', route: '/reports' },
-          { label: 'Total Hostel Admins', tone: 'purple', value: admins.length, format: 'count', icon: 'manage_accounts', sub: `${activeAdmins} active`, route: '/admins' },
+          { label: 'Total Hostel Owners', tone: 'purple', value: admins.length, format: 'count', icon: 'manage_accounts', sub: `${activeAdmins} active`, route: '/admins' },
         ],
       },
       {
-        title: 'Residents & Beds',
+        title: 'Tenants & Beds',
         scope: 'today',
         cards: [
-          { label: 'Total Residents', tone: 'teal', value: current + checkedOut, format: 'count', icon: 'groups', sub: `${current.toLocaleString('en-IN')} currently staying`, route: '/reports' },
+          { label: 'Total Tenants', tone: 'teal', value: current + checkedOut, format: 'count', icon: 'groups', sub: `${current.toLocaleString('en-IN')} currently staying`, route: '/reports' },
           { label: 'Total Beds', tone: 'blue', value: beds, format: 'count', icon: 'bed', sub: `Across ${plural(hostels.length, 'hostel')}`, route: '/reports' },
           { label: 'Occupied Beds', tone: 'green', value: current, format: 'count', icon: 'hotel', sub: `${occupancy}% occupancy`, route: '/reports' },
           { label: 'Available Beds', tone: 'amber', value: beds - current, format: 'count', icon: 'event_available', sub: `${100 - occupancy}% free`, route: '/reports' },
@@ -381,7 +391,7 @@ export class DashboardComponent {
       items.push({
         icon: 'lock',
         tone: 'danger',
-        text: `${locked.length} admin account${locked.length > 1 ? 's are' : ' is'} locked`,
+        text: `${locked.length} hostel owner account${locked.length > 1 ? 's are' : ' is'} locked`,
         route: '/admins',
       });
     }
@@ -414,6 +424,7 @@ export class DashboardComponent {
       });
     }
 
-    return items;
+    // Every item opens an Admin module, so only Admins see them.
+    return items.filter((item) => this.auth.canAccess(item.route));
   }
 }

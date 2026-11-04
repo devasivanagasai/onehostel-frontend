@@ -1,0 +1,291 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+$teal: #0d9488;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.visitors-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.vis-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.vis-kpi--green .kpi-card__value { color: #16a34a; }
+.vis-kpi--blue .kpi-card__value { color: #2563eb; }
+.vis-kpi--orange .kpi-card__value { color: #ea580c; }
+.vis-kpi--indigo .kpi-card__value { color: #4f46e5; }
+
+/* ---- Currently inside ---- */
+.vis-inside {
+  padding: 14px 16px;
+  border: 1px solid #d1fae5;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f0fdf8 0%, #ffffff 70%);
+}
+
+.vis-inside__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  h2 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
+  small { margin-left: auto; font-size: 12.5px; color: #64748b; }
+}
+
+.vis-inside__live {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+}
+
+.vis-inside__count {
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.vis-inside__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.vis-inside__empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #64748b;
+
+  mat-icon { @include icon(18px); color: #16a34a; }
+}
+
+.vis-pass {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e8edf3;
+  border-left: 3px solid #22c55e;
+  border-radius: 10px;
+  background: #ffffff;
+
+  &.is-over { border-left-color: #f97316; }
+
+  app-button { flex-shrink: 0; }
+}
+
+.vis-pass__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.vis-pass__name {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover { color: $teal; }
+  small { color: #64748b; font-weight: 500; }
+}
+
+.vis-pass__sub {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vis-pass__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: #334155;
+
+  mat-icon { @include icon(15px); color: #16a34a; }
+}
+
+.vis-pass__dur {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.vis-pass__warn { color: #ea580c; font-weight: 600; }
+
+/* ---- Filter buttons ---- */
+.vis-buttons {
+  display: inline-flex;
+  gap: 10px;
+}
+
+/* ---- Tabs inside the table card ---- */
+.vis-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.vis-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); }
+  &:hover { color: #1e293b; }
+
+  &.is-active {
+    color: $teal;
+    border-bottom-color: $teal;
+
+    .vis-tab__count { background: #ccfbf1; color: #0f766e; }
+  }
+}
+
+.vis-tab__count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11.5px;
+}
+
+/* ---- Table ---- */
+.vis-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0ecff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+
+  &--green { width: 40px; height: 40px; background: #dcfce7; color: #15803d; font-size: 13px; }
+}
+
+.visitors-table {
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .vis-clip {
+    display: block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vis-dot {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e6f7f5;
+    color: $teal;
+
+    mat-icon { @include icon(17px); }
+  }
+
+  .vis-tag {
+    margin-left: 4px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .vis-io {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    mat-icon { @include icon(14px); }
+    &--in { color: #16a34a; }
+    &--out { color: #94a3b8; }
+  }
+
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  .vis-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  // Plain icon actions: blue, green for approve / check-in, red for reject / check-out / cancel
+  .vis-act ::ng-deep button { color: #2563eb; }
+  .vis-act--ok ::ng-deep button { color: #16a34a; }
+  .vis-act--danger ::ng-deep button { color: #dc2626; }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}
+
+.muted {
+  color: #94a3b8;
+}

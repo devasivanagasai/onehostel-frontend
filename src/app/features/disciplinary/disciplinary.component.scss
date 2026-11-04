@@ -1,0 +1,77 @@
+// Table look comes from styles/_table.scss; filter card from styles/_page-kit.scss.
+
+.disc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 16px;
+}
+
+.disc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9a3412;
+
+  mat-icon { flex-shrink: 0; font-size: 20px; width: 20px; height: 20px; }
+}
+
+.disc-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 56px 16px;
+  text-align: center;
+  color: #475569;
+
+  mat-icon { font-size: 40px; width: 40px; height: 40px; color: #94a3b8; }
+  h2 { margin: 0; font-size: 18px; color: #0f172a; }
+  p { margin: 0; }
+}
+
+.disc-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+
+  input {
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid #dbe3ec;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    color: #1e293b;
+  }
+}
+
+.disc-error {
+  margin: -8px 0 0;
+  font-size: 12.5px;
+  color: #dc2626;
+}
+
+.disc-table-card { padding-top: 8px; }
+
+.disc-class {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+
+  mat-icon { font-size: 15px; width: 15px; height: 15px; }
+  &--res { color: #b45309; }
+  &--conf { color: #b91c1c; }
+}

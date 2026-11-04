@@ -1,5 +1,3 @@
-import { LoginMethod } from '../../../core/models/auth.models';
-
 /**
  * Full wizard-shaped mock data for the 3 hostels already listed on the
  * Hostel Onboarding screen, keyed by the same Hostel ID shown in that table.
@@ -59,8 +57,6 @@ export interface HostelWizardRecord {
     mobileNumber: string;
     email: string;
     username: string;
-    /** Defaults to 'Password' when omitted. */
-    loginMethod?: LoginMethod;
     tempPassword: string;
     sendEmail: boolean;
     sendSms: boolean;

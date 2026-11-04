@@ -1,440 +1,445 @@
-import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { AuditLog, auditAction, auditModule } from '../../core/models/audit.models';
+import { AuditLog, auditAction, auditEventLabel, auditModule } from '../../core/models/audit.models';
+import { AppFormatService } from '../../core/services/app-format.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
+/** Centred "Audit Log Details" dialog, opened from the Audit Logs list. */
 @Component({
   selector: 'app-audit-log-detail-panel',
   standalone: true,
-  imports: [AppDatePipe, CommonModule, MatIconModule, MatButtonModule],
+  imports: [AppDatePipe, CommonModule, MatIconModule, AppButtonComponent],
   template: `
-    <div class="panel-backdrop" *ngIf="isOpen" (click)="closePanel.emit()"></div>
+    @if (isOpen && log; as l) {
+      <div class="al-backdrop" (click)="closePanel.emit()"></div>
 
-    <div class="side-panel-drawer" [class.side-panel-drawer--open]="isOpen">
-      <div class="panel-header">
-        <div class="identity">
-          <span class="identity__icon"><mat-icon>manage_history</mat-icon></span>
-          <div>
-            <h2 class="panel-title">Audit Log Details</h2>
-            <div class="panel-subtitle" *ngIf="log">{{ log.logId }}</div>
-          </div>
-        </div>
-        <button mat-icon-button type="button" class="close-btn" (click)="closePanel.emit()" aria-label="Close panel">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
+      <div class="al-modal" role="dialog" aria-modal="true" aria-labelledby="al-title">
+        <header class="al-header">
+          <h2 class="al-title" id="al-title">Audit Log Details — {{ l.logId }}</h2>
+          <app-button variant="icon" icon="close" ariaLabel="Close" (clicked)="closePanel.emit()"></app-button>
+        </header>
 
-      <div class="panel-body" *ngIf="log as l">
-        <!-- Summary -->
-        <section class="hero" [class.hero--failed]="l.status === 'Failed'">
-          <span class="hero__icon">
-            <mat-icon>{{ l.status === 'Failed' ? 'error' : 'check_circle' }}</mat-icon>
-          </span>
-          <div class="hero__text">
-            <div class="hero__top">
-              <span class="hero__event">{{ l.event }}</span>
-              <span class="status-pill" [class.status-pill--failed]="l.status === 'Failed'">{{ l.status }}</span>
-            </div>
-            <div class="hero__entity">{{ l.entity }}</div>
-          </div>
-        </section>
-
-        <!-- Event details -->
-        <section class="info-card">
-          <div class="info-card__header">
-            <span class="info-card__icon"><mat-icon>fact_check</mat-icon></span>
-            <h3 class="info-card__title">Event Details</h3>
-          </div>
-          <dl class="detail-grid">
-            <div class="detail-item">
-              <dt><mat-icon>schedule</mat-icon>Date &amp; Time</dt>
-              <dd>{{ l.timestamp | appDate: 'datetimeSeconds' }}</dd>
-            </div>
-            <div class="detail-item">
-              <dt><mat-icon>person</mat-icon>User</dt>
-              <dd>{{ l.user }}</dd>
-            </div>
-            <div class="detail-item">
-              <dt><mat-icon>category</mat-icon>Module</dt>
-              <dd>{{ module(l) }}</dd>
-            </div>
-            <div class="detail-item">
-              <dt><mat-icon>bolt</mat-icon>Action</dt>
-              <dd><span class="action-chip">{{ action(l) }}</span></dd>
-            </div>
-            <div class="detail-item">
-              <dt><mat-icon>label</mat-icon>Entity</dt>
-              <dd>{{ l.entity }}</dd>
-            </div>
-            <div class="detail-item">
-              <dt><mat-icon>language</mat-icon>IP Address</dt>
-              <dd class="mono">{{ l.ipAddress }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <!-- Details -->
-        <section class="info-card" *ngIf="l.details">
-          <div class="info-card__header">
-            <span class="info-card__icon"><mat-icon>notes</mat-icon></span>
-            <h3 class="info-card__title">Details</h3>
-          </div>
-          <p class="details-text">{{ l.details }}</p>
-        </section>
-
-        <!-- Changes -->
-        <section class="info-card" *ngIf="l.changes?.length">
-          <div class="info-card__header">
-            <span class="info-card__icon"><mat-icon>difference</mat-icon></span>
-            <h3 class="info-card__title">Changes</h3>
-            <span class="count-pill">{{ l.changes!.length }} {{ l.changes!.length === 1 ? 'change' : 'changes' }}</span>
-          </div>
-          <ul class="changes">
-            <li class="change" *ngFor="let c of l.changes">
-              <div class="change__field">{{ c.field }}</div>
-              <div class="change__values">
-                <span class="old-value" [attr.aria-label]="'Old value: ' + c.oldValue">{{ c.oldValue }}</span>
-                <mat-icon class="change__arrow" aria-hidden="true">arrow_forward</mat-icon>
-                <span class="new-value" [attr.aria-label]="'New value: ' + c.newValue">{{ c.newValue }}</span>
+        <div class="al-body">
+          <!-- Summary banner -->
+          <section class="hero" [class.hero--failed]="failed">
+            <span class="hero__badge">
+              <mat-icon>{{ failed ? 'close' : 'check' }}</mat-icon>
+            </span>
+            <div class="hero__text">
+              <div class="hero__top">
+                <span class="hero__event">{{ eventLabel(l.event) }}</span>
+                <span class="hero__status">
+                  <mat-icon fontSet="material-icons-outlined">{{ failed ? 'cancel' : 'check_circle' }}</mat-icon>
+                  {{ l.status }}
+                </span>
               </div>
-            </li>
-          </ul>
-        </section>
+              <div class="hero__user">{{ l.user }}</div>
+            </div>
+          </section>
 
-        <div class="immutable-note">
-          <mat-icon>lock</mat-icon>
-          <span>Audit entries are read-only and cannot be edited or deleted.</span>
+          <!-- Event details -->
+          <section class="card" [class.card--failed]="failed">
+            <h3 class="card__title">
+              <span class="tile tile--sm"><mat-icon fontSet="material-icons-outlined">article</mat-icon></span>
+              Event Details
+            </h3>
+
+            <div class="details">
+              <dl class="details__col">
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">calendar_month</mat-icon></span>Date &amp; Time</dt>
+                  <dd>{{ l.timestamp | appDate: 'datetimeSeconds' }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>User</dt>
+                  <dd>{{ l.user }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">layers</mat-icon></span>Module</dt>
+                  <dd>{{ module(l) }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile tile--blue"><mat-icon fontSet="material-icons-outlined">bolt</mat-icon></span>Action</dt>
+                  <dd><span class="action-chip">{{ action(l) }}</span></dd>
+                </div>
+              </dl>
+
+              <div class="details__divider" aria-hidden="true"></div>
+
+              <dl class="details__col">
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">label</mat-icon></span>Entity</dt>
+                  <dd>{{ l.entity }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">language</mat-icon></span>IP Address</dt>
+                  <dd>{{ l.ipAddress }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">tag</mat-icon></span>Log ID</dt>
+                  <dd>{{ l.logId }}</dd>
+                </div>
+                <div>
+                  <dt><span class="tile"><mat-icon fontSet="material-icons-outlined">event_note</mat-icon></span>Event</dt>
+                  <dd>{{ eventLabel(l.event) }}</dd>
+                </div>
+              </dl>
+            </div>
+          </section>
+
+          @if (l.details) {
+            <section class="card card--plain">
+              <h3 class="card__title">
+                <span class="tile tile--sm"><mat-icon fontSet="material-icons-outlined">notes</mat-icon></span>
+                Details
+              </h3>
+              <p class="details-text">{{ l.details }}</p>
+            </section>
+          }
+
+          @if (l.changes?.length) {
+            <section class="card card--plain">
+              <h3 class="card__title">
+                <span class="tile tile--sm"><mat-icon>difference</mat-icon></span>
+                Changes
+                <span class="count-pill">{{ l.changes!.length }} {{ l.changes!.length === 1 ? 'change' : 'changes' }}</span>
+              </h3>
+              <ul class="changes">
+                @for (c of l.changes; track $index) {
+                  <li class="change">
+                    <div class="change__field">{{ c.field }}</div>
+                    <div class="change__values">
+                      <span class="old-value" [attr.aria-label]="'Old value: ' + c.oldValue">{{ c.oldValue }}</span>
+                      <mat-icon class="change__arrow" aria-hidden="true">arrow_forward</mat-icon>
+                      <span class="new-value" [attr.aria-label]="'New value: ' + c.newValue">{{ c.newValue }}</span>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <div class="readonly-note">
+            <span class="readonly-note__icon"><mat-icon fontSet="material-icons-outlined">lock</mat-icon></span>
+            Audit entries are read-only and cannot be edited or deleted.
+          </div>
         </div>
-      </div>
 
-      <div class="panel-footer">
-        <button type="button" class="btn-secondary" (click)="closePanel.emit()">Close</button>
+        <footer class="al-footer">
+          <app-button variant="secondary" icon="download" (clicked)="downloadLog(l)">Download Log</app-button>
+          <app-button (clicked)="closePanel.emit()">Close</app-button>
+        </footer>
       </div>
-    </div>
+    }
   `,
   styles: [`
-    .panel-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.12);
-      z-index: 1050;
-      animation: fadeIn 0.2s ease-out forwards;
+    :host {
+      display: contents;
     }
 
-    @keyframes fadeIn {
+    /* Below the CDK overlay (z-index 1000) so tooltips stay on top. */
+    .al-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 990;
+      background: rgba(15, 23, 42, 0.45);
+      animation: al-fade 0.18s ease-out;
+    }
+
+    .al-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 991;
+      width: min(1000px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+      overflow: hidden;
+      animation: al-pop 0.2s ease-out;
+    }
+
+    @keyframes al-fade {
       from { opacity: 0; }
       to { opacity: 1; }
     }
 
-    .side-panel-drawer {
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 540px;
-      max-width: 100vw;
-      height: 100vh;
-      background: #ffffff;
-      z-index: 1060;
-      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
-      display: flex;
-      flex-direction: column;
-      transform: translateX(100%);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    @keyframes al-pop {
+      from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
-    .side-panel-drawer--open {
-      transform: translateX(0);
-    }
-
-    /* Header */
-    .panel-header {
+    .al-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
-      border-bottom: 1px solid #e2e8f0;
+      gap: 16px;
+      padding: 22px 28px 12px;
       flex-shrink: 0;
     }
 
-    .identity {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .identity__icon {
-      width: 40px;
-      height: 40px;
-      flex-shrink: 0;
-      border-radius: 10px;
-      background: #e6f7f5;
-      color: #0d9488;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 22px;
-        width: 22px;
-        height: 22px;
-      }
-    }
-
-    .panel-title {
+    .al-title {
       margin: 0;
-      font-size: 17px;
+      font-size: 22px;
       font-weight: 700;
-      color: #0f172a;
-      line-height: 1.2;
+      color: #1e293b;
     }
 
-    .panel-subtitle {
-      margin-top: 2px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: #64748b;
-    }
-
-    .close-btn {
-      color: #64748b;
-
-      &:hover {
-        color: #0f172a;
-        background: #f1f5f9;
-      }
-    }
-
-    /* Body: light backdrop, cards keep full height and the body scrolls */
-    .panel-body {
+    .al-body {
       flex: 1;
-      min-height: 0;
-      padding: 18px 20px 24px;
       overflow-y: auto;
-      background: #f8fafc;
+      padding: 8px 28px 8px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-
-      > * {
-        flex-shrink: 0;
-      }
+      gap: 16px;
     }
 
-    /* Summary */
+    .al-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 14px;
+      padding: 16px 28px 22px;
+      flex-shrink: 0;
+    }
+
+    /* ---- Summary banner ---- */
     .hero {
-      --tone: #0d9488;
-      --tone-tint: #e6f7f5;
+      --tone: #16a34a;
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 16px;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-left: 4px solid var(--tone);
+      gap: 22px;
+      padding: 20px 28px;
       border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      background: #effaf3;
+      border: 1px solid #bfe8cf;
     }
 
     .hero--failed {
-      --tone: #e11d48;
-      --tone-tint: #ffebf0;
+      --tone: #dc2626;
+      background: #fdf1f1;
+      border-color: #f6caca;
     }
 
-    .hero__icon {
-      width: 44px;
-      height: 44px;
+    .hero__badge {
+      width: 64px;
+      height: 64px;
       flex-shrink: 0;
       border-radius: 50%;
-      background: var(--tone-tint);
-      color: var(--tone);
+      background: var(--tone);
+      color: #ffffff;
       display: flex;
       align-items: center;
       justify-content: center;
-
-      mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.7), 0 6px 16px rgba(15, 23, 42, 0.12);
     }
 
-    .hero__text {
-      min-width: 0;
+    .hero__badge mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
     }
 
     .hero__top {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 14px;
     }
 
     .hero__event {
-      font-size: 16px;
-      font-weight: 800;
+      font-size: 26px;
+      font-weight: 700;
       color: #0f172a;
     }
 
-    .hero__entity {
-      margin-top: 3px;
-      font-size: 13px;
-      color: #475569;
-      word-break: break-word;
+    .hero__status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--tone);
+      font-size: 15px;
+      font-weight: 600;
     }
 
-    .status-pill {
-      padding: 2px 10px;
-      border-radius: 999px;
-      background: #e6f7f5;
-      color: #0f766e;
-      font-size: 11.5px;
-      font-weight: 700;
+    .hero__status mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
-    .status-pill--failed {
-      background: #ffebf0;
-      color: #be123c;
+    .hero__user {
+      margin-top: 4px;
+      font-size: 16px;
+      color: #64748b;
     }
 
-    /* Cards (green header, same as the other detail panels) */
-    .info-card {
+    /* ---- Cards ---- */
+    .card {
+      --tone: #16a34a;
+      padding: 20px 24px;
       background: #ffffff;
-      border: 1px solid #e2e8f0;
       border-radius: 12px;
-      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-      overflow: hidden;
+      border-left: 4px solid var(--tone);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07), 0 0 0 1px #eef2f7;
     }
 
-    .info-card__header {
+    .card--failed {
+      --tone: #dc2626;
+    }
+
+    .card--plain {
+      border-left: none;
+    }
+
+    .card__title {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 12px 16px;
-      background: #e6f7f0;
-      border-bottom: 1px solid #d1eee3;
-    }
-
-    .info-card__icon {
-      width: 30px;
-      height: 30px;
-      flex-shrink: 0;
-      border-radius: 8px;
-      background: #ffffff;
-      color: #0d9488;
-      box-shadow: 0 0 0 1px #c6e9dc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      mat-icon {
-        font-size: 17px;
-        width: 17px;
-        height: 17px;
-      }
-    }
-
-    .info-card__title {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 700;
+      margin: 0 0 12px;
+      font-size: 17px;
+      font-weight: 600;
       color: #0f172a;
     }
 
-    .count-pill {
-      margin-left: auto;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #ffffff;
-      color: #0d9488;
-      font-size: 11.5px;
-      font-weight: 700;
-      box-shadow: 0 0 0 1px #c6e9dc;
+    .tile {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      background: #effaf3;
+      color: #16a34a;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* Event details grid */
-    .detail-grid {
+    .tile mat-icon {
+      font-size: 21px;
+      width: 21px;
+      height: 21px;
+    }
+
+    .tile--sm {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+    }
+
+    .tile--sm mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+
+    .tile--blue {
+      background: #eef4ff;
+      color: #2563eb;
+    }
+
+    .card--failed .tile:not(.tile--blue) {
+      background: #fdf1f1;
+      color: #dc2626;
+    }
+
+    .details {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 18px;
+      grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+      gap: 28px;
+    }
+
+    .details__divider {
+      background: #eef2f7;
+    }
+
+    .details__col {
       margin: 0;
-      padding: 14px 16px 16px;
+    }
 
-      dt {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 4px;
-        font-size: 11.5px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #64748b;
+    .details__col > div {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
 
-        mat-icon {
-          font-size: 14px;
-          width: 14px;
-          height: 14px;
-          color: #94a3b8;
-        }
-      }
+    .details__col > div:last-child {
+      border-bottom: none;
+    }
 
-      dd {
-        margin: 0;
-        font-size: 13.5px;
-        font-weight: 600;
-        color: #0f172a;
-        word-break: break-word;
-      }
+    .details__col dt {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 15px;
+      color: #64748b;
+    }
+
+    .details__col dd {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 500;
+      color: #0f172a;
+      word-break: break-word;
     }
 
     .action-chip {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-size: 12.5px;
+      padding: 5px 14px;
+      border-radius: 8px;
+      background: #eef4ff;
+      color: #2563eb;
       font-weight: 600;
-    }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 13px !important;
     }
 
     .details-text {
       margin: 0;
-      padding: 14px 16px 16px;
-      font-size: 13.5px;
-      line-height: 1.55;
+      font-size: 14px;
+      line-height: 1.6;
       color: #334155;
     }
 
-    /* Changes: field, then old → new */
+    .count-pill {
+      margin-left: auto;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
     .changes {
       list-style: none;
       margin: 0;
-      padding: 4px 16px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .change {
-      padding: 12px 0;
-
-      & + & {
-        border-top: 1px dashed #e2e8f0;
-      }
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #eef2f7;
     }
 
     .change__field {
       margin-bottom: 6px;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      font-size: 12.5px;
+      font-weight: 600;
       color: #475569;
     }
 
@@ -443,100 +448,126 @@ import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
+      font-size: 13.5px;
+    }
+
+    .old-value {
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #fee2e2;
+      color: #b91c1c;
+      text-decoration: line-through;
+    }
+
+    .new-value {
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 600;
     }
 
     .change__arrow {
-      flex-shrink: 0;
       font-size: 16px;
       width: 16px;
       height: 16px;
       color: #94a3b8;
     }
 
-    .old-value,
-    .new-value {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 13px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
-
-    .old-value {
-      background: #fef2f2;
-      color: #b91c1c;
-      text-decoration: line-through;
-      text-decoration-color: rgba(185, 28, 28, 0.4);
-    }
-
-    .new-value {
-      background: #f0fdf4;
-      color: #15803d;
-      font-weight: 600;
-    }
-
-    .immutable-note {
+    .readonly-note {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 0 4px;
-      font-size: 12px;
-      color: #64748b;
-
-      mat-icon {
-        font-size: 15px;
-        width: 15px;
-        height: 15px;
-      }
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: #f1f6ff;
+      color: #1d4ed8;
+      font-size: 14.5px;
     }
 
-    /* Footer */
-    .panel-footer {
-      padding: 14px 20px;
-      border-top: 1px solid #e2e8f0;
-      background: #ffffff;
-      display: flex;
-      justify-content: flex-end;
-      flex-shrink: 0;
-    }
-
-    .btn-secondary {
-      height: var(--btn-height);
+    .readonly-note__icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: #e0eaff;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      color: #475569;
-      padding: 0 var(--btn-padding-x);
-      border-radius: var(--btn-radius);
-      font-size: var(--btn-font-size);
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        background: #f1f5f9;
-        color: #0f172a;
-      }
     }
 
-    @media (max-width: 520px) {
-      .detail-grid {
+    .readonly-note__icon mat-icon {
+      font-size: 17px;
+      width: 17px;
+      height: 17px;
+    }
+
+    @media (max-width: 760px) {
+      .details {
+        grid-template-columns: 1fr;
+      }
+
+      .details__divider {
+        display: none;
+      }
+
+      .details__col > div {
         grid-template-columns: 1fr;
       }
     }
   `],
 })
-export class AuditLogDetailPanelComponent {
+export class AuditLogDetailPanelComponent implements OnInit, OnDestroy {
   @Input() isOpen = false;
   @Input() log?: AuditLog;
   @Output() closePanel = new EventEmitter<void>();
 
   readonly module = auditModule;
   readonly action = auditAction;
+  readonly eventLabel = auditEventLabel;
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly fmt = inject(AppFormatService);
+
+  get failed(): boolean {
+    return this.log?.status === 'Failed';
+  }
+
+  ngOnInit(): void {
+    // The page area is its own stacking context; on <body> the dialog sits above the side menu.
+    document.body.appendChild(this.host.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.host.nativeElement.remove();
+  }
 
   @HostListener('document:keydown.escape', ['$event'])
   onEscape(event: KeyboardEvent): void {
     if (this.isOpen && shouldCloseOnEscape(event)) this.closePanel.emit();
+  }
+
+  /** Saves this entry as a small text file (read-only record for sharing or filing). */
+  downloadLog(l: AuditLog): void {
+    const lines = [
+      `Audit Log ${l.logId}`,
+      '',
+      `Date & Time : ${this.fmt.date(l.timestamp, 'datetimeSeconds')}`,
+      `Event       : ${auditEventLabel(l.event)}`,
+      `Module      : ${auditModule(l)}`,
+      `Action      : ${auditAction(l)}`,
+      `User        : ${l.user}`,
+      `Entity      : ${l.entity}`,
+      `IP Address  : ${l.ipAddress}`,
+      `Status      : ${l.status}`,
+      ...(l.details ? ['', `Details     : ${l.details}`] : []),
+      ...(l.changes?.length ? ['', 'Changes:', ...l.changes.map((c) => `  - ${c.field}: ${c.oldValue} -> ${c.newValue}`)] : []),
+    ];
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${l.logId}.txt`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

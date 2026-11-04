@@ -7,7 +7,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { provideNativeDateAdapter } from '@angular/material/core';
@@ -17,7 +16,7 @@ import {
   REPORT_HOSTELS,
   ReportHostel,
   ReportKey,
-} from './report.models';
+} from '../../core/models/report.models';
 import {
   HostelSubscription,
   MOCK_PAYMENTS,
@@ -25,12 +24,14 @@ import {
   PAYMENT_STATUSES,
   PaymentTransaction,
   SUBSCRIPTION_STATUSES,
-} from '../subscription-payments/subscription-payment.models';
-import { ReportExportService } from './report-export.service';
+} from '../../core/models/subscription-payment.models';
+import { ReportExportService } from '../../core/services/report-export.service';
 import { ReportBarListComponent, BarItem } from './report-bar-list.component';
 import { statusTone } from '../../shared/constants/status.constants';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { AppCurrencyPipe } from '../../shared/pipes/app-currency.pipe';
+import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
+import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 
 interface ReportFilters {
   dateFrom: Date | null;
@@ -93,9 +94,10 @@ const toIsoDate = (d: Date): string =>
     MatSelectModule,
     MatDatepickerModule,
     MatIconModule,
-    MatButtonModule,
     MatTooltipModule,
-    ReportBarListComponent,
+    ReportBarListComponent,
+    AppTableCardComponent,
+    AppButtonComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './reports.component.html',
@@ -107,7 +109,7 @@ export class ReportsComponent {
 
   readonly tabs: ReportTab[] = [
     { key: 'hostels', label: 'Hostel Report', icon: 'apartment', dateField: 'onboarding date' },
-    { key: 'residents', label: 'Resident Report', icon: 'groups' },
+    { key: 'residents', label: 'Tenant Report', icon: 'groups' },
     { key: 'occupancy', label: 'Occupancy Report', icon: 'bed' },
     { key: 'subscriptions', label: 'Subscription Report', icon: 'card_membership', dateField: 'start date' },
     { key: 'revenue', label: 'Revenue Report', icon: 'payments', dateField: 'payment date' },
@@ -414,9 +416,9 @@ export class ReportsComponent {
           columns: [
             { header: 'Hostel', value: (h: ReportHostel) => h.hostelName },
             { header: 'City', value: (h: ReportHostel) => h.city },
-            { header: 'Active Residents', value: (h: ReportHostel) => h.activeResidents, numeric: true },
-            { header: 'Checked-out Residents', value: (h: ReportHostel) => h.checkedOutResidents, numeric: true },
-            { header: 'Total Residents', value: (h: ReportHostel) => h.activeResidents + h.checkedOutResidents, numeric: true },
+            { header: 'Active Tenants', value: (h: ReportHostel) => h.activeResidents, numeric: true },
+            { header: 'Checked-out Tenants', value: (h: ReportHostel) => h.checkedOutResidents, numeric: true },
+            { header: 'Total Tenants', value: (h: ReportHostel) => h.activeResidents + h.checkedOutResidents, numeric: true },
           ],
           totals: ['Total', '', s.active, s.checkedOut, s.total],
         };

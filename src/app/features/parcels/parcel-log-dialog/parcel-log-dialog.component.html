@@ -1,0 +1,96 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog title="Log Parcel" subtitle="Record a parcel received at the desk and let the resident know it's here." icon="inventory_2" tone="teal" (closed)="cancel()">
+    <div class="pl">
+      <!-- Resident -->
+      <div class="fk-field">
+        <label class="fk-label" for="pl-resident">Resident<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="residentError">
+          <mat-icon class="fk-lead">search</mat-icon>
+          <input id="pl-resident" [formControl]="residentSearch" [matAutocomplete]="residentAuto" placeholder="Search by name, room or phone number..." autocomplete="off" />
+        </span>
+        <mat-autocomplete #residentAuto="matAutocomplete" [displayWith]="displayResident" (optionSelected)="onResidentSelected($event)">
+          @for (r of filteredResidents; track r.id) {
+            <mat-option [value]="r">
+              <span class="pl-opt">
+                @if (r.photoUrl) { <img class="pl-opt__avatar" [src]="r.photoUrl" alt="" /> }
+                @else { <span class="pl-opt__avatar">{{ initials(r.name) }}</span> }
+                <span class="pl-opt__text">
+                  <strong>{{ r.name }}</strong>
+                  <small>{{ r.location }} • {{ r.contact }}</small>
+                </span>
+              </span>
+            </mat-option>
+          } @empty {
+            <mat-option disabled>No current residents found</mat-option>
+          }
+        </mat-autocomplete>
+        @if (residentError) { <span class="fk-error">{{ residentError }}</span> }
+        @else if (selected) { <span class="fk-hint">{{ selected.location }} · {{ selected.contact }}</span> }
+      </div>
+
+      <!-- Courier -->
+      <div class="fk-field">
+        <span class="fk-label">Courier / Sender<span class="req">*</span></span>
+        <div class="pl__chips" role="radiogroup" aria-label="Courier">
+          @for (c of couriers; track c) {
+            <button type="button" role="radio" class="pl__chip" [class.is-on]="form.controls.courier.value === c" [attr.aria-checked]="form.controls.courier.value === c" (click)="pickCourier(c)">
+              @if (form.controls.courier.value === c) { <mat-icon>check</mat-icon> }{{ c }}
+            </button>
+          }
+          <button type="button" role="radio" class="pl__chip" [class.is-on]="form.controls.courier.value === 'Other'" [attr.aria-checked]="form.controls.courier.value === 'Other'" (click)="pickCourier('Other')">
+            @if (form.controls.courier.value === 'Other') { <mat-icon>check</mat-icon> }Other
+          </button>
+        </div>
+        @if (form.controls.courier.value === 'Other') {
+          <span class="fk-control pl__gap" [class.is-invalid]="courierError">
+            <input formControlName="courierOther" maxlength="60" placeholder="Courier company or sender name" aria-label="Other courier or sender" />
+          </span>
+        }
+        @if (courierError) { <span class="fk-error">{{ courierError }}</span> }
+      </div>
+
+      <div class="pl__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="pl-tracking">Tracking Number <span class="opt">(Optional)</span></label>
+          <span class="fk-control fk-control--lead">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">qr_code_2</mat-icon>
+            <input id="pl-tracking" formControlName="tracking" maxlength="40" placeholder="AWB / order number" autocomplete="off" />
+          </span>
+        </div>
+        <div class="fk-field">
+          <label class="fk-label" for="pl-storage">Storage Location <span class="opt">(Optional)</span></label>
+          <span class="fk-control fk-control--lead">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">shelves</mat-icon>
+            <input id="pl-storage" formControlName="storage" maxlength="40" placeholder="Locker or shelf" list="pl-storage-list" autocomplete="off" />
+          </span>
+          <datalist id="pl-storage-list">
+            @for (s of storageSuggestions; track s) { <option [value]="s"></option> }
+          </datalist>
+        </div>
+      </div>
+
+      <!-- Notify -->
+      <label class="pl__notify" [class.is-on]="form.controls.notify.value">
+        <input type="checkbox" formControlName="notify" />
+        <span class="pl__notify-text">
+          <strong>Notify the resident now</strong>
+          @if (!selected) {
+            <small>Pick a resident to see how they'll be reached.</small>
+          } @else if (channels.length) {
+            <small>Arrival notice via {{ channels.join(', ') }}.</small>
+          } @else {
+            <small class="pl__warn">No contact details on the profile — the notification will fail.</small>
+          }
+        </span>
+        <mat-icon fontSet="material-icons-outlined">{{ form.controls.notify.value ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+      </label>
+
+      @if (saveError) { <p class="pl__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="inventory_2" [iconOutlined]="true" [loading]="saving">Log Parcel</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

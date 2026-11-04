@@ -1,10 +1,11 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { PLAN_DETAILS, PlanName } from '../../plan-details';
+import { planDetailFor } from '../../plan-details';
+import { SubscriptionPlanService } from '../../../../../core/services/subscription-plan.service';
 
 @Component({
   selector: 'app-step-subscription',
@@ -16,9 +17,9 @@ import { PLAN_DETAILS, PlanName } from '../../plan-details';
         <label class="field-label">Subscription Plan<span class="required-mark">*</span></label>
         <mat-form-field appearance="outline">
           <mat-select formControlName="plan" placeholder="Select Plan">
-            <mat-option value="Basic">Basic</mat-option>
-            <mat-option value="Standard">Standard</mat-option>
-            <mat-option value="Premium">Premium</mat-option>
+            @for (p of plans.activePlans; track p.planId) {
+              <mat-option [value]="p.planName">{{ p.planName }}</mat-option>
+            }
           </mat-select>
         </mat-form-field>
       </div>
@@ -51,10 +52,14 @@ import { PLAN_DETAILS, PlanName } from '../../plan-details';
         </mat-form-field>
       </div>
 
+      @if (formGroup.errors?.['endBeforeStart'] && formGroup.get('endDate')?.touched) {
+        <p class="step-grid__full group-error" role="alert">End date cannot be earlier than the start date.</p>
+      }
+
       <div class="plan-summary step-grid__full">
         <div class="plan-summary__row">
-          <span>Resident Limit</span>
-          <strong>{{ planDetail.residentLimit }} residents</strong>
+          <span>Tenant Limit</span>
+          <strong>{{ planDetail.residentLimit }} tenants</strong>
         </div>
         <div class="plan-summary__row plan-summary__row--features">
           <span>Enabled Features</span>
@@ -81,6 +86,12 @@ import { PLAN_DETAILS, PlanName } from '../../plan-details';
 
       .step-grid__full {
         grid-column: 1 / -1;
+      }
+
+      .group-error {
+        color: #dc2626;
+        font-size: 12px;
+        margin: 0;
       }
 
       .plan-summary {
@@ -132,8 +143,10 @@ import { PLAN_DETAILS, PlanName } from '../../plan-details';
 export class StepSubscriptionComponent {
   @Input({ required: true }) formGroup!: FormGroup;
 
+  readonly plans = inject(SubscriptionPlanService);
+
   get planDetail() {
-    const plan = (this.formGroup.get('plan')?.value as PlanName) ?? 'Standard';
-    return PLAN_DETAILS[plan] ?? PLAN_DETAILS.Standard;
+    const name = (this.formGroup.get('plan')?.value as string) ?? '';
+    return planDetailFor(this.plans.byName(name), name);
   }
 }

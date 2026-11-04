@@ -169,6 +169,20 @@ $line: #eef2f7;
 .stat-card--red { --tone: #e11d48; --tone-soft: #ffebf0; }
 .stat-card--purple { --tone: #7c3aed; --tone-soft: #f1ebff; }
 
+/* Cards whose page is Admin-only (Hostel Owner / Tenant): information only, no link. */
+.stat-card.stat-card--static {
+  cursor: default;
+
+  &:hover {
+    transform: none;
+    box-shadow: 0 8px 24px rgba(15, 34, 74, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  }
+
+  .stat-card__go {
+    display: none;
+  }
+}
+
 .stat-card__top {
   display: flex;
   align-items: center;
@@ -730,20 +744,8 @@ $line: #eef2f7;
   color: #0057e7;
 }
 
-.link-btn {
+.mark-read {
   flex-shrink: 0;
-  padding: 2px 4px;
-  border: none;
-  background: none;
-  color: #0057e7;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:hover {
-    text-decoration: underline;
-  }
 }
 
 .notif-list {

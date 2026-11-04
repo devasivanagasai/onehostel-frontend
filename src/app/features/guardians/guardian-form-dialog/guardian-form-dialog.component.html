@@ -1,0 +1,125 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    [title]="isEdit ? 'Edit Guardian' : 'Add Guardian'"
+    [subtitle]="isEdit ? existing!.id + ' · verification status is managed by the system' : 'Link a parent or guardian to a resident. They are verified separately.'"
+    icon="family_restroom"
+    tone="teal"
+    (closed)="cancel()"
+  >
+    <div class="gf">
+      <!-- Resident -->
+      <div class="fk-field gf-wide">
+        <label class="fk-label" for="gf-resident">Linked Resident<span class="req">*</span></label>
+        @if (isEdit) {
+          <span class="fk-control"><input id="gf-resident" [value]="service.residentName(existing!.residentId) + ' (' + existing!.residentId + ')'" readonly /></span>
+          <span class="fk-hint">The resident cannot be changed. Add a new guardian link for another resident.</span>
+        } @else {
+          <span class="fk-control fk-control--lead" [class.is-invalid]="residentError">
+            <mat-icon class="fk-lead">search</mat-icon>
+            <input id="gf-resident" [formControl]="residentSearch" [matAutocomplete]="residentAuto" placeholder="Search by name or resident ID" autocomplete="off" />
+          </span>
+          <mat-autocomplete #residentAuto="matAutocomplete" [displayWith]="displayResident" (optionSelected)="onResidentSelected($event)">
+            @for (r of filteredResidents; track r.id) {
+              <mat-option [value]="r"><strong>{{ r.name }}</strong> <small class="gd-muted">{{ r.id }} · {{ r.status }}</small></mat-option>
+            } @empty {
+              <mat-option disabled>No residents match</mat-option>
+            }
+          </mat-autocomplete>
+          @if (residentError) { <span class="fk-error">{{ residentError }}</span> }
+          @else if (selected?.status === 'Checked Out') { <span class="fk-hint gf-warn">This resident has checked out, so guardian access will show as revoked.</span> }
+        }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="gf-name">Guardian Name<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="nameError">
+          <input id="gf-name" formControlName="name" maxlength="80" placeholder="Full name" />
+        </span>
+        @if (nameError) { <span class="fk-error">{{ nameError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label" id="gf-rel-label">Relationship<span class="req">*</span></span>
+        <div class="gd-chips" role="radiogroup" aria-labelledby="gf-rel-label">
+          @for (r of relationships; track r) {
+            <button type="button" role="radio" class="gd-opt" [class.is-on]="form.controls.relationship.value === r" [attr.aria-checked]="form.controls.relationship.value === r" (click)="setRelationship(r)">{{ r }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="gf-mobile">Mobile <span class="opt">(mobile or email required)</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="mobileError || contactError">
+          <span class="fk-lead">+91</span>
+          <input id="gf-mobile" formControlName="mobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" />
+        </span>
+        @if (mobileError) { <span class="fk-error">{{ mobileError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="gf-email">Email</label>
+        <span class="fk-control" [class.is-invalid]="emailError || contactError">
+          <input id="gf-email" type="email" formControlName="email" maxlength="120" placeholder="name@example.com" />
+        </span>
+        @if (emailError) { <span class="fk-error">{{ emailError }}</span> }
+      </div>
+      @if (contactError) { <span class="fk-error gf-wide">{{ contactError }}</span> }
+
+      <!-- Primary -->
+      <div class="fk-field gf-wide">
+        <label class="gf-check">
+          <input type="checkbox" [checked]="primaryValue" [disabled]="lockedPrimary" (change)="setPrimary($any($event.target).checked)" />
+          <span>Primary contact for this resident</span>
+        </label>
+        @if (firstForResident) { <span class="fk-hint">The first guardian of a resident is automatically primary.</span> }
+        @else if (existing?.primary) { <span class="fk-hint">To change the primary contact, mark another guardian as primary.</span> }
+        @else if (primaryValue && currentPrimary) { <span class="fk-hint gf-warn">{{ currentPrimary.name }} ({{ currentPrimary.id }}) will stop being primary.</span> }
+      </div>
+
+      <!-- Consent -->
+      <div class="fk-field">
+        <span class="fk-label" id="gf-consent-label">Notification Consent<span class="req">*</span></span>
+        <div class="gd-chips" role="radiogroup" aria-labelledby="gf-consent-label">
+          @for (c of channels; track c) {
+            <button type="button" role="radio" class="gd-opt" [class.is-on]="form.controls.consent.value === c" [attr.aria-checked]="form.controls.consent.value === c" (click)="setConsent(c)">
+              <mat-icon fontSet="material-icons-outlined">{{ consentIcons[c] }}</mat-icon>{{ c }}
+            </button>
+          }
+        </div>
+        <span class="fk-hint">{{ form.controls.consent.value === 'None' ? 'The guardian declined notifications; no alerts will be sent.' : 'Where the guardian agreed to receive alerts.' }}</span>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="gf-consent-date">Consent Captured On<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="consentDateError">
+          <input id="gf-consent-date" type="date" formControlName="consentDate" [max]="today" />
+        </span>
+        @if (consentDateError) { <span class="fk-error">{{ consentDateError }}</span> }
+      </div>
+
+      <!-- Access scope -->
+      <div class="fk-field gf-wide">
+        <span class="fk-label" id="gf-scope-label">Access Scope<span class="req">*</span></span>
+        <div class="gd-chips" role="group" aria-labelledby="gf-scope-label">
+          @for (s of scopes; track s) {
+            <button type="button" class="gd-opt" [class.is-on]="isScopeOn(s)" [attr.aria-pressed]="isScopeOn(s)" (click)="toggleScope(s)">
+              <mat-icon>{{ isScopeOn(s) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>{{ s }}
+            </button>
+          }
+        </div>
+        @if (scopeError) { <span class="fk-error">{{ scopeError }}</span> }
+        @else { <span class="fk-hint">Only information about this resident. A guardian never sees other residents.</span> }
+      </div>
+    </div>
+
+    @if (contactChangeResets) {
+      <p class="gd-banner gd-banner--warn"><mat-icon fontSet="material-icons-outlined">info</mat-icon>Changing the contact resets verification to Unverified. Send a new code afterwards.</p>
+    }
+    @if (saveError) { <p class="gd-banner gd-banner--error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [loading]="saving">{{ isEdit ? 'Save Changes' : 'Add Guardian' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

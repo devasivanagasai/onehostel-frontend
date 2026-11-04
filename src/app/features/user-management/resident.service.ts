@@ -35,7 +35,7 @@ function nowIso(): string {
 
 /**
  * Resident (end-user) accounts across all hostels, and the account actions a
- * SuperAdmin can take. Each action asks for confirmation, updates the account
+ * Admin can take. Each action asks for confirmation, updates the account
  * and writes an audit entry. UI-only build: data is in-memory mock data.
  */
 @Injectable({ providedIn: 'root' })
@@ -64,22 +64,22 @@ export class ResidentService {
     const name = residentFullName(resident);
     const dialogs: Record<ResidentAction, ConfirmDialogData> = {
       activate: {
-        title: 'Activate resident?',
-        message: `${name} will be able to use the resident app for ${resident.hostelName} again.`,
+        title: 'Activate tenant?',
+        message: `${name} will be able to use the tenant app for ${resident.hostelName} again.`,
         icon: 'check_circle_outline',
         tone: 'success',
         confirmLabel: 'Activate',
       },
       deactivate: {
-        title: 'Deactivate resident?',
-        message: `${name} will be signed out and can no longer use the resident app.`,
+        title: 'Deactivate tenant?',
+        message: `${name} will be signed out and can no longer use the tenant app.`,
         icon: 'person_off',
-        note: 'Use this when a resident has moved out. You can reactivate the account later.',
+        note: 'Use this when a tenant has moved out. You can reactivate the account later.',
         confirmLabel: 'Deactivate',
         danger: true,
       },
       block: {
-        title: 'Block resident?',
+        title: 'Block tenant?',
         message: `${name} will be signed out immediately and blocked until the account is unblocked.`,
         icon: 'block',
         note: 'Use this for rule violations or suspicious activity.',
@@ -87,8 +87,8 @@ export class ResidentService {
         danger: true,
       },
       unblock: {
-        title: 'Unblock resident?',
-        message: `${name} will be able to use the resident app again.`,
+        title: 'Unblock tenant?',
+        message: `${name} will be able to use the tenant app again.`,
         icon: 'lock_open',
         tone: 'success',
         confirmLabel: 'Unblock',
@@ -123,7 +123,7 @@ export class ResidentService {
         break;
 
       case 'block':
-        this.patch(resident.residentId, { status: 'Blocked', blockReason: 'Blocked manually by SuperAdmin.', blockedAt: nowIso() });
+        this.patch(resident.residentId, { status: 'Blocked', blockReason: 'Blocked manually by Admin.', blockedAt: nowIso() });
         this.auditLog.record('Block Resident', entity, { changes: statusChange('Blocked') });
         this.toast(`${name} blocked`);
         break;

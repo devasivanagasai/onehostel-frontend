@@ -1,12 +1,14 @@
 import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../core/models/auth.models';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AccountService } from '../../../core/services/account.service';
 import {
   PasswordPolicy,
@@ -26,7 +28,7 @@ type PasswordField = 'currentPassword' | 'newPassword' | 'confirmPassword';
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [AppDatePipe, CommonModule, ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [AppDatePipe, AppButtonComponent, CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatIconModule],
   templateUrl: './change-password.component.html',
   styleUrl: './change-password.component.scss',
 })
@@ -59,6 +61,8 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
   visible: Record<PasswordField, boolean> = { currentPassword: false, newPassword: false, confirmPassword: false };
   capsLockOn = false;
   saving = false;
+  /** A failure reported by the backend, shown above the Update button. */
+  serverError = '';
   /** Set after a successful change; swaps the form for a confirmation panel. */
   done = false;
 
@@ -112,14 +116,33 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
     return d;
   }
 
-  /** Strength bar fill (0–100) and colour tone for the current score (0–4). */
-  get strengthPercent(): number {
-    return this.form.controls.newPassword.value ? Math.max(8, (this.strength.score / 4) * 100) : 0;
+  /** The four strength segments, weakest first. */
+  readonly strengthLevels = [
+    { key: 'weak', label: 'Weak' },
+    { key: 'medium', label: 'Medium' },
+    { key: 'strong', label: 'Strong' },
+    { key: 'very-strong', label: 'Very Strong' },
+  ];
+
+  /** How many segments are lit (0 when empty; at least 1 once something is typed). */
+  get strengthFilled(): number {
+    if (!this.form.controls.newPassword.value) return 0;
+    return Math.min(4, Math.max(1, this.strength.score));
   }
 
-  get strengthTone(): 'weak' | 'fair' | 'good' | 'strong' {
-    const s = this.strength.score;
-    return s <= 1 ? 'weak' : s === 2 ? 'fair' : s === 3 ? 'good' : 'strong';
+  get strengthLevel(): string {
+    return this.strengthLevels[Math.max(0, this.strengthFilled - 1)].key;
+  }
+
+  get strengthLabel(): string {
+    return this.strengthLevels[Math.max(0, this.strengthFilled - 1)].label;
+  }
+
+  /** Colour of the expiry card: green (fine / never), amber (14 days or less), red (expired). */
+  get expiryTone(): 'green' | 'amber' | 'red' {
+    const days = this.passwordExpiresInDays;
+    if (days === null || days > 14) return 'green';
+    return days <= 0 ? 'red' : 'amber';
   }
 
   get confirmMatches(): boolean {
@@ -152,24 +175,39 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
     }
     const { currentPassword, newPassword } = this.form.getRawValue();
     this.saving = true;
+    this.serverError = '';
 
-    this.account.changePassword(currentPassword, newPassword).subscribe((result) => {
-      this.saving = false;
-      if (result === 'wrong-current') {
-        const current = this.form.controls.currentPassword;
-        current.setErrors({ incorrect: true });
-        current.markAsTouched();
-        this.currentInput?.nativeElement.focus();
-        this.currentInput?.nativeElement.select();
-        return;
-      }
-      this.form.reset();
-      this.done = true;
+    this.account.changePassword(currentPassword, newPassword).subscribe({
+      next: (result) => {
+        this.saving = false;
+        if (result === 'wrong-current') {
+          const current = this.form.controls.currentPassword;
+          current.setErrors({ incorrect: true });
+          current.markAsTouched();
+          this.currentInput?.nativeElement.focus();
+          this.currentInput?.nativeElement.select();
+          return;
+        }
+        this.form.reset();
+        this.done = true;
+      },
+      // Rules the backend enforces too (format, not reusing the current password), or a network failure.
+      error: (error: HttpErrorResponse) => {
+        this.saving = false;
+        this.serverError = apiErrorMessage(error, {
+          fallback: 'Could not change the password. Please try again.',
+          unavailable: 'Changing the password is not available yet. Please try again later.',
+        });
+      },
     });
   }
 
   onCancel(): void {
     this.router.navigate(['/profile']);
+  }
+
+  goTo(url: string): void {
+    this.router.navigateByUrl(url);
   }
 
   changeAgain(): void {

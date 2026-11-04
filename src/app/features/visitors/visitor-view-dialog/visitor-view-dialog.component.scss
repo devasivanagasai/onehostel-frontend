@@ -1,0 +1,135 @@
+// Visitor details + timeline. Frame comes from <app-dialog>.
+@use '../visitor-kit' as vk;
+
+@include vk.pills;
+
+.vv__label {
+  display: block;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.vv__muted { color: #94a3b8 !important; font-weight: 500 !important; }
+.vv__mono { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; letter-spacing: 0.04em; }
+.vv__err { color: #dc2626 !important; }
+
+.vv__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.vv__tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 14px; color: #0f172a; overflow-wrap: anywhere; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.vv__icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: #0d9488;
+
+  mat-icon { @include vk.icon(19px); }
+
+  &--blue { background: #e0ecff; color: #2563eb; }
+  &--purple { background: #f1e8ff; color: #7c3aed; }
+  &--red { background: #fee2e2; color: #dc2626; }
+  &--slate { background: #f1f5f9; color: #475569; }
+}
+
+.vv__card {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #ffffff;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.vv__id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vv__id-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+
+  strong { font-size: 14px; color: #0f172a; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.vv__notes p {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  color: #334155;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.vv__timeline {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    display: flex;
+    gap: 12px;
+    padding-bottom: 14px;
+
+    // Connector line between dots
+    &:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      top: 30px;
+      bottom: 0;
+      left: 14px;
+      width: 2px;
+      background: #e2e8f0;
+    }
+
+    &:last-child { padding-bottom: 0; }
+  }
+
+  strong { display: block; font-size: 13.5px; color: #0f172a; }
+  small { font-size: 12px; color: #64748b; }
+  p { margin: 4px 0 0; font-size: 13px; color: #334155; }
+}
+
+.vv__dot {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f7f5;
+  color: #0d9488;
+
+  mat-icon { @include vk.icon(16px); }
+}

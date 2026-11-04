@@ -1,0 +1,113 @@
+// Table look comes from the shared list styles (styles/_table.scss), KPI row + filter card
+// from styles/_page-kit.scss. Only what's unique to Fees & Payments lives here.
+
+.fees-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+/* ---- Tabs ---- */
+.fees-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+    cursor: pointer;
+
+    mat-icon {
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+    }
+
+    &:hover:not(.is-active) {
+      background: #f8fafc;
+    }
+
+    &.is-active {
+      background: #e6f7f5;
+      color: #0f766e;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #0d9488;
+      outline-offset: 2px;
+    }
+  }
+}
+
+/* ---- Filter card extras ---- */
+.filter-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* ---- Tables ---- */
+.fees-table-card {
+  padding-top: 8px;
+}
+
+.fees-table {
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  th.num,
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  td.is-due {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  .list-entity__text--end {
+    align-items: flex-end;
+  }
+
+  .mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+
+  // Amount that doesn't count as collected (Pending / Failed / Reversed / Refunded)
+  .is-void {
+    color: #94a3b8;
+    text-decoration: line-through;
+  }
+
+  .late {
+    color: #dc2626;
+  }
+
+  .is-cancelled td {
+    color: #94a3b8;
+  }
+}

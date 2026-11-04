@@ -1,0 +1,289 @@
+<div class="rooms-page">
+  <!-- KPI Summary: Rooms · Beds · Occupied · Available · Maintenance -->
+  @if (stats$ | async; as stats) {
+    <section class="kpi-row" aria-label="Rooms and beds summary">
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">meeting_room</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Total Rooms</span>
+          <span class="kpi-card__value">{{ stats.totalRooms }}</span>
+          <span class="kpi-card__sub">Across {{ floorsInUse }} {{ floorsInUse === 1 ? 'Floor' : 'Floors' }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">bed</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Total Beds</span>
+          <span class="kpi-card__value">{{ stats.totalBeds }}</span>
+          <span class="kpi-card__sub">Configured inventory</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--indigo"><mat-icon fontSet="material-icons-outlined">groups</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Occupied / Reserved</span>
+          <span class="kpi-card__value">{{ stats.occupiedBeds }}</span>
+          <span class="kpi-card__sub kpi-card__sub--accent">{{ stats.occupancyRate }}% Occupancy Rate</span>
+          <span class="kpi-card__bar" aria-hidden="true">
+            <span [style.width.%]="stats.occupancyRate"></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">event_available</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Available Beds</span>
+          <span class="kpi-card__value">{{ stats.availableBeds }}</span>
+          <span class="kpi-card__sub">Ready to allocate</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">handyman</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Maintenance</span>
+          <span class="kpi-card__value">{{ stats.maintenanceBeds }}</span>
+          <span class="kpi-card__sub">Beds blocked</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- Filter card: search + filters, Add Room at the right -->
+  <div class="filter-card">
+    <label class="filter-search">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Search room, floor or tenant"
+        aria-label="Search room, floor or tenant"
+        [(ngModel)]="filters.search"
+        (ngModelChange)="currentPage = 0"
+      />
+      @if (filters.search) {
+        <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Building" [(ngModel)]="filters.building" (ngModelChange)="currentPage = 0">
+          @for (b of buildings; track b.value) {
+            <option [value]="b.value">{{ b.label }}</option>
+          }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Floor" [(ngModel)]="filters.floor" (ngModelChange)="currentPage = 0">
+          @for (f of floors; track f.value) {
+            <option [value]="f.value">{{ f.label }}</option>
+          }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Sharing type" [(ngModel)]="filters.roomType" (ngModelChange)="currentPage = 0">
+          @for (t of roomTypes; track t.value) {
+            <option [value]="t.value">{{ t.label }}</option>
+          }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+          @for (s of statuses; track s.value) {
+            <option [value]="s.value">{{ s.label }}</option>
+          }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <label class="filter-select">
+      <span class="filter-select__control">
+        <select aria-label="Gender" [(ngModel)]="filters.gender" (ngModelChange)="currentPage = 0">
+          @for (g of genderOptions; track g.value) {
+            <option [value]="g.value">{{ g.label }}</option>
+          }
+        </select>
+        <mat-icon>expand_more</mat-icon>
+      </span>
+    </label>
+
+    <div class="filter-toggle">
+      <span>AC Rooms Only</span>
+      <mat-slide-toggle [(ngModel)]="filters.acOnly" (ngModelChange)="currentPage = 0" color="primary" aria-label="AC rooms only"></mat-slide-toggle>
+    </div>
+
+    @if (hasActiveFilters) {
+      <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+    }
+
+    <app-button class="filter-card__add" icon="add" (clicked)="openAddRoomModal()">Add Room</app-button>
+  </div>
+
+  <!-- Shared 3-dot action menu (View, Edit, Add Beds, Allocate, Mark Maintenance, Deactivate) -->
+  <mat-menu #roomMenu="matMenu" class="room-actions-menu" xPosition="before">
+    <ng-template matMenuContent let-room="room">
+      <button mat-menu-item (click)="openEditRoomModal(room)">
+        <mat-icon fontSet="material-icons-outlined">visibility</mat-icon>
+        <span>View Details</span>
+      </button>
+      <button mat-menu-item (click)="openEditRoomModal(room)">
+        <mat-icon fontSet="material-icons-outlined">edit</mat-icon>
+        <span>Edit Room</span>
+      </button>
+      <button mat-menu-item (click)="onAddBeds(room)">
+        <mat-icon>add</mat-icon>
+        <span>Add Beds</span>
+      </button>
+      <button mat-menu-item [disabled]="!canAllocate(room)" (click)="onAllocate(room)">
+        <mat-icon fontSet="material-icons-outlined">person</mat-icon>
+        <span>Allocate Bed</span>
+      </button>
+      <button mat-menu-item (click)="onToggleMaintenance(room)">
+        <mat-icon fontSet="material-icons-outlined">{{ room.status === 'Maintenance' ? 'check_circle' : 'build' }}</mat-icon>
+        <span>{{ room.status === 'Maintenance' ? 'Complete Maintenance' : 'Mark Maintenance' }}</span>
+      </button>
+      <button mat-menu-item (click)="onToggleDeactivate(room)">
+        <mat-icon>{{ room.status === 'Inactive' ? 'restart_alt' : 'autorenew' }}</mat-icon>
+        <span>{{ room.status === 'Inactive' ? 'Activate Room' : 'Deactivate Room' }}</span>
+      </button>
+      <button mat-menu-item class="menu-item--danger" (click)="deleteRoom(room)">
+        <mat-icon fontSet="material-icons-outlined">delete</mat-icon>
+        <span>Delete Room</span>
+      </button>
+    </ng-template>
+  </mat-menu>
+
+  @if (filteredRooms.length > 0) {
+    <div class="room-grid">
+      @for (room of pagedRooms; track room.id) {
+        <article class="room-card" [ngClass]="'room-card--' + statusKey(room.status)">
+          <header class="room-card__head">
+            <span class="room-card__icon" [ngClass]="'tone--' + statusKey(room.status)">
+              <mat-icon fontSet="material-icons-outlined">{{ room.status === 'Maintenance' ? 'handyman' : 'door_front' }}</mat-icon>
+            </span>
+
+            <div class="room-card__title-group">
+              <h3 class="room-card__name">Room {{ room.roomNumber }} - {{ room.floor }}</h3>
+              <span class="room-card__meta">
+                {{ roomTypeLabel(room) }}
+                <span class="dot">•</span>
+                ₹{{ room.baseRent | number }} / Bed
+              </span>
+            </div>
+
+            <span class="room-status" [ngClass]="'tone--' + statusKey(room.status)">{{ statusLabel(room.status) }}</span>
+
+            <app-button
+              variant="icon"
+              size="sm"
+              icon="more_vert"
+              class="room-card__menu"
+              [matMenuTriggerFor]="roomMenu"
+              [matMenuTriggerData]="{ room: room }"
+              [ariaLabel]="'Actions for room ' + room.roomNumber"
+            ></app-button>
+          </header>
+
+          <!-- Scope tags -->
+          <div class="room-card__tags">
+            <span class="tag"><mat-icon fontSet="material-icons-outlined">apartment</mat-icon>{{ room.building }}</span>
+            <span class="tag"><mat-icon fontSet="material-icons-outlined">{{ genderIcon(room) }}</mat-icon>{{ genderLabel(room) }}</span>
+            @if (room.collegeRestriction) {
+              <span class="tag" [matTooltip]="'Restricted to ' + room.collegeRestriction">
+                <mat-icon fontSet="material-icons-outlined">school</mat-icon>{{ room.collegeRestriction }}
+              </span>
+            }
+          </div>
+
+          <!-- Facilities -->
+          <ul class="room-card__facilities">
+            @for (f of room.facilities.slice(0, 3); track f) {
+              <li><mat-icon fontSet="material-icons-outlined">{{ facilityIcon(f) }}</mat-icon>{{ facilityLabel(f) }}</li>
+            }
+            @if (room.facilities.length > 3) {
+              <li class="more" [matTooltip]="room.facilities.slice(3).join(', ')">+{{ room.facilities.length - 3 }}</li>
+            }
+          </ul>
+
+          @if (room.status === 'Maintenance' && room.maintenanceNote) {
+            <div class="room-card__note">
+              <mat-icon fontSet="material-icons-outlined">construction</mat-icon>
+              <span>{{ room.maintenanceNote }}</span>
+            </div>
+          }
+
+          <!-- Beds -->
+          <div class="room-card__beds">
+            <div class="room-card__beds-head">
+              <span class="label">Beds</span>
+              <span class="count">{{ getOccupiedBedsCount(room) }}/{{ room.capacity }} occupied</span>
+            </div>
+            <div class="bed-grid" [class.bed-grid--3]="room.beds.length >= 3">
+              @for (bed of room.beds; track bed.id) {
+                <button
+                  type="button"
+                  class="bed-tile"
+                  [ngClass]="'bed-tile--' + bedKey(room, bed)"
+                  (click)="onBedClick(room, bed)"
+                  [matTooltip]="bedTooltip(room, bed)"
+                >
+                  <span class="bed-tile__avatar">
+                    @if (bed.tenantName && bed.avatarUrl) {
+                      <img [src]="bed.avatarUrl" [alt]="bed.tenantName" />
+                    } @else if (bed.tenantName) {
+                      <span class="initials">{{ initials(bed.tenantName) }}</span>
+                    } @else {
+                      <mat-icon fontSet="material-icons-outlined">{{ bedIcon(room, bed) }}</mat-icon>
+                    }
+                  </span>
+                  <span class="bed-tile__text">
+                    <span class="bed-tile__name">Bed {{ bed.bedNumber }}</span>
+                    <span class="bed-tile__sub">{{ bedSubLabel(room, bed) }}</span>
+                  </span>
+                </button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="rooms-empty">
+      <app-empty-state
+        icon="meeting_room"
+        [message]="hasActiveFilters ? 'No rooms match your filters' : 'No rooms configured yet'"
+        [hint]="hasActiveFilters ? 'Try adjusting your search, building or floor filters.' : 'Get started by creating your first room inventory.'"
+        [clearable]="hasActiveFilters"
+        (clear)="clearFilters()"
+      ></app-empty-state>
+      @if (hasActiveFilters) {
+        <app-button icon="filter_alt_off" (clicked)="clearFilters()">Clear filters</app-button>
+      } @else {
+        <app-button icon="add" (clicked)="openAddRoomModal()">Create your first room</app-button>
+      }
+    </div>
+  }
+
+  <!-- Pagination -->
+  @if (totalPages > 1) {
+    <app-pagination [page]="safePage" [totalPages]="totalPages" (pageChange)="currentPage = $event"></app-pagination>
+  }
+</div>

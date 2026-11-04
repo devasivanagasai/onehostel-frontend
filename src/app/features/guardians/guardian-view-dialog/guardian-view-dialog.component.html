@@ -1,0 +1,106 @@
+<app-dialog [eyebrow]="'Guardian ID · ' + g.id" [title]="g.name" icon="family_restroom" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="gd-pill gd-pill--{{ tones[g.verification] }}">{{ g.verification }}</span>
+    @if (access.state === 'Revoked') { <span class="gd-pill gd-pill--danger">Access revoked</span> }
+    @if (g.primary) { <span class="gd-pill gd-pill--info">Primary</span> }
+  </ng-container>
+
+  @if (access.state === 'Revoked') {
+    <p class="gd-banner gd-banner--error"><mat-icon fontSet="material-icons-outlined">block</mat-icon>{{ access.reason }}</p>
+  }
+
+  <div class="gw-facts">
+    <div class="gw-tile">
+      <span class="gw-label">Linked resident</span>
+      <strong>{{ residentName }}</strong>
+      <small>{{ g.residentId }} · {{ resident?.status ?? 'Unknown' }}{{ resident?.deactivatedAt ? ' · deactivated' : '' }}</small>
+    </div>
+    <div class="gw-tile">
+      <span class="gw-label">Relationship</span>
+      <strong>{{ g.relationship }}</strong>
+    </div>
+    <div class="gw-tile">
+      <span class="gw-label">Contact</span>
+      <strong>{{ g.mobile ? '+91 ' + g.mobile : 'No mobile' }}</strong>
+      <small>{{ g.email || 'No email' }}</small>
+    </div>
+    <div class="gw-tile">
+      <span class="gw-label">Notification consent</span>
+      <strong>{{ g.consent }}</strong>
+      <small>Captured {{ fmt.date(g.consentDate) }}</small>
+    </div>
+    <div class="gw-tile">
+      <span class="gw-label">Verification</span>
+      <strong>{{ g.verification }}</strong>
+      <small>{{ g.verifiedAt ? 'Verified ' + fmt.date(g.verifiedAt, 'datetime') : g.verification === 'Pending' ? 'Code sent, waiting for the guardian' : 'Not verified for this resident' }}</small>
+    </div>
+    <div class="gw-tile">
+      <span class="gw-label">Access scope</span>
+      <span class="gw-scope">
+        @for (s of g.scope; track s) { <span class="gw-chip">{{ s }}</span> }
+      </span>
+    </div>
+  </div>
+
+  @if (sameMobileElsewhere.length) {
+    <p class="gd-banner gd-banner--info">
+      <mat-icon fontSet="material-icons-outlined">info</mat-icon>
+      <span>This mobile is also linked to
+        @for (x of sameMobileElsewhere; track x.id; let last = $last) { {{ service.residentName(x.residentId) }} ({{ x.id }}){{ last ? '' : ', ' }} }.
+        Each link is verified separately.</span>
+    </p>
+  }
+
+  <section class="gw-section" aria-label="Alert eligibility">
+    <h3>Would this guardian get an alert?</h3>
+    <ul class="gw-kinds">
+      @for (k of kinds; track k) {
+        <li>
+          @if (!blocker(k)) {
+            <mat-icon fontSet="material-icons-outlined" class="is-on">notifications_active</mat-icon><span>{{ k }}</span><small>Yes, by {{ g.consent }}</small>
+          } @else {
+            <mat-icon fontSet="material-icons-outlined">notifications_off</mat-icon><span>{{ k }}</span><small>No, {{ blocker(k).toLowerCase() }}</small>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  @if (others.length) {
+    <section class="gw-section" aria-label="Other guardians of this resident">
+      <h3>Other guardians of {{ residentName }}</h3>
+      <ul class="gw-others">
+        @for (o of others; track o.id) {
+          <li><strong>{{ o.name }}</strong> <small>{{ o.id }} · {{ o.relationship }} · {{ o.verification }}{{ o.primary ? ' · Primary' : '' }}</small></li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="gw-section" aria-label="History">
+    <h3>History</h3>
+    <ol class="gw-history">
+      @for (h of history; track $index) {
+        <li>
+          <span class="gw-when">{{ fmt.date(h.at, 'datetime') }}</span>
+          <span><strong>{{ h.action }}</strong> <small>by {{ h.by }}</small>@if (h.note) { <small class="gw-note">{{ h.note }}</small> }</span>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    <span class="app-dialog__spacer"></span>
+    @if (access.state === 'Revoked' && !access.automatic) {
+      <app-button variant="outline" icon="verified_user" (clicked)="act('restore')">Restore Access</app-button>
+    } @else if (access.state === 'Active') {
+      <app-button variant="danger-outline" icon="block" (clicked)="act('revoke')">Revoke Access</app-button>
+    }
+    @if (!g.primary) { <app-button variant="outline" icon="star" (clicked)="act('primary')">Make Primary</app-button> }
+    @if (g.verification !== 'Verified' && access.state === 'Active') {
+      <app-button variant="outline" icon="verified_user" (clicked)="act('verify')">{{ g.verification === 'Pending' ? 'Enter Code' : 'Send Verification' }}</app-button>
+    }
+    <app-button variant="accent" icon="edit" (clicked)="act('edit')">Edit</app-button>
+  </ng-container>
+</app-dialog>

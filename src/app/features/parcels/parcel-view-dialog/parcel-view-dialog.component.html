@@ -1,0 +1,108 @@
+<app-dialog [eyebrow]="'Parcel ID · ' + p.id" [title]="p.courier + (p.tracking ? ' · ' + p.tracking : '')" icon="inventory_2" tone="teal" (closed)="close()">
+  <ng-container dialogMeta>
+    <span class="pv__pill pv__pill--{{ pickupTone }}">{{ p.status }}</span>
+    @if (overdue) { <span class="pv__pill pv__pill--danger">Overdue · {{ age }} days</span> }
+  </ng-container>
+
+  <div class="pv__facts">
+    <div class="pv__tile">
+      <span class="pv__icon"><mat-icon fontSet="material-icons-outlined">person</mat-icon></span>
+      <div>
+        <span class="pv__label">Resident</span>
+        <strong>{{ residentName }}</strong>
+        <small>{{ location }}</small>
+      </div>
+    </div>
+    <div class="pv__tile">
+      <span class="pv__icon pv__icon--orange"><mat-icon fontSet="material-icons-outlined">shelves</mat-icon></span>
+      <div>
+        <span class="pv__label">Storage Location</span>
+        <strong [class.pv__muted]="!p.storage">{{ p.storage || 'Not recorded' }}</strong>
+      </div>
+    </div>
+    <div class="pv__tile">
+      <span class="pv__icon pv__icon--blue"><mat-icon fontSet="material-icons-outlined">move_to_inbox</mat-icon></span>
+      <div>
+        <span class="pv__label">Received</span>
+        <strong>{{ fmt.date(p.receivedAt, 'datetime') }}</strong>
+        <small>by {{ p.receivedBy }}</small>
+      </div>
+    </div>
+
+    @if (p.status === 'Collected' && p.collector) {
+      <div class="pv__tile pv__tile--wide">
+        <span class="pv__icon pv__icon--green"><mat-icon fontSet="material-icons-outlined">task_alt</mat-icon></span>
+        <div>
+          <span class="pv__label">Collected By</span>
+          <strong>{{ p.collector.name }}{{ p.collector.self ? ' (resident)' : ' · ' + p.collector.relation }}</strong>
+          <small>{{ fmt.date(p.collectedAt, 'datetime') }} · handed over by {{ p.handedOverBy }}{{ p.collector.idReference ? ' · ID ' + p.collector.idReference : '' }}</small>
+          @if (p.collector.reason) { <small class="pv__reason">{{ p.collector.reason }}</small> }
+        </div>
+      </div>
+    }
+    @if (p.status === 'Returned') {
+      <div class="pv__tile pv__tile--wide">
+        <span class="pv__icon pv__icon--slate"><mat-icon fontSet="material-icons-outlined">assignment_return</mat-icon></span>
+        <div>
+          <span class="pv__label">Returned To</span>
+          <strong>{{ p.returnedTo }}</strong>
+          <small>{{ fmt.date(p.returnedAt, 'datetime') }} · by {{ p.returnedBy }}</small>
+          <small class="pv__reason">{{ p.returnReason }}</small>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Notifications -->
+  <section class="pv__card">
+    <div class="pv__head">
+      <strong>Notifications</strong>
+      <span class="pv__pill pv__pill--{{ notificationTone }}">{{ notification }}</span>
+      <small>{{ p.reminderCount }} reminder{{ p.reminderCount === 1 ? '' : 's' }}{{ p.lastReminderAt ? ' · last ' + fmt.date(p.lastReminderAt, 'datetime') : '' }}</small>
+    </div>
+    @if (notices.length) {
+      <ul class="pv__notices">
+        @for (n of notices; track $index) {
+          <li>
+            <mat-icon fontSet="material-icons-outlined">{{ n.kind === 'Arrival' ? 'notifications' : 'notifications_active' }}</mat-icon>
+            <div>
+              <strong>{{ n.kind === 'Arrival' ? 'Arrival notice' : 'Pickup reminder' }}</strong>
+              <small>{{ fmt.date(n.at, 'datetime') }} · {{ n.channels }}{{ n.note ? ' · ' + n.note : '' }}</small>
+            </div>
+            <span class="pv__pill pv__pill--{{ noticeState(n).tone }}">{{ noticeState(n).label }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="pv__empty">The resident hasn't been notified about this parcel.</p>
+    }
+  </section>
+
+  <!-- History -->
+  <section class="pv__card">
+    <strong class="pv__title">History</strong>
+    <ol class="pv__timeline">
+      @for (e of p.history; track $index) {
+        <li>
+          <span class="pv__dot"><mat-icon fontSet="material-icons-outlined">{{ e.icon }}</mat-icon></span>
+          <div>
+            <strong>{{ e.action }}</strong>
+            <small>{{ fmt.date(e.at, 'datetime') }} · {{ e.by }}</small>
+            @if (e.note) { <p>{{ e.note }}</p> }
+          </div>
+        </li>
+      }
+    </ol>
+  </section>
+
+  <ng-container dialogFooter>
+    @if (p.status === 'Awaiting Pickup') {
+      <app-button variant="danger-outline" icon="assignment_return" (clicked)="close('return')">Return to Sender</app-button>
+      <span class="app-dialog__spacer"></span>
+      <app-button variant="outline" icon="notifications_active" [iconOutlined]="true" [disabled]="!!reminderBlocker" [matTooltip]="reminderBlocker" (clicked)="close('remind')">Send Reminder</app-button>
+      <app-button variant="accent" icon="task_alt" (clicked)="close('collect')">Mark Collected</app-button>
+    } @else {
+      <app-button variant="secondary" (clicked)="close()">Close</app-button>
+    }
+  </ng-container>
+</app-dialog>

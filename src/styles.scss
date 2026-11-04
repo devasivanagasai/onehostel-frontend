@@ -3,6 +3,7 @@
 @use 'styles/typography';
 @use 'styles/filters';
 @use 'styles/table';
+@use 'styles/page-kit';
 
 // ---- Button sizes: the single source for every button in the app -------------------
 // md is the default; sm for row / inline actions; lg only for the login screen's CTAs.
