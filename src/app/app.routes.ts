@@ -1,11 +1,11 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/services/auth.service';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { passwordExpiryGuard } from './core/guards/password-expiry.guard';
 import { adminGuard } from './core/guards/admin.guard';
-import { AuthService } from './core/services/auth.service';
 
 export const routes: Routes = [
   {
@@ -17,10 +17,30 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
-    // Password expiry first, then the Admin-only modules (Hostel Owners and Tenants get the Dashboard).
+    // Password expiry first, then the role checks (AuthService.canAccess).
     canActivateChild: [passwordExpiryGuard, adminGuard],
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      // Each role's home page: Admin → onboarding, Hostel Owner → their hostel's dashboard,
+      // Hostel Manager → branch overview.
+      { path: '', pathMatch: 'full', redirectTo: () => inject(AuthService).landingRoute },
+      {
+        path: 'admin/onboarding',
+        loadComponent: () =>
+          import('./features/hostel-onboarding/hostel-onboarding.component').then(
+            (m) => m.HostelOnboardingComponent,
+          ),
+      },
+      {
+        path: 'owner/dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/owner-dashboard.component').then((m) => m.OwnerDashboardComponent),
+      },
+      {
+        // The manager's own overview page isn't built yet; the Dashboard shows the hostel modules they can use.
+        path: 'manager/branch-overview',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
       // Hostel Owners get their own hostel's dashboard; the platform-wide one is for everyone else.
       {
         path: 'dashboard',
@@ -240,5 +260,5 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: () => inject(AuthService).landingRoute },
 ];

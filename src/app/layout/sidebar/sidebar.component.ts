@@ -31,15 +31,16 @@ export class SidebarComponent {
   private readonly auth = inject(AuthService);
 
   /**
-   * Menu for the signed-in user, filtered by role through AuthService.canAccess():
+   * Menu for the signed-in user, filtered through AuthService.canAccess() (privileges, else role rules):
    * Hostel Owner modules (Rooms & Beds, Residents, Fees & Payments, Complaints, Announcements, Reports,
    * Hostel Settings) for Hostel Owners only,
    * Admin modules for Admins only.
    */
   get navSections(): NavSection[] {
-    // Built once per role combination and reused: a fresh array on every check would re-create the menu links,
-    // and each new routerLinkActive schedules another check — an endless render loop (white screen).
-    const cacheKey = `${this.auth.isAdmin}_${this.auth.isHostelOwner}_${this.auth.isTenant}`;
+    // Built once per access state (roles, privToken, catalogue) and reused: a fresh array on every check
+    // would re-create the menu links, and each new routerLinkActive schedules another check — an endless
+    // render loop (white screen).
+    const cacheKey = this.auth.accessKey;
     if (!this.cachedSections || this.cachedRoleKey !== cacheKey) {
       this.cachedRoleKey = cacheKey;
       this.cachedSections = ALL_SECTIONS.map((section) => ({
