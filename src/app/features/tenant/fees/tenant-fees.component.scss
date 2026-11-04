@@ -41,7 +41,14 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 
   @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 480px) { grid-template-columns: 1fr; }
+  // Phones: a compact 2 x 2 grid without icons, so the invoices are not pushed a screen down.
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    .kpi-card { padding: 12px; }
+    .kpi-card__icon { display: none; }
+    .kpi-card__value { font-size: 20px; }
+  }
 }
 
 .tf__small { font-size: 20px !important; }
@@ -112,4 +119,47 @@
   &--danger { background: #fee2e2; color: #dc2626; }
   &--info { background: #e0f2fe; color: #0284c7; }
   &--neutral { background: #f1f5f9; color: #64748b; }
+}
+
+// ---- "Pay now" banner -------------------------------------------------------------
+.tf__pay {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+
+  &--overdue { background: #fef2f2; border-color: #fecaca; }
+  &--ok { background: #f0fdf4; border-color: #bbf7d0; }
+}
+.tf__pay__icon {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #2563eb; flex-shrink: 0;
+  .tf__pay--overdue & { color: #dc2626; }
+  .tf__pay--ok & { color: #16a34a; }
+}
+.tf__pay__text {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  strong { font-size: 15px; color: #0f172a; }
+  span { font-size: 12.5px; color: #475569; }
+}
+@media (max-width: 600px) {
+  .tf__pay { flex-wrap: wrap; app-button { width: 100%; ::ng-deep button { width: 100%; justify-content: center; } } }
+}
+
+// ---- Invoice cards (phones) -----------------------------------------------------
+.tf__cards { display: none; list-style: none; margin: 0; padding: 0; flex-direction: column; gap: 10px; }
+.tf__card {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: #fff; box-shadow: 0 0 0 1px #e2e8f0;
+  &.is-overdue { box-shadow: 0 0 0 1px #fecaca; border-left: 4px solid #dc2626; }
+}
+.tf__card__top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; strong { display: block; font-size: 14px; color: #0f172a; } }
+.tf__card__amount { display: flex; align-items: baseline; justify-content: space-between; span { font-size: 12px; color: #64748b; } strong { font-size: 20px; color: #0f172a; } }
+.tf__card__meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: #64748b; }
+.tf__card__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 720px) {
+  .tf__table { display: none; }
+  .tf__cards { display: flex; }
 }

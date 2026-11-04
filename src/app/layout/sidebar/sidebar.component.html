@@ -8,9 +8,18 @@
 
   <nav class="sidebar__nav">
     <div *ngFor="let section of navSections" class="sidebar__section">
-      <div *ngIf="section.sectionTitle && !collapsed" class="sidebar__section-title">{{ section.sectionTitle }}</div>
+      <button
+        *ngIf="section.sectionTitle && !collapsed"
+        type="button"
+        class="sidebar__section-title sidebar__section-toggle"
+        [attr.aria-expanded]="isOpen(section)"
+        (click)="toggle(section)"
+      >
+        <span>{{ section.sectionTitle }}</span>
+        <mat-icon class="sidebar__section-chevron" [class.sidebar__section-chevron--open]="isOpen(section)">expand_more</mat-icon>
+      </button>
 
-      <div class="sidebar__menu-list">
+      <div class="sidebar__menu-list" *ngIf="isOpen(section)">
         <a
           *ngFor="let item of section.items"
           [routerLink]="item.route"

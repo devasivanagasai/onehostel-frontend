@@ -11,6 +11,27 @@
       <app-button variant="secondary" icon="refresh" (clicked)="load()">Retry</app-button>
     </div>
   } @else {
+    <!-- The one thing to do: pay what is due -->
+    @if (payNext; as next) {
+      <section class="tf__pay" [class.tf__pay--overdue]="next.status === 'Overdue'" aria-label="Pay your fees">
+        <span class="tf__pay__icon" aria-hidden="true"><mat-icon fontSet="material-icons-outlined">{{ next.activeAttemptRef ? 'hourglass_top' : next.status === 'Overdue' ? 'error_outline' : 'payments' }}</mat-icon></span>
+        <div class="tf__pay__text">
+          <strong>
+            @if (next.activeAttemptRef) { A payment for {{ next.id }} is waiting for its result }
+            @else if (next.status === 'Overdue') { {{ fmt.money(next.outstanding, 0) }} is overdue }
+            @else { {{ fmt.money(next.outstanding, 0) }} is due on {{ fmt.date(next.dueDate) }} }
+          </strong>
+          <span>{{ next.description }} · you have {{ fmt.money(summary.outstandingTotal, 0) }} outstanding in total.</span>
+        </div>
+        <app-button variant="primary" [icon]="next.activeAttemptRef ? 'hourglass_top' : 'payments'" [ariaLabel]="(next.activeAttemptRef ? 'Check payment status for ' : 'Pay ') + next.id" (clicked)="pay(next)">{{ next.activeAttemptRef ? 'Check status' : 'Pay ' + fmt.money(next.outstanding, 0) }}</app-button>
+      </section>
+    } @else {
+      <section class="tf__pay tf__pay--ok" aria-label="Fees status">
+        <span class="tf__pay__icon" aria-hidden="true"><mat-icon fontSet="material-icons-outlined">check_circle</mat-icon></span>
+        <div class="tf__pay__text"><strong>You are all paid up</strong><span>Nothing is due right now. Your receipts are in Transaction history.</span></div>
+      </section>
+    }
+
     <!-- Summary -->
     <section class="kpi-row tf__kpis" aria-label="Fees summary">
       <div class="kpi-card">
@@ -136,6 +157,28 @@
             }
           </tbody>
         </table>
+
+        <!-- Phones: one card per invoice instead of a wide table -->
+        <ul class="tf__cards" aria-label="Your invoices">
+          @for (i of paged; track i.id) {
+            <li class="tf__card" [class.is-overdue]="i.status === 'Overdue'">
+              <div class="tf__card__top">
+                <div><strong>{{ i.description }}</strong><small class="tf__sub">{{ i.id }} · {{ i.period }}</small></div>
+                <span class="status-badge status-badge--{{ invoiceTone[i.status] }}">{{ i.status }}</span>
+              </div>
+              <div class="tf__card__amount"><span>Outstanding</span><strong>{{ fmt.money(i.outstanding) }}</strong></div>
+              <div class="tf__card__meta"><span>Total {{ fmt.money(i.total) }}</span><span>Paid {{ fmt.money(i.paid) }}</span><span>Due {{ fmt.date(i.dueDate) }}</span></div>
+              @if (i.pendingAmount > 0) { <small class="tf__sub">{{ fmt.money(i.pendingAmount) }} pending confirmation</small> }
+              <div class="tf__card__actions">
+                @if (canPay(i)) {
+                  <app-button variant="primary" size="sm" [icon]="i.activeAttemptRef ? 'hourglass_top' : 'payments'" [ariaLabel]="(i.activeAttemptRef ? 'Check payment status for ' : 'Pay ') + i.id" (clicked)="pay(i)">{{ i.activeAttemptRef ? 'Check status' : 'Pay now' }}</app-button>
+                }
+                <app-button variant="outline" size="sm" icon="visibility" [ariaLabel]="'View invoice ' + i.id" (clicked)="openInvoice(i)">Details</app-button>
+                <app-button variant="icon" size="sm" icon="download" [ariaLabel]="'Download invoice ' + i.id" (clicked)="downloadInvoice(i)"></app-button>
+              </div>
+            </li>
+          }
+        </ul>
       </app-table-card>
     } @else {
       <app-table-card

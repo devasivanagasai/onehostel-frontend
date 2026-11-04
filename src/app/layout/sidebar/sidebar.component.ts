@@ -1,6 +1,8 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, DestroyRef, Input, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
@@ -32,6 +34,54 @@ export class SidebarComponent {
 
   private readonly auth = inject(AuthService);
   private readonly tenant = inject(TenantContextService);
+  private readonly router = inject(Router);
+
+  /** Titled groups (the Tenant menu) fold away; the group holding the current page opens by itself. */
+  private open: Record<string, boolean> = this.loadOpen();
+
+  constructor() {
+    this.openGroupOf(this.router.url);
+    this.router.events
+      .pipe(filter((e) => e instanceof NavigationEnd), takeUntilDestroyed(inject(DestroyRef)))
+      .subscribe((e) => this.openGroupOf((e as NavigationEnd).urlAfterRedirects));
+  }
+
+  isOpen(section: NavSection): boolean {
+    return !section.sectionTitle || this.collapsed || !!this.open[section.sectionTitle];
+  }
+
+  toggle(section: NavSection): void {
+    if (!section.sectionTitle) return;
+    this.open = { ...this.open, [section.sectionTitle]: !this.open[section.sectionTitle] };
+    this.saveOpen();
+  }
+
+  private openGroupOf(url: string): void {
+    const path = url.split(/[?#]/)[0];
+    const group = this.navSections.find((s) => s.sectionTitle && s.items.some((i) => path === i.route || path.startsWith(i.route + '/')));
+    if (group?.sectionTitle && !this.open[group.sectionTitle]) {
+      this.open = { ...this.open, [group.sectionTitle]: true };
+      this.saveOpen();
+    }
+  }
+
+  private loadOpen(): Record<string, boolean> {
+    try {
+      const raw = localStorage.getItem(GROUPS_KEY);
+      if (raw) return JSON.parse(raw) as Record<string, boolean>;
+    } catch {
+      /* use the defaults */
+    }
+    return { 'My Stay': true, 'Requests & Updates': true };
+  }
+
+  private saveOpen(): void {
+    try {
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(this.open));
+    } catch {
+      /* not remembered */
+    }
+  }
 
   /**
    * Menu for the signed-in user, filtered by role through AuthService.canAccess():
@@ -56,6 +106,8 @@ export class SidebarComponent {
   private cachedSections?: NavSection[];
   private cachedRoleKey?: string;
 }
+
+const GROUPS_KEY = 'onehostel_sidebar_groups_v1';
 
 /** Tenant pages, grouped as in the FRD navigation (Home / My Hostel / Payments / Services / Updates / Profile). */
 const TENANT_SECTIONS: NavSection[] = (['My Stay', 'Requests & Updates', 'Daily Services', 'More'] as const).map((group) => ({

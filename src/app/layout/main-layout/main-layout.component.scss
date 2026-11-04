@@ -37,7 +37,8 @@
 }
 
 app-header,
-app-breadcrumb {
+app-breadcrumb,
+app-tenant-bottom-nav {
   flex-shrink: 0;
   position: relative;
   z-index: 2;
@@ -50,4 +51,13 @@ app-breadcrumb {
   padding: 24px 28px;
   background: #f8fafc;
   box-sizing: border-box;
+
+  // Phones: tighter gutters, and room for the bottom navigation bar.
+  @media (max-width: 599px) {
+    padding: 16px 14px;
+  }
+}
+
+.layout-page--bottom-nav {
+  padding-bottom: 20px;
 }

@@ -2,11 +2,13 @@ import { Component, DestroyRef, ElementRef, ViewChild } from '@angular/core';
 import { tenantModuleForUrl } from '../../core/models/tenant.models';
 import { AsyncPipe } from '@angular/common';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { filter, map, shareReplay, take } from 'rxjs';
 import { AppHeaderComponent } from '../../shared/components/header/app-header.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
+import { TenantBottomNavComponent } from '../tenant-bottom-nav/tenant-bottom-nav.component';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { AuthService } from '../../core/services/auth.service';
 import { AccountService } from '../../core/services/account.service';
@@ -15,14 +17,16 @@ import { SessionTimeoutService } from '../../core/services/session-timeout.servi
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [AsyncPipe, RouterOutlet, MatSidenavModule, AppHeaderComponent, SidebarComponent, BreadcrumbComponent],
+  imports: [AsyncPipe, RouterOutlet, MatSidenavModule, AppHeaderComponent, SidebarComponent, BreadcrumbComponent, TenantBottomNavComponent],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
 })
 export class MainLayoutComponent {
   @ViewChild('pageScroller') private pageScroller?: ElementRef<HTMLElement>;
 
-  sidenavOpened = true;
+  /** The phone drawer starts closed so it never covers the page; it closes again after every navigation. */
+  sidenavOpened = false;
+  private handset = false;
   /** Icon-only rail mode for the desktop sidebar, toggled from the header's menu button. */
   sidebarCollapsed = false;
   pageTitle = 'Institution';
@@ -45,12 +49,17 @@ export class MainLayoutComponent {
     destroyRef: DestroyRef,
   ) {
     // Settings → Security → Session Timeout: sign out after that much inactivity.
+    this.isHandset$.pipe(takeUntilDestroyed(destroyRef)).subscribe((h) => {
+      this.handset = h;
+      if (!h) this.sidenavOpened = false;
+    });
     sessionTimeout.start();
     destroyRef.onDestroy(() => sessionTimeout.stop());
 
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event: any) => {
       const url = event.urlAfterRedirects || event.url;
       this.pageSubtitle = undefined;
+      if (this.handset) this.sidenavOpened = false;
       // Only the page area scrolls (headers are fixed), so start each new page at the top.
       this.pageScroller?.nativeElement.scrollTo({ top: 0 });
 
@@ -167,6 +176,14 @@ export class MainLayoutComponent {
   }
 
   /** On mobile this opens/closes the overlay drawer; on desktop it collapses/expands the rail instead. */
+  get isTenant(): boolean {
+    return this.authService.isTenant;
+  }
+
+  openMenu(): void {
+    this.sidenavOpened = true;
+  }
+
   toggleSidenav(): void {
     this.isHandset$.pipe(take(1)).subscribe((isHandset) => {
       if (isHandset) {

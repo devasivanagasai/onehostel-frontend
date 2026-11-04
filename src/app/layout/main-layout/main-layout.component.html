@@ -5,6 +5,7 @@
       [opened]="(isHandset$ | async) ? sidenavOpened : true"
       class="layout-sidenav"
       [disableClose]="!(isHandset$ | async)"
+      (closedStart)="sidenavOpened = false"
     >
       <app-sidebar [collapsed]="!(isHandset$ | async) && sidebarCollapsed"></app-sidebar>
     </mat-sidenav>
@@ -22,9 +23,13 @@
 
       <app-breadcrumb [pageTitle]="pageTitle" [subtitle]="pageSubtitle"></app-breadcrumb>
 
-      <main class="layout-page" #pageScroller>
+      <main class="layout-page" [class.layout-page--bottom-nav]="(isHandset$ | async) && isTenant" #pageScroller>
         <router-outlet></router-outlet>
       </main>
+
+      @if ((isHandset$ | async) && isTenant) {
+        <app-tenant-bottom-nav (more)="openMenu()"></app-tenant-bottom-nav>
+      }
     </mat-sidenav-content>
   </mat-sidenav-container>
 </div>

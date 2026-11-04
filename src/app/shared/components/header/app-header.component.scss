@@ -676,3 +676,36 @@
   font-size: 13px;
   color: #94a3b8;
 }
+
+/* Phones: let the search fill the free space, hide the full-screen button and the name (the avatar stays),
+   so nothing wraps or squashes. */
+@media (max-width: 599px) {
+  .app-header {
+    padding: 0 10px;
+  }
+
+  .app-header__left {
+    flex: 1;
+    gap: 8px;
+  }
+
+  .app-header__search-field {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-header__right {
+    gap: 6px;
+    flex-shrink: 0;
+
+    .app-header__icon-btn[aria-label*='full screen'] {
+      display: none;
+    }
+  }
+
+  .app-header__user-details,
+  .app-header__dropdown-icon {
+    display: none;
+  }
+}

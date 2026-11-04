@@ -146,6 +146,14 @@ export class TenantFeesComponent implements OnInit {
     this.txPage = 0;
   }
 
+  /** The invoice to pay first: overdue before due, earliest due date first. A payment already waiting comes first of all. */
+  get payNext(): TenantInvoice | undefined {
+    const payable = this.invoices.filter((i) => this.canPay(i));
+    const waiting = payable.find((i) => i.activeAttemptRef);
+    if (waiting) return waiting;
+    return [...payable].sort((a, b) => Number(b.status === 'Overdue') - Number(a.status === 'Overdue') || a.dueDate.localeCompare(b.dueDate))[0];
+  }
+
   canPay(i: TenantInvoice): boolean {
     return i.outstanding > 0 && i.status !== 'Cancelled' && i.status !== 'Waived' && i.status !== 'Paid';
   }

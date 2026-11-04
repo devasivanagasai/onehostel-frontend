@@ -81,6 +81,42 @@
   text-transform: uppercase;
 }
 
+.sidebar__section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 8px;
+  text-align: left;
+
+  &:hover {
+    background: #f8fafc;
+    color: #64748b;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+  }
+}
+
+.sidebar__section-chevron {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.15s ease;
+  transform: rotate(-90deg);
+
+  &--open {
+    transform: rotate(0);
+  }
+}
+
 .sidebar__menu-list {
   display: flex;
   flex-direction: column;
