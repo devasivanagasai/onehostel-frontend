@@ -1,0 +1,57 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog [title]="editing ? 'Edit Task' : 'New Task'" [subtitle]="editing ? editing.id : 'Give a staff member something to do.'" icon="task_alt" tone="teal" (closed)="cancel()">
+    <div class="sf">
+      <div class="fk-field">
+        <label class="fk-label" for="tk-title">Title<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="errors.title">
+          <input id="tk-title" formControlName="title" maxlength="120" autocomplete="off" placeholder="e.g. Fix leaking tap in Room 204" />
+        </span>
+        @if (errors.title) { <span class="fk-error">{{ errors.title }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="tk-desc">Description <span class="opt">(Optional)</span></label>
+        <span class="fk-control"><textarea id="tk-desc" formControlName="description" rows="3" maxlength="500" placeholder="Details, location or instructions"></textarea></span>
+      </div>
+
+      <div class="sf__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="tk-assignee">Assign To<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.assigneeId">
+            <select id="tk-assignee" formControlName="assigneeId">
+              <option value="">Select active staff</option>
+              @for (s of assignees; track s.id) { <option [value]="s.id" [disabled]="s.status !== 'Active'">{{ s.name }} ({{ s.category }}){{ s.status !== 'Active' ? ' · ' + s.status : '' }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (errors.assigneeId) { <span class="fk-error">{{ errors.assigneeId }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="tk-priority">Priority<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="tk-priority" formControlName="priority">
+              @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="tk-due">Due Date<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="errors.dueDate">
+            <input id="tk-due" type="date" formControlName="dueDate" [attr.min]="editing ? null : today" />
+          </span>
+          @if (errors.dueDate) { <span class="fk-error">{{ errors.dueDate }}</span> }
+        </div>
+      </div>
+
+      @if (saveError) { <p class="sf__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [iconOutlined]="true" [loading]="saving">{{ editing ? 'Save Changes' : 'Create Task' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

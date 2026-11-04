@@ -1,0 +1,147 @@
+<div class="onboarding-page academic-page">
+  @if (!isCollege) {
+    <!-- Academic years only apply to College Hostels -->
+    <div class="saas-card ay-info" role="status">
+      <span class="ay-info__icon"><mat-icon fontSet="material-icons-outlined">school</mat-icon></span>
+      <h2>Academic years apply to College Hostels</h2>
+      <p>This hostel is not set up as a College Hostel, so there is nothing to manage here. The hostel type is set during onboarding and shown in Hostel Settings.</p>
+    </div>
+  } @else {
+    @if (active; as a) {
+      <section class="ay-current" aria-label="Active academic year">
+        <span class="ay-current__icon"><mat-icon fontSet="material-icons-outlined">play_circle</mat-icon></span>
+        <div class="ay-current__body">
+          <span class="ay-current__label">Active academic year</span>
+          <strong>{{ a.name }}</strong>
+          <small>{{ fmt.date(a.startDate) }} → {{ fmt.date(a.endDate) }} · {{ a.residentIds.length }} residents assigned</small>
+        </div>
+        <app-button variant="outline" size="sm" icon="visibility" (clicked)="openView(a)">View</app-button>
+      </section>
+    }
+
+    <!-- Filter card -->
+    <div class="filter-card">
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search ID, name, block or eligibility" aria-label="Search academic years"
+          [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+        @if (filters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+            <option value="All">All Status</option>
+            @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      @if (hasFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+      }
+
+      <span class="filter-card__add">
+        <app-button icon="add" (clicked)="openAdd()">New Academic Year</app-button>
+      </span>
+    </div>
+
+    @if (loading) {
+      <div class="saas-card ay-loading" role="status" aria-live="polite"><mat-icon class="ay-spin">autorenew</mat-icon>Loading academic years…</div>
+    } @else {
+      <app-table-card
+        class="academic-table-card"
+        [empty]="filtered.length === 0"
+        [emptyIcon]="hasFilters ? 'search_off' : 'school'"
+        [emptyMessage]="hasFilters ? 'No academic years match your filters' : 'No academic years yet'"
+        [emptyHint]="hasFilters ? 'Try a different search or status.' : 'Create the first academic year to set dates and the allocation window.'"
+        [clearable]="hasFilters"
+        (clear)="clearFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <table mat-table [dataSource]="paged" class="saas-table academic-table">
+          <ng-container matColumnDef="year">
+            <th mat-header-cell *matHeaderCellDef> Academic Year </th>
+            <td mat-cell *matCellDef="let y">
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ y.name }}</span>
+                <span class="list-entity__sub">{{ y.id }}</span>
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="period">
+            <th mat-header-cell *matHeaderCellDef> Period </th>
+            <td mat-cell *matCellDef="let y" class="date-cell">
+              <span class="list-entity__text">
+                <span>{{ fmt.date(y.startDate) }} → {{ fmt.date(y.endDate) }}</span>
+                <span class="list-entity__sub">
+                  @if (y.allocationWindow) { Allocation {{ fmt.date(y.allocationWindow.start) }} – {{ fmt.date(y.allocationWindow.end) }} } @else { No allocation window }
+                </span>
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="block">
+            <th mat-header-cell *matHeaderCellDef> Block · Eligibility </th>
+            <td mat-cell *matCellDef="let y">
+              <span class="list-entity__text">
+                <span>{{ y.block || 'Whole hostel' }}</span>
+                <span class="list-entity__sub ay-clip" [title]="y.eligibility.join(', ')">{{ y.eligibility.length ? y.eligibility.join(', ') : 'All residents' }}</span>
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Status </th>
+            <td mat-cell *matCellDef="let y">
+              <span class="list-entity__text">
+                <span class="status-badge status-badge--{{ tone(y) }}">{{ y.status }}</span>
+                @if (ready(y)) { <span class="list-entity__sub ay-ready">Ready to activate</span> }
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="residents">
+            <th mat-header-cell *matHeaderCellDef> Residents </th>
+            <td mat-cell *matCellDef="let y">
+              <span class="list-entity__text">
+                <span>{{ y.residentIds.length }}</span>
+                <span class="list-entity__sub">assigned</span>
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+            <td mat-cell *matCellDef="let y" class="actions-cell">
+              <span class="ay-actions">
+                <app-button class="ay-act" variant="icon" size="sm" icon="visibility" matTooltip="View" [ariaLabel]="'View ' + y.name" (clicked)="openView(y)"></app-button>
+                @if (service.canEdit(y)) {
+                  <app-button class="ay-act" variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + y.name" (clicked)="openEdit(y)"></app-button>
+                }
+                @if (service.canCorrect(y)) {
+                  <app-button class="ay-act" variant="icon" size="sm" icon="edit_note" matTooltip="Authorized correction" [ariaLabel]="'Authorized correction for ' + y.name" (clicked)="openEdit(y, true)"></app-button>
+                }
+                @if (nextStep(y); as step) {
+                  <app-button class="ay-act ay-act--ok" variant="icon" size="sm" [icon]="step === 'Active' ? 'play_circle' : step === 'Completed' ? 'task_alt' : 'event_upcoming'"
+                    [matTooltip]="'Mark ' + step" [ariaLabel]="'Mark ' + y.name + ' as ' + step" (clicked)="changeStatus(y, step)"></app-button>
+                }
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns" class="table-row" [class.is-muted]="row.status === 'Archived'"></tr>
+        </table>
+      </app-table-card>
+    }
+  }
+</div>

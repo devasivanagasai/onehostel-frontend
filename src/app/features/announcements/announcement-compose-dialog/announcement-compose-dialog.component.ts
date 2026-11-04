@@ -7,8 +7,8 @@ import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { RoomType } from '../../rooms-management/rooms.models';
-import { residentFullName } from '../../residents/residents.models';
+import { RoomType } from '../../../core/models/rooms.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { AnnouncementsService, HOSTEL_NAME } from '../announcements.service';
 import {
   ATTACHMENT_EXTENSIONS,

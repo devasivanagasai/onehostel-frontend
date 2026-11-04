@@ -1,0 +1,188 @@
+// Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+$teal: #0d9488;
+
+.staff-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.stf-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.stf-kpi-icon--red { background: #fee2e2; color: #dc2626; }
+.stf-kpi-value--red { color: #dc2626; }
+
+.stf-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: #334155;
+  cursor: pointer;
+
+  input { accent-color: $teal; }
+}
+
+.staff-table-card { padding-top: 8px; }
+
+/* ---- Tabs inside the table card ---- */
+.stf-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.stf-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); }
+  &:hover { color: #1e293b; }
+  &:focus-visible { outline: 2px solid $teal; outline-offset: -2px; }
+
+  &.is-active {
+    color: $teal;
+    border-bottom-color: $teal;
+
+    .stf-tab__count { background: #ccfbf1; color: #0f766e; }
+  }
+}
+
+.stf-tab__count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 11.5px;
+}
+
+.stf-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 18px 16px;
+  font-size: 13.5px;
+  color: #64748b;
+
+  mat-icon { @include icon(18px); }
+}
+
+.stf-spin { animation: stf-rotate 1s linear infinite; }
+
+@keyframes stf-rotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Table ---- */
+.staff-table {
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .stf-avatar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ccfbf1;
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .stf-clip,
+  .stf-task-title {
+    display: block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stf-task-title { max-width: 280px; }
+
+  .stf-duties {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 220px;
+    overflow: hidden;
+    font-size: 13px;
+    color: #334155;
+  }
+
+  .date-cell {
+    color: #334155;
+    white-space: nowrap;
+  }
+
+  .list-entity__text .status-badge { align-self: flex-start; }
+
+  // Small red flag under a status: open tasks left behind, overdue, deactivated assignee
+  .stf-flag {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 1px 8px;
+    border-radius: 6px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &--warn { background: #fef3c7; color: #b45309; }
+  }
+
+  .stf-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stf-act ::ng-deep button { color: #2563eb; }
+  .stf-act--ok ::ng-deep button { color: #16a34a; }
+  .stf-act--warn ::ng-deep button { color: #d97706; }
+  .stf-act--danger ::ng-deep button { color: #dc2626; }
+  .stf-act ::ng-deep button:disabled { color: #cbd5e1; }
+
+  .is-overdue td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+
+  .is-muted td {
+    color: #94a3b8;
+
+    .list-entity__name { color: #94a3b8; }
+  }
+}
+
+.muted { color: #94a3b8; }

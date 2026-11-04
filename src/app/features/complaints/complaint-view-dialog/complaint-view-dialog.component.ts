@@ -11,7 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppFormatService } from '../../../core/services/app-format.service';
 import { AppDialogComponent, AppDialogTone } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { ComplaintsService } from '../complaints.service';
+import { ComplaintsService } from '../../../core/services/complaints.service';
 import {
   ATTACHMENT_MAX_COUNT,
   COMPLAINT_PRIORITIES,
@@ -27,8 +27,9 @@ import {
   isActive,
   staffById,
   staffLabel,
-} from '../complaints.models';
+} from '../../../core/models/complaints.models';
 import { isImage, readAttachments } from '../attachments';
+import { localDateIso } from '../../../shared/utils/local-date';
 
 export interface ComplaintViewDialogData {
   complaintId: string;
@@ -81,7 +82,7 @@ export class ComplaintViewDialogComponent {
   readonly priorities = COMPLAINT_PRIORITIES;
   readonly reopenDays = REOPEN_WINDOW_DAYS;
   readonly maxFiles = ATTACHMENT_MAX_COUNT;
-  readonly today = new Date().toISOString().slice(0, 10);
+  readonly today = localDateIso();
   readonly isImage = isImage;
 
   step: PendingStep = null;

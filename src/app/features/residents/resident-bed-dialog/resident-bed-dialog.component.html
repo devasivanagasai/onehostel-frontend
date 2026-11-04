@@ -88,10 +88,11 @@
         <label class="fk-label" for="rb-date">
           {{ data.mode === 'checkout' ? 'Check-out Date' : data.mode === 'transfer' ? 'Effective Date' : 'Allocation Start Date' }}<span class="req">*</span>
         </label>
-        <span class="fk-control" [class.is-invalid]="dateTooEarly">
-          <input id="rb-date" type="date" formControlName="date" [min]="minDate" />
+        <span class="fk-control" [class.is-invalid]="dateTooEarly || dateInFuture">
+          <input id="rb-date" type="date" formControlName="date" [min]="minDate" [max]="data.mode === 'checkout' ? today : null" />
         </span>
         @if (dateTooEarly) { <span class="fk-error">Can't be before {{ fmt.date(minDate) }}</span> }
+        @else if (dateInFuture) { <span class="fk-error">Check-out date can't be in the future</span> }
       </div>
 
       <div class="fk-field">

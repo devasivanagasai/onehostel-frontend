@@ -3,8 +3,8 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { HostelSettingsService } from './hostel-settings.service';
-import { NOTIFICATION_CHANNELS, NOTIFICATION_EVENTS, NotificationChannel } from './hostel-settings.models';
+import { HostelSettingsService } from '../../core/services/hostel-settings.service';
+import { NOTIFICATION_CHANNELS, NOTIFICATION_EVENTS, NotificationChannel } from '../../core/models/hostel-settings.models';
 
 /** Notifications: event × channel matrix. Unavailable channels are locked; each event keeps one channel on. */
 @Component({

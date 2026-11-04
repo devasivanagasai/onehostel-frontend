@@ -6,9 +6,11 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { Bed, BedStatus, Room } from '../rooms.models';
-import { ResidentsService } from '../../residents/residents.service';
-import { ResidentGender, formatMobile, residentFullName } from '../../residents/residents.models';
+import { Bed, BedStatus, Room } from '../../../core/models/rooms.models';
+import { ResidentsService } from '../../../core/services/residents.service';
+import { RoomsService } from '../../../core/services/rooms.service';
+import { ResidentGender, formatMobile, residentFullName } from '../../../core/models/residents.models';
+import { localDateIso } from '../../../shared/utils/local-date';
 
 export interface BedModalData {
   room: Room;
@@ -25,6 +27,7 @@ export interface ResidentOption {
   email?: string;
   gender: ResidentGender;
   collegeOrCompany?: string;
+  joiningDate: string;
 }
 
 type BedTab = 'allocate' | 'occupant' | 'transfer' | 'checkout' | 'status';
@@ -72,6 +75,7 @@ export class BedModalComponent {
 
   /** Residents (from Residents) who are current and don't hold a bed yet. */
   private readonly residentsService = inject(ResidentsService);
+  private readonly roomsService = inject(RoomsService);
   readonly residentsList: ResidentOption[] = this.residentsService.residents
     .filter((r) => this.residentsService.needsBed(r))
     .map((r) => ({
@@ -81,6 +85,7 @@ export class BedModalComponent {
       email: (r as { email?: string }).email,
       gender: r.gender,
       collegeOrCompany: r.collegeOrCompany,
+      joiningDate: r.joiningDate,
     }));
 
   readonly statuses: { value: BedStatus; label: string; icon: string }[] = [
@@ -90,6 +95,10 @@ export class BedModalComponent {
     { value: 'Maintenance', label: 'Under Maintenance', icon: 'build' },
   ];
 
+  /** Occupied is only reachable by allocating a resident; Reserved/Maintenance can't be set on a bed that holds one. */
+  readonly statusOptions: { value: BedStatus; label: string; icon: string }[];
+
+  readonly today = localDateIso();
   readonly transferTargets: TransferTarget[];
 
   constructor(
@@ -98,7 +107,7 @@ export class BedModalComponent {
     @Inject(MAT_DIALOG_DATA) public data: BedModalData,
   ) {
     const b = data.bed;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateIso();
     const occupied = b.status === 'Occupied';
     const blocked = data.room.status === 'Maintenance' || data.room.status === 'Inactive';
     const canAllocate = !blocked && b.status === 'Available';
@@ -120,10 +129,15 @@ export class BedModalComponent {
       data.mode === 'manage' ? (occupied ? 'occupant' : 'status') : data.mode;
     this.actionTab = this.tabs.some((t) => t.id === requested) ? requested! : this.tabs[0].id;
 
+    this.statusOptions = this.statuses.filter(
+      (s) =>
+        s.value === b.status ||
+        (s.value !== 'Occupied' && !(b.residentId && (s.value === 'Reserved' || s.value === 'Maintenance'))),
+    );
+
     this.manageForm = this.fb.group({
-      status: [b.status, Validators.required],
-      tenantName: [b.tenantName || ''],
-      tenantContact: [b.tenantContact || ''],
+      // An occupied bed's status can only change through Check-Out / Transfer
+      status: [{ value: b.status, disabled: occupied }, Validators.required],
       monthlyRent: [b.monthlyRent || data.room.baseRent, [Validators.required, Validators.min(500)]],
     });
 
@@ -146,8 +160,15 @@ export class BedModalComponent {
       remarks: [''],
     });
 
+    // Same eligibility as allocation: room status, gender and college restrictions
+    const holder = b.residentId ? this.residentsService.byId(b.residentId) : undefined;
+    const last = b.allocationHistory?.[0];
+    const who = {
+      gender: holder ? (holder.gender === 'Other' ? undefined : holder.gender) : last?.gender,
+      collegeOrCompany: holder ? holder.collegeOrCompany : last?.collegeOrCompany,
+    };
     this.transferTargets = (data.allRooms || [])
-      .filter((r) => r.status !== 'Maintenance' && r.status !== 'Inactive')
+      .filter((r) => !this.roomsService.restrictionError(r, who))
       .flatMap((r) =>
         r.beds
           .filter((bed) => bed.status === 'Available' && bed.id !== b.id)
@@ -229,7 +250,20 @@ export class BedModalComponent {
   displayResident = (r: ResidentOption | string | null): string => (typeof r === 'string' ? r : r?.name ?? '');
 
   onResidentSelected(e: MatAutocompleteSelectedEvent): void {
-    this.allocateForm.patchValue({ residentId: (e.option.value as ResidentOption).residentId });
+    const picked = e.option.value as ResidentOption;
+    this.allocateForm.patchValue({ residentId: picked.residentId });
+    if (this.allocateForm.value.joiningDate < picked.joiningDate) this.allocateForm.patchValue({ joiningDate: picked.joiningDate });
+  }
+
+  /** Earliest allocation date: the selected resident's joining date. */
+  get allocateMinDate(): string | null {
+    return this.residentsList.find((r) => r.residentId === this.allocateForm.value.residentId)?.joiningDate ?? null;
+  }
+
+  /** Earliest check-out date: the resident's joining date, else when this allocation began. */
+  get checkoutMinDate(): string | null {
+    const holder = this.data.bed.residentId ? this.residentsService.byId(this.data.bed.residentId) : undefined;
+    return holder?.joiningDate ?? this.data.bed.joinedDate ?? null;
   }
 
   get selectedTransferTarget(): string {
@@ -251,7 +285,7 @@ export class BedModalComponent {
   // Submit handlers
   onSaveManage(): void {
     if (this.manageForm.invalid) return this.manageForm.markAllAsTouched();
-    this.dialogRef.close({ action: 'manage', ...this.manageForm.value });
+    this.dialogRef.close({ action: 'manage', ...this.manageForm.getRawValue() });
   }
 
   onSaveAllocate(): void {

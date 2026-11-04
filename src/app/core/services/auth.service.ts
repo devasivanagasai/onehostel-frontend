@@ -43,6 +43,12 @@ export const HOSTEL_OWNER_ROUTES = [
   '/announcements',
   '/hostel-reports',
   '/hostel-settings',
+  '/staff',
+  '/permissions',
+  '/guardians',
+  '/academic-years',
+  '/disciplinary',
+  '/analytics',
 ];
 
 /** True when `route` is `base` or a page under it ("/fees", "/fees/123", "/fees?tab=charges"). */

@@ -2,7 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { PaymentTransaction } from './subscription-payment.models';
+import { PaymentTransaction } from '../../core/models/subscription-payment.models';
 import { statusTone } from '../../shared/constants/status.constants';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';

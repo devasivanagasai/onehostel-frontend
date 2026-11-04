@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { shouldCloseOnEscape } from '../../shared/utils/panel-escape';
 import { AuditLogService } from '../../core/services/audit-log.service';
 import { auditAction, auditEventLabel } from '../../core/models/audit.models';
-import { LogoutType, formatDuration, sessionMinutes } from '../admin-management/admin.models';
+import { LogoutType, formatDuration, sessionMinutes } from '../../core/models/admin.models';
 import { Resident, residentAuditEntity, residentFullName } from './resident.models';
 import { RESIDENT_ACTION_META, ResidentAction, ResidentService, residentActions } from './resident.service';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';

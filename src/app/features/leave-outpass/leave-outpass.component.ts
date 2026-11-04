@@ -10,19 +10,17 @@ import { switchMap, timer } from 'rxjs';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { HOSTEL_ID, LeaveOutpassService } from './leave-outpass.service';
+import { HOSTEL_ID, LeaveMovement, LeaveOutpassService } from '../../core/services/leave-outpass.service';
 import {
   APPROVAL_STATUSES,
   APPROVAL_TONES,
   LEAVE_TYPES,
   LeaveRequest,
   MOVEMENT_STATES,
-  MOVEMENT_TONES,
-  MovementState,
   durationLabel,
   localIso,
   time,
-} from './leave-outpass.models';
+} from '../../core/models/leave-outpass.models';
 import { LeaveRequestDialogComponent } from './leave-request-dialog/leave-request-dialog.component';
 import { LeaveAction, LeaveActionDialogComponent, LeaveActionData } from './leave-action-dialog/leave-action-dialog.component';
 import { LeaveViewDialogComponent } from './leave-view-dialog/leave-view-dialog.component';
@@ -74,7 +72,7 @@ export class LeaveOutpassComponent {
   readonly columns = ['resident', 'type', 'schedule', 'destination', 'approval', 'movement', 'actions'];
   readonly types = LEAVE_TYPES;
   readonly statuses = APPROVAL_STATUSES;
-  readonly movements = MOVEMENT_STATES;
+  readonly movements = [...MOVEMENT_STATES, 'No-show'] as const;
   readonly duration = durationLabel;
 
   filters: LeaveFilters = { ...DEFAULT_FILTERS };
@@ -129,7 +127,7 @@ export class LeaveOutpassComponent {
 
   // ---- View helpers -----------------------------------------------------------
 
-  movement(r: LeaveRequest): MovementState | null {
+  movement(r: LeaveRequest): LeaveMovement | null {
     return this.service.movement(r);
   }
 
@@ -137,8 +135,8 @@ export class LeaveOutpassComponent {
     return APPROVAL_TONES[r.status];
   }
 
-  movementTone(m: MovementState): string {
-    return MOVEMENT_TONES[m];
+  movementTone(m: LeaveMovement): string {
+    return this.service.movementTone(m);
   }
 
   initials(name: string): string {
@@ -157,6 +155,7 @@ export class LeaveOutpassComponent {
       if (time(r.returnAt) < Date.now()) return `Due ${this.duration(r.returnAt, localIso())} ago`;
       return `Left ${this.fmt.date(r.exitAt, 'datetime')}`;
     }
+    if (this.movement(r) === 'No-show') return 'Never left';
     return time(r.departAt) < Date.now() ? 'Departure time passed' : '';
   }
 

@@ -9,7 +9,7 @@ import { AppTableCardComponent } from '../../../shared/components/table-card/app
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { BillingPreviewRow, MessService } from '../mess.service';
 import { MEAL_PLANS, MEAL_TYPES, PLAN_HINTS, PLAN_MEALS, MealPlan, monthOffset, periodLabel } from '../mess.models';
 import { MessPlanDialogComponent, MessPlanDialogData } from '../mess-plan-dialog/mess-plan-dialog.component';

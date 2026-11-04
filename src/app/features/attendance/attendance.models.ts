@@ -1,7 +1,7 @@
 // Attendance & Check-in / Check-out (Section 5.5).
 
-import { HostelResident } from '../residents/residents.models';
-import { LeaveRequest } from '../leave-outpass/leave-outpass.models';
+import { HostelResident } from '../../core/models/residents.models';
+import { LeaveRequest } from '../../core/models/leave-outpass.models';
 
 export const ATTENDANCE_STATUSES = ['Present', 'Absent', 'On Leave', 'Not Expected', 'Unknown'] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];

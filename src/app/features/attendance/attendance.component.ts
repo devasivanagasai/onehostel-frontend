@@ -13,9 +13,9 @@ import { AppFormatService } from '../../core/services/app-format.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
-import { ResidentsService } from '../residents/residents.service';
-import { LeaveOutpassService } from '../leave-outpass/leave-outpass.service';
-import { localDate } from '../leave-outpass/leave-outpass.models';
+import { ResidentsService } from '../../core/services/residents.service';
+import { LeaveOutpassService } from '../../core/services/leave-outpass.service';
+import { localDate } from '../../core/models/leave-outpass.models';
 import { AttendanceService } from './attendance.service';
 import {
   ATTENDANCE_METHODS,

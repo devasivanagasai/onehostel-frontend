@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident } from '../residents/residents.models';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident } from '../../core/models/residents.models';
 import {
   NotificationStatus,
   OVERDUE_DAYS,
@@ -282,7 +282,7 @@ export class ParcelsService {
     const p = this.require(id);
     const blocker = this.reminderBlocker(p);
     if (blocker) throw new Error(blocker);
-    const next = this.withNotice(p, p.notices.length ? 'Reminder' : 'Arrival');
+    const next = this.withNotice(p, p.notices.some((n) => n.status === 'Sent') ? 'Reminder' : 'Arrival');
     this.replace(next);
     return next;
   }
@@ -297,7 +297,7 @@ export class ParcelsService {
         result.skipped++;
         continue;
       }
-      const next = this.withNotice(p, p.notices.length ? 'Reminder' : 'Arrival');
+      const next = this.withNotice(p, p.notices.some((n) => n.status === 'Sent') ? 'Reminder' : 'Arrival');
       updated.set(id, next);
       if (next.notices[next.notices.length - 1].status === 'Sent') result.sent++;
       else result.failed++;

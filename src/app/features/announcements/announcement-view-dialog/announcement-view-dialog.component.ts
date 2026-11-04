@@ -4,7 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { residentFullName } from '../../residents/residents.models';
+import { residentFullName } from '../../../core/models/residents.models';
 import { AnnouncementsService } from '../announcements.service';
 import { ANNOUNCEMENT_STATUS_TONES, Announcement, AnnouncementStatus, CHANNEL_ICONS, CHANNEL_TONES, formatBytes, wasSent } from '../announcements.models';
 

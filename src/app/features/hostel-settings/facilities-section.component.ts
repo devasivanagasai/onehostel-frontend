@@ -1,7 +1,7 @@
 import { Component, Input } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { HOSTEL_FACILITIES, HostelSubscription, facilityBlockedReason } from './hostel-settings.models';
+import { HOSTEL_FACILITIES, HostelSubscription, facilityBlockedReason } from '../../core/models/hostel-settings.models';
 
 /** Facilities: checkbox grid with icons; facilities outside the plan are disabled. */
 @Component({

@@ -2,10 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { AppFormatService } from '../../core/services/app-format.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident, residentFullName } from '../residents/residents.models';
-import { LeaveOutpassService } from '../leave-outpass/leave-outpass.service';
-import { dayEnd, dayStart, localDate, localIso, time } from '../leave-outpass/leave-outpass.models';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident, residentFullName } from '../../core/models/residents.models';
+import { LeaveOutpassService } from '../../core/services/leave-outpass.service';
+import { dayEnd, dayStart, localDate, localIso, time } from '../../core/models/leave-outpass.models';
 import {
   AttendanceChange,
   AttendanceChangeInput,
@@ -28,6 +28,7 @@ const STORAGE_KEY = 'onehostel_attendance_v1';
 const METHODS_KEY = 'onehostel_attendance_methods_v1';
 export const HOSTEL_ID = 'HST-OWNER-01';
 
+const DAY_MS = 86_400_000;
 const hhmm = (iso?: string): string => (iso ? iso.slice(11, 16) : '—');
 
 /** Local date `days` from today. */
@@ -123,7 +124,8 @@ export class AttendanceService {
 
   /**
    * Impossible time sequences: times off the date or in the future, check-out before check-in,
-   * stays overlapping the previous one, or more than one open check-in.
+   * stays overlapping the previous one, or more than one open check-in. A check-out may fall on the
+   * next day (a stay that runs past midnight); a later stay can't start before it (overlap check).
    */
   sessionErrors(date: string, sessions: AttendanceSession[]): SessionError[] {
     const now = Date.now() + 60_000;
@@ -139,7 +141,7 @@ export class AttendanceService {
       else if (prevOut && tin < time(prevOut)) e.in = `Overlaps the previous stay (out ${hhmm(prevOut)})`;
       if (s.out) {
         if (isNaN(tout)) e.out = 'Enter a valid time';
-        else if (tout > dayEnd(date)) e.out = 'Must be on the selected date';
+        else if (tout > dayEnd(date) + DAY_MS) e.out = 'Must be on the selected date or the next day';
         else if (tout > now) e.out = 'Check-out cannot be in the future';
         else if (!isNaN(tin) && tout <= tin) e.out = 'Check-out must be after check-in';
       }
@@ -220,17 +222,22 @@ export class AttendanceService {
     const sessions = (rec?.sessions ?? []).map((s) => ({ ...s }));
     const open = sessions.find((s) => !s.out);
     if (!rec || !open) throw new Error('Not checked in — nothing to check out.');
+    if (when.slice(0, 10) > date) {
+      // After midnight: the next day's own record must not already show the resident inside before this check-out.
+      const nextRec = this.records.find((r) => r.residentId === residentId && r.date === when.slice(0, 10));
+      if (nextRec?.sessions.some((s) => s.in && time(s.in) < time(when))) throw new Error('A check-in on the next day starts before this check-out.');
+    }
     open.out = when;
     open.outMethod = method;
     return this.save(residentId, date, { status: rec.status, sessions, remarks: rec.remarks }, method, reason, 'Checked out');
   }
 
-  /** Today only: mark expected, unmarked residents without approved leave as Present. */
+  /** Today only: mark expected, unmarked residents as Present, except those on approved leave for the whole day. */
   markAllPresent(date: string, method: AttendanceMethod): { marked: number; skipped: number } {
     if (date !== this.today) throw new Error('Bulk marking is only available for today.');
     const unmarked = this.rows(date).filter((r) => r.expected && !r.record);
     let marked = 0;
-    for (const row of unmarked.filter((r) => !r.leave)) {
+    for (const row of unmarked.filter((r) => !r.leaveOut)) {
       this.save(row.resident.residentId, date, { status: 'Present', sessions: [] }, method);
       marked++;
     }

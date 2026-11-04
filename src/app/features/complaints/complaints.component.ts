@@ -10,7 +10,7 @@ import { map } from 'rxjs';
 import { AppFormatService } from '../../core/services/app-format.service';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { ComplaintsService, NewComplaintInput } from './complaints.service';
+import { ComplaintsService, NewComplaintInput } from '../../core/services/complaints.service';
 import {
   COMPLAINT_CATEGORIES,
   COMPLAINT_PRIORITIES,
@@ -21,9 +21,10 @@ import {
   STATUS_TONES,
   isActive,
   staffById,
-} from './complaints.models';
+} from '../../core/models/complaints.models';
 import { ComplaintFormDialogComponent } from './complaint-form-dialog/complaint-form-dialog.component';
 import { ComplaintViewDialogComponent, ComplaintViewDialogData } from './complaint-view-dialog/complaint-view-dialog.component';
+import { localDateIso } from '../../shared/utils/local-date';
 
 const PRIORITY_RANK: Record<ComplaintPriority, number> = { Urgent: 0, High: 1, Medium: 2, Low: 3 };
 const AVATAR_TONES = ['blue', 'purple', 'green', 'amber'] as const;
@@ -302,7 +303,7 @@ export class ComplaintsComponent {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return localDateIso();
   }
 
   /** Last n local dates (yyyy-mm-dd), oldest first. */

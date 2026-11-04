@@ -6,9 +6,9 @@ import { MatDialogRef } from '@angular/material/dialog';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { MatIconModule } from '@angular/material/icon';
-import { ResidentsService } from '../../residents/residents.service';
-import { residentFullName } from '../../residents/residents.models';
-import { NewComplaintInput } from '../complaints.service';
+import { ResidentsService } from '../../../core/services/residents.service';
+import { residentFullName } from '../../../core/models/residents.models';
+import { NewComplaintInput } from '../../../core/services/complaints.service';
 import {
   ATTACHMENT_MAX_COUNT,
   CATEGORY_DEFAULT_STAFF,
@@ -18,8 +18,9 @@ import {
   ComplaintAttachment,
   ComplaintCategory,
   STAFF,
-} from '../complaints.models';
+} from '../../../core/models/complaints.models';
 import { isImage, readAttachments } from '../attachments';
+import { localDateIso } from '../../../shared/utils/local-date';
 
 /** Logs a complaint on a resident's behalf (residents normally use the Resident App). */
 @Component({
@@ -38,7 +39,7 @@ export class ComplaintFormDialogComponent {
   readonly priorities = COMPLAINT_PRIORITIES;
   readonly staff = STAFF;
   readonly maxFiles = ATTACHMENT_MAX_COUNT;
-  readonly today = new Date().toISOString().slice(0, 10);
+  readonly today = localDateIso();
   readonly isImage = isImage;
   readonly categoryIcons = CATEGORY_ICONS;
 

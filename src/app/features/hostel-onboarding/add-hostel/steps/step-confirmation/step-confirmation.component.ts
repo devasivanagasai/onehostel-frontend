@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
-import { PLAN_DETAILS, PlanName } from '../../plan-details';
+import { planDetailFor } from '../../plan-details';
+import { SubscriptionPlanService } from '../../../../../core/services/subscription-plan.service';
 import { AppDatePipe } from '../../../../../shared/pipes/app-date.pipe';
 
 /** "9876543210" → "98765 43210" (other lengths are shown as typed). */
@@ -196,10 +197,11 @@ function groupDigits(value: string | null | undefined): string {
 })
 export class StepConfirmationComponent {
   @Input() value: any;
+  private readonly plans = inject(SubscriptionPlanService);
 
   get planDetail() {
-    const plan = (this.value?.subscription?.plan as PlanName) ?? 'Standard';
-    return PLAN_DETAILS[plan] ?? PLAN_DETAILS.Standard;
+    const name = (this.value?.subscription?.plan as string) ?? '';
+    return planDetailFor(this.plans.byName(name), name);
   }
 
   /** e.g. "+91 98765 43210" */

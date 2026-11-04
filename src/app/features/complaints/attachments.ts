@@ -1,4 +1,4 @@
-import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_COUNT, ATTACHMENT_TYPES, ComplaintAttachment } from './complaints.models';
+import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_COUNT, ATTACHMENT_TYPES, ComplaintAttachment } from '../../core/models/complaints.models';
 
 /**
  * Reads picked files into attachments (data URLs in this UI-only build).

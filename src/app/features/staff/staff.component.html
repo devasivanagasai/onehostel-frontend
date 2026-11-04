@@ -1,0 +1,358 @@
+<div class="onboarding-page staff-page">
+  <!-- KPI Summary -->
+  <section class="kpi-row stf-kpis" aria-label="Staff summary">
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--teal"><mat-icon fontSet="material-icons-outlined">badge</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Active Staff</span>
+        <span class="kpi-card__value">{{ kpis.active }}</span>
+        <span class="kpi-card__sub">Available for tasks</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">beach_access</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">On Leave</span>
+        <span class="kpi-card__value">{{ kpis.onLeave }}</span>
+        <span class="kpi-card__sub">Not taking new tasks</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">pending_actions</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Open Tasks</span>
+        <span class="kpi-card__value">{{ kpis.open }}</span>
+        <span class="kpi-card__sub">Open and in progress</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-card__icon stf-kpi-icon--red"><mat-icon fontSet="material-icons-outlined">running_with_errors</mat-icon></span>
+      <div class="kpi-card__body">
+        <span class="kpi-card__label">Overdue Tasks</span>
+        <span class="kpi-card__value stf-kpi-value--red">{{ kpis.overdue }}</span>
+        <span class="kpi-card__sub">Past their due date</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filter card -->
+  @if (tab === 'staff') {
+    <div class="filter-card">
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search ID, name or mobile" aria-label="Search staff"
+          [(ngModel)]="staffFilters.search" (ngModelChange)="staffPage = 0" />
+        @if (staffFilters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="staffFilters.search = ''; staffPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Category" [(ngModel)]="staffFilters.category" (ngModelChange)="staffPage = 0">
+            <option value="All">All Categories</option>
+            @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Status" [(ngModel)]="staffFilters.status" (ngModelChange)="staffPage = 0">
+            <option value="All">All Statuses</option>
+            @for (s of staffStatuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      @if (hasStaffFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearStaffFilters()">Reset</app-button>
+      }
+
+      <span class="filter-card__add">
+        <app-button icon="person_add" (clicked)="openStaffForm()">Add Staff</app-button>
+      </span>
+    </div>
+  } @else {
+    <div class="filter-card">
+      <label class="filter-search">
+        <mat-icon>search</mat-icon>
+        <input type="text" placeholder="Search task ID, title or assignee" aria-label="Search tasks"
+          [(ngModel)]="taskFilters.search" (ngModelChange)="taskPage = 0" />
+        @if (taskFilters.search) {
+          <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="taskFilters.search = ''; taskPage = 0"><mat-icon>close</mat-icon></button>
+        }
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Task status" [(ngModel)]="taskFilters.status" (ngModelChange)="taskPage = 0">
+            <option value="All">All Statuses</option>
+            @for (s of taskStatuses; track s) { <option [value]="s">{{ s }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Priority" [(ngModel)]="taskFilters.priority" (ngModelChange)="taskPage = 0">
+            <option value="All">All Priorities</option>
+            @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="filter-select">
+        <span class="filter-select__control">
+          <select aria-label="Assignee" [(ngModel)]="taskFilters.assignee" (ngModelChange)="taskPage = 0">
+            <option value="All">All Staff</option>
+            @for (s of service.staff; track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+          </select>
+          <mat-icon>expand_more</mat-icon>
+        </span>
+      </label>
+
+      <label class="stf-check">
+        <input type="checkbox" [(ngModel)]="taskFilters.overdueOnly" (ngModelChange)="taskPage = 0" />
+        Overdue only
+      </label>
+
+      @if (hasTaskFilters) {
+        <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearTaskFilters()">Reset</app-button>
+      }
+
+      <span class="filter-card__add">
+        <app-button icon="add_task" [disabled]="!service.activeStaff.length" (clicked)="openTaskForm()">New Task</app-button>
+      </span>
+    </div>
+  }
+
+  @if (tab === 'staff') {
+    <app-table-card
+      class="staff-table-card"
+      [empty]="!loading && filteredStaff.length === 0"
+      [emptyIcon]="hasStaffFilters ? 'search_off' : 'badge'"
+      [emptyMessage]="hasStaffFilters ? 'No staff match your filters' : 'No staff added yet'"
+      [emptyHint]="hasStaffFilters ? 'Try a different search, category or status.' : 'Add your first staff member to start assigning tasks.'"
+      [clearable]="hasStaffFilters"
+      (clear)="clearStaffFilters()"
+      [page]="staffSafePage"
+      [totalPages]="staffTotalPages"
+      [pageSize]="staffPageSize"
+      (pageChange)="staffPage = $event"
+      (pageSizeChange)="staffPageSize = $event; staffPage = 0"
+    >
+      <nav class="stf-tabs" role="tablist" aria-label="Staff views" tableToolbar>
+        <button type="button" role="tab" class="stf-tab is-active" id="stf-tab-staff" aria-selected="true" (click)="setTab('staff')">
+          <mat-icon fontSet="material-icons-outlined">badge</mat-icon>Staff<span class="stf-tab__count">{{ service.staff.length }}</span>
+        </button>
+        <button type="button" role="tab" class="stf-tab" id="stf-tab-tasks" aria-selected="false" (click)="setTab('tasks')">
+          <mat-icon fontSet="material-icons-outlined">task_alt</mat-icon>Tasks<span class="stf-tab__count">{{ service.tasks.length }}</span>
+        </button>
+      </nav>
+
+      @if (loading) {
+        <p class="stf-loading" role="status"><mat-icon class="stf-spin">autorenew</mat-icon>Loading staff...</p>
+      }
+
+      <table mat-table [dataSource]="loading ? [] : pagedStaff" class="saas-table staff-table">
+        <ng-container matColumnDef="staff">
+          <th mat-header-cell *matHeaderCellDef> Staff </th>
+          <td mat-cell *matCellDef="let s">
+            <span class="with-icon">
+              <span class="stf-avatar">{{ initials(s.name) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ s.name }}</span>
+                <span class="list-entity__sub">{{ s.id }} · {{ s.category }}</span>
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="contact">
+          <th mat-header-cell *matHeaderCellDef> Contact </th>
+          <td mat-cell *matCellDef="let s">
+            <span class="list-entity__text">
+              <span>{{ s.mobile }}</span>
+              <span class="list-entity__sub stf-clip" [title]="s.email || ''">{{ s.email || 'No email' }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="duties">
+          <th mat-header-cell *matHeaderCellDef> Duties </th>
+          <td mat-cell *matCellDef="let s">
+            <span class="stf-duties" [title]="dutiesText(s)">{{ dutiesText(s) }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shift">
+          <th mat-header-cell *matHeaderCellDef> Shift </th>
+          <td mat-cell *matCellDef="let s">
+            @if (s.shift) {
+              <span class="list-entity__text">
+                <span>{{ s.shift.name }}</span>
+                <span class="list-entity__sub">{{ s.shift.start }} – {{ s.shift.end }}</span>
+              </span>
+            } @else { <span class="muted">—</span> }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="employment">
+          <th mat-header-cell *matHeaderCellDef> Employment </th>
+          <td mat-cell *matCellDef="let s" class="date-cell">
+            <span class="list-entity__text">
+              <span>{{ fmt.date(s.employmentStart) }}</span>
+              <span class="list-entity__sub">{{ s.employmentEnd ? 'to ' + fmt.date(s.employmentEnd) : 'Ongoing' }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="access">
+          <th mat-header-cell *matHeaderCellDef> Role / Login </th>
+          <td mat-cell *matCellDef="let s">
+            <span class="list-entity__text" [matTooltip]="accessSummary(s)">
+              <span>{{ s.roleTemplate }}</span>
+              <span class="list-entity__sub">{{ s.loginAccess ? 'Login enabled' : 'No login' }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <td mat-cell *matCellDef="let s">
+            <span class="list-entity__text">
+              <span class="status-badge status-badge--{{ statusTone(s.status) }}">{{ s.status }}</span>
+              @if (s.status !== 'Active' && pendingCount(s) > 0) {
+                <span class="stf-flag">{{ pendingCount(s) }} open task{{ pendingCount(s) === 1 ? '' : 's' }}</span>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let s" class="actions-cell">
+            <span class="stf-actions">
+              <app-button class="stf-act" variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + s.name" (clicked)="openStaffForm(s)"></app-button>
+              <app-button class="stf-act" variant="icon" size="sm" icon="checklist" matTooltip="View tasks" [ariaLabel]="'View tasks for ' + s.name" (clicked)="showTasksFor(s)"></app-button>
+              <app-button class="stf-act" variant="icon" size="sm" icon="add_task" [disabled]="s.status !== 'Active'"
+                [matTooltip]="s.status === 'Active' ? 'New task' : s.name + ' cannot receive new tasks'" [ariaLabel]="'New task for ' + s.name" (clicked)="openTaskForm({ assigneeId: s.id })"></app-button>
+              @if (s.status !== 'Active') {
+                <app-button class="stf-act stf-act--ok" variant="icon" size="sm" icon="check_circle" matTooltip="Activate" [ariaLabel]="'Activate ' + s.name" (clicked)="changeStatus(s, 'Active')"></app-button>
+              }
+              @if (s.status === 'Active') {
+                <app-button class="stf-act stf-act--warn" variant="icon" size="sm" icon="beach_access" matTooltip="Mark on leave" [ariaLabel]="'Mark ' + s.name + ' on leave'" (clicked)="changeStatus(s, 'On Leave')"></app-button>
+              }
+              @if (s.status !== 'Inactive') {
+                <app-button class="stf-act stf-act--danger" variant="icon" size="sm" icon="person_off" matTooltip="Deactivate" [ariaLabel]="'Deactivate ' + s.name" (clicked)="changeStatus(s, 'Inactive')"></app-button>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="staffColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: staffColumns" class="table-row" [class.is-muted]="row.status === 'Inactive'"></tr>
+      </table>
+    </app-table-card>
+  } @else {
+    <app-table-card
+      class="staff-table-card"
+      [empty]="filteredTasks.length === 0"
+      [emptyIcon]="hasTaskFilters ? 'search_off' : 'task_alt'"
+      [emptyMessage]="hasTaskFilters ? 'No tasks match your filters' : 'No tasks yet'"
+      [emptyHint]="hasTaskFilters ? 'Try a different search, status, priority or assignee.' : 'Create a task and assign it to active staff.'"
+      [clearable]="hasTaskFilters"
+      (clear)="clearTaskFilters()"
+      [page]="taskSafePage"
+      [totalPages]="taskTotalPages"
+      [pageSize]="taskPageSize"
+      (pageChange)="taskPage = $event"
+      (pageSizeChange)="taskPageSize = $event; taskPage = 0"
+    >
+      <nav class="stf-tabs" role="tablist" aria-label="Staff views" tableToolbar>
+        <button type="button" role="tab" class="stf-tab" id="stf-tab-staff" aria-selected="false" (click)="setTab('staff')">
+          <mat-icon fontSet="material-icons-outlined">badge</mat-icon>Staff<span class="stf-tab__count">{{ service.staff.length }}</span>
+        </button>
+        <button type="button" role="tab" class="stf-tab is-active" id="stf-tab-tasks" aria-selected="true" (click)="setTab('tasks')">
+          <mat-icon fontSet="material-icons-outlined">task_alt</mat-icon>Tasks<span class="stf-tab__count">{{ service.tasks.length }}</span>
+        </button>
+      </nav>
+
+      <table mat-table [dataSource]="pagedTasks" class="saas-table staff-table">
+        <ng-container matColumnDef="task">
+          <th mat-header-cell *matHeaderCellDef> Task </th>
+          <td mat-cell *matCellDef="let t">
+            <span class="list-entity__text">
+              <span class="list-entity__name stf-task-title" [title]="t.description || t.title">{{ t.title }}</span>
+              <span class="list-entity__sub">{{ t.id }}</span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="assignee">
+          <th mat-header-cell *matHeaderCellDef> Assigned To </th>
+          <td mat-cell *matCellDef="let t">
+            <span class="with-icon">
+              <span class="stf-avatar">{{ initials(assigneeName(t)) }}</span>
+              <span class="list-entity__text">
+                <span class="list-entity__name">{{ assigneeName(t) }}</span>
+                @if (service.isOrphaned(t)) {
+                  <span class="stf-flag">Assignee deactivated</span>
+                } @else if (assignee(t)?.status === 'On Leave' && service.isPending(t)) {
+                  <span class="stf-flag stf-flag--warn">Assignee on leave</span>
+                }
+              </span>
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="due">
+          <th mat-header-cell *matHeaderCellDef> Due </th>
+          <td mat-cell *matCellDef="let t" class="date-cell">
+            <span class="list-entity__text">
+              <span>{{ fmt.date(t.dueDate) }}</span>
+              @if (service.isOverdue(t)) { <span class="stf-flag">Overdue</span> }
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="priority">
+          <th mat-header-cell *matHeaderCellDef> Priority </th>
+          <td mat-cell *matCellDef="let t">
+            <span class="status-badge status-badge--{{ priorityTone(t.priority) }}">{{ t.priority }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <td mat-cell *matCellDef="let t">
+            <span class="status-badge status-badge--{{ taskTone(t.status) }}">{{ t.status }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+          <td mat-cell *matCellDef="let t" class="actions-cell">
+            <span class="stf-actions">
+              @if (service.isPending(t)) {
+                <app-button class="stf-act" variant="icon" size="sm" icon="edit" matTooltip="Edit" [ariaLabel]="'Edit ' + t.id" (clicked)="openTaskForm({ task: t })"></app-button>
+              }
+              @for (next of service.allowedTransitions(t.status); track next) {
+                <app-button class="stf-act" [class.stf-act--ok]="next === 'Done'" [class.stf-act--danger]="next === 'Cancelled'" variant="icon" size="sm"
+                  [icon]="moveIcon(next)" [matTooltip]="moveLabel(next)" [ariaLabel]="moveLabel(next) + ' ' + t.id" (clicked)="moveTask(t, next)"></app-button>
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="taskColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: taskColumns" class="table-row" [class.is-overdue]="service.isOverdue(row)" [class.is-muted]="!service.isPending(row)"></tr>
+      </table>
+    </app-table-card>
+  }
+</div>

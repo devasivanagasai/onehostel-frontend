@@ -1,0 +1,144 @@
+// Incident details. Frame comes from <app-dialog>; badges from styles/_table.scss (status-badge).
+
+.iv {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 4px;
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+}
+
+.iv__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: #94a3b8;
+
+  li { display: flex; align-items: center; gap: 6px; }
+  .is-done { color: #16a34a; }
+  .is-current { color: #1e293b; font-weight: 700; }
+}
+
+.iv__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 11px;
+}
+
+.iv__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; }
+
+  dt { font-size: 12px; color: #64748b; }
+  dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; color: #1e293b; }
+  small { font-weight: 400; color: #64748b; }
+}
+
+.iv__text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+}
+
+.iv__muted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+}
+
+.iv__files {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+
+  li { display: flex; align-items: center; gap: 8px; }
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; }
+  small { color: #64748b; }
+}
+
+.iv__advance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e8edf3;
+
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #dbe3ec;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    resize: vertical;
+  }
+}
+
+.iv__label { font-size: 13px; font-weight: 600; color: #1e293b; }
+
+.iv__error {
+  margin: 0;
+  font-size: 12.5px;
+  color: #dc2626;
+}
+
+.iv__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  li { display: flex; gap: 10px; }
+  strong { display: block; font-size: 13.5px; color: #1e293b; }
+  small { display: block; font-size: 12px; color: #64748b; }
+}
+
+.iv__ev-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: #64748b;
+}
+
+.iv__change { overflow-wrap: anywhere; }

@@ -1,6 +1,7 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { MatStepperModule, MatStepper } from '@angular/material/stepper';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -20,6 +21,32 @@ import { AuditLogService } from '../../../core/services/audit-log.service';
 import { diffForAudit } from '../../../core/models/audit.models';
 import { HostelAdminAccountService } from '../../../core/services/hostel-admin-account.service';
 import { SystemSettingsService } from '../../../core/services/system-settings.service';
+import { SubscriptionPlanService } from '../../../core/services/subscription-plan.service';
+import { ONBOARDED_HOSTELS } from '../../../core/models/onboarded-hostels';
+import { REPORT_HOSTELS } from '../../../core/models/report.models';
+import { BUILT_IN_HOSTEL_OWNER, findBuiltInAccount } from '../../../core/models/built-in-accounts';
+
+const wholeNumber: ValidatorFn = (c) =>
+  c.value !== '' && c.value != null && !Number.isInteger(Number(c.value)) ? { integer: true } : null;
+
+/** A hostel needs at least one bed per room. */
+const bedsCoverRooms: ValidatorFn = (g) => {
+  const rooms = Number(g.get('rooms')?.value);
+  const beds = Number(g.get('totalBeds')?.value);
+  return rooms > 0 && beds > 0 && beds < rooms ? { bedsLessThanRooms: true } : null;
+};
+
+/** Subscription end date must not be earlier than the start date. */
+const endNotBeforeStart: ValidatorFn = (g) => {
+  const start = g.get('startDate')?.value as Date | null;
+  const end = g.get('endDate')?.value as Date | null;
+  return start && end && end < start ? { endBeforeStart: true } : null;
+};
+
+/** True once the user typed or picked an end date themselves. */
+function isEndDateEdited(sub: AbstractControl): boolean {
+  return !!sub.get('endDate')?.dirty;
+}
 
 /** Hostel fields compared for the "Update Hostel" audit entry (flattened across steps). */
 const HOSTEL_AUDIT_FIELDS: Record<string, string> = {
@@ -72,7 +99,7 @@ const HOSTEL_AUDIT_FIELDS: Record<string, string> = {
   templateUrl: './add-hostel.component.html',
   styleUrl: './add-hostel.component.scss',
 })
-export class AddHostelComponent implements OnInit {
+export class AddHostelComponent implements OnInit, OnDestroy {
   @ViewChild('stepper') private stepperRef?: MatStepper;
   @ViewChild('wizardCard') private wizardCard?: ElementRef<HTMLElement>;
 
@@ -83,6 +110,7 @@ export class AddHostelComponent implements OnInit {
   /** Set from the `:id` route param — when present, the wizard edits that hostel instead of creating a new one. */
   isEditMode = false;
   private editingHostelId = '';
+  private originalHostelName = '';
   /** Values as loaded for editing, so the audit entry can record old → new. */
   private originalAuditValues: Record<string, unknown> = {};
 
@@ -175,14 +203,14 @@ export class AddHostelComponent implements OnInit {
 
   readonly form = this.fb.group({
     hostelInfo: this.fb.group({
-      hostelName: ['', Validators.required],
+      hostelName: ['', [Validators.required, this.uniqueHostelName()]],
       hostelType: ['', Validators.required],
       hostelCategory: ['', Validators.required],
       gender: ['', Validators.required],
-      contactCountryCode: ['+1', Validators.required],
+      contactCountryCode: ['+91', Validators.required],
       contactNumber: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
       email: ['', [Validators.required, Validators.email]],
-      alternateCountryCode: ['+1'],
+      alternateCountryCode: ['+91'],
       alternateContact: ['', CustomValidators.phoneNumber],
       website: ['', Validators.pattern(/^https?:\/\/.+/)],
       logoFileName: [''],
@@ -190,7 +218,7 @@ export class AddHostelComponent implements OnInit {
     address: this.fb.group({
       addressLine1: ['', Validators.required],
       addressLine2: [''],
-      country: ['', Validators.required],
+      country: ['India', Validators.required],
       state: ['', Validators.required],
       city: ['', Validators.required],
       pincode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
@@ -198,11 +226,11 @@ export class AddHostelComponent implements OnInit {
       longitude: [''],
     }),
     capacity: this.fb.group({
-      buildings: [2, [Validators.required, Validators.min(1)]],
-      floors: [5, [Validators.required, Validators.min(1)]],
-      rooms: [150, [Validators.required, Validators.min(1)]],
-      totalBeds: [500, [Validators.required, Validators.min(1)]],
-    }),
+      buildings: [2, [Validators.required, Validators.min(1), wholeNumber]],
+      floors: [5, [Validators.required, Validators.min(1), wholeNumber]],
+      rooms: [150, [Validators.required, Validators.min(1), wholeNumber]],
+      totalBeds: [500, [Validators.required, Validators.min(1), wholeNumber]],
+    }, { validators: bedsCoverRooms }),
     facilities: this.fb.group({
       wifi: [false],
       mess: [false],
@@ -222,20 +250,20 @@ export class AddHostelComponent implements OnInit {
     }),
     admin: this.fb.group({
       firstName: ['', Validators.required],
-      lastName: [''],
+      lastName: ['', [Validators.required, Validators.pattern(/\S/)]],
       mobileNumber: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
-      email: ['', [Validators.required, Validators.email]],
-      username: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email, this.uniqueLogin()]],
+      username: ['', [Validators.required, this.uniqueLogin()]],
       tempPassword: [this.generatePassword(), Validators.required],
       sendEmail: [true],
       sendSms: [true],
     }),
     subscription: this.fb.group({
-      plan: ['Standard', Validators.required],
+      plan: [this.defaultPlan(), Validators.required],
       startDate: [new Date(), Validators.required],
       endDate: [null as Date | null, Validators.required],
       billingCycle: ['Monthly', Validators.required],
-    }),
+    }, { validators: endNotBeforeStart }),
   });
 
   constructor(
@@ -246,9 +274,13 @@ export class AddHostelComponent implements OnInit {
     private auditLog: AuditLogService,
     private hostelAdmins: HostelAdminAccountService,
     private systemSettings: SystemSettingsService,
+    readonly plans: SubscriptionPlanService,
   ) {}
 
+  private readonly subs = new Subscription();
+
   ngOnInit(): void {
+    this.syncEndDate();
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
 
@@ -258,8 +290,63 @@ export class AddHostelComponent implements OnInit {
     const record = MOCK_HOSTEL_RECORDS[id];
     if (record) {
       this.form.patchValue(record);
+      this.originalHostelName = record.hostelInfo?.hostelName ?? '';
     }
     this.originalAuditValues = this.flatAuditValues();
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
+
+  /** Active plans only: an inactive plan cannot be assigned to a new hostel. */
+  private defaultPlan(): string {
+    const active = this.plans.activePlans;
+    return (active.find((p) => p.planName === 'Standard') ?? active[0])?.planName ?? '';
+  }
+
+  /** Until the end date is chosen by hand, it follows the start date and billing cycle. */
+  private syncEndDate(): void {
+    const sub = this.form.get('subscription') as FormGroup;
+    const update = () => {
+      if (isEndDateEdited(sub)) return;
+      const start = sub.get('startDate')?.value as Date | null;
+      if (!(start instanceof Date) || isNaN(start.getTime())) return;
+      const end = new Date(start);
+      if (sub.get('billingCycle')?.value === 'Yearly') end.setFullYear(end.getFullYear() + 1);
+      else end.setMonth(end.getMonth() + 1);
+      end.setDate(end.getDate() - 1);
+      sub.get('endDate')?.setValue(end, { emitEvent: false });
+    };
+    update();
+    this.subs.add(sub.get('startDate')!.valueChanges.subscribe(update));
+    this.subs.add(sub.get('billingCycle')!.valueChanges.subscribe(update));
+  }
+
+  private uniqueHostelName(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const key = String(control.value ?? '').trim().toLowerCase();
+      if (!key) return null;
+      const own = this.isEditMode ? this.originalHostelName.toLowerCase() : '';
+      const names = [...ONBOARDED_HOSTELS.map((h) => h.hostelName), ...REPORT_HOSTELS.map((h) => h.hostelName)];
+      return names.some((n) => n.trim().toLowerCase() === key && n.trim().toLowerCase() !== own) ? { duplicate: true } : null;
+    };
+  }
+
+  /** Owner email / username must not already sign in as another account. */
+  private uniqueLogin(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = String(control.value ?? '').trim();
+      if (!value) return null;
+      if (findBuiltInAccount(value) || value.toLowerCase() === BUILT_IN_HOSTEL_OWNER.email.toLowerCase()) return { duplicate: true };
+      const taken = this.hostelAdmins.findByIdentifier(value);
+      return taken && taken.hostelId !== this.editingHostelId ? { duplicate: true } : null;
+    };
+  }
+
+  private nextHostelId(): string {
+    const max = ONBOARDED_HOSTELS.reduce((m, h) => Math.max(m, Number(h.hostelId.replace(/\D/g, '')) || 0), 1000);
+    return `HST-${max + 1}`;
   }
 
   /** Step values flattened to one level; the admin step is excluded so passwords never reach the log. */
@@ -350,12 +437,27 @@ export class AddHostelComponent implements OnInit {
       this.recordAudit();
       this.createdHostelId = this.isEditMode
         ? this.editingHostelId
-        : `HST${String(Math.floor(Math.random() * 900000) + 100000)}`;
+        : this.nextHostelId();
       this.saveAdminAccount();
+      if (!this.isEditMode) this.addToHostelList();
     }, 900);
   }
 
   /** Registers the admin's login so they can sign in with their temporary password. */
+  /** A newly created hostel shows up in the Onboard Hostel list and in Admin Management. */
+  private addToHostelList(): void {
+    const { hostelInfo, address, admin } = this.form.getRawValue();
+    ONBOARDED_HOSTELS.unshift({
+      hostelId: this.createdHostelId,
+      hostelName: (hostelInfo.hostelName ?? '').trim(),
+      city: address.city ?? '',
+      contactPerson: [admin.firstName, admin.lastName].filter(Boolean).join(' '),
+      mobileNumber: admin.mobileNumber ?? '',
+      status: 'Active',
+      createdDate: new Date().toISOString().split('T')[0],
+    });
+  }
+
   private saveAdminAccount(): void {
     const { hostelInfo, admin } = this.form.getRawValue();
     this.hostelAdmins.save({

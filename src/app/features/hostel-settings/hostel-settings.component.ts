@@ -16,7 +16,7 @@ import { Observable, of } from 'rxjs';
 import { UnsavedChangesAware } from '../../core/guards/unsaved-changes.guard';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
-import { HostelSettingsService } from './hostel-settings.service';
+import { HostelSettingsService } from '../../core/services/hostel-settings.service';
 import {
   HostelSettingsSection,
   HostelSettingsState,
@@ -24,7 +24,7 @@ import {
   NOTIFICATION_CHANNELS,
   NOTIFICATION_EVENTS,
   facilityBlockedReason,
-} from './hostel-settings.models';
+} from '../../core/models/hostel-settings.models';
 import { ProfileSectionComponent } from './profile-section.component';
 import { RulesSectionComponent, houseRuleControl } from './rules-section.component';
 import { FacilitiesSectionComponent } from './facilities-section.component';

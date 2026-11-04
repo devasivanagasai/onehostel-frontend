@@ -8,7 +8,12 @@ export type AuditModule =
   | 'Fees & Payments'
   | 'Complaints'
   | 'Communication Template'
-  | 'System Defaults';
+  | 'System Defaults'
+  | 'Staff'
+  | 'Guardian'
+  | 'Academic Year'
+  | 'Disciplinary'
+  | 'Permissions';
 
 /** Every tracked platform event, and the Module / Action it is shown under. */
 export const AUDIT_EVENTS = {
@@ -65,6 +70,24 @@ export const AUDIT_EVENTS = {
   'Update Room': { module: 'Hostel', action: 'Update' },
   'Delete Room': { module: 'Hostel', action: 'Delete' },
   'Update Bed': { module: 'Hostel', action: 'Update' },
+  'Create Staff': { module: 'Staff', action: 'Create' },
+  'Update Staff': { module: 'Staff', action: 'Update' },
+  'Activate Staff': { module: 'Staff', action: 'Activate' },
+  'Deactivate Staff': { module: 'Staff', action: 'Deactivate' },
+  'Create Task': { module: 'Staff', action: 'Create Task' },
+  'Update Task': { module: 'Staff', action: 'Update Task' },
+  'Create Guardian': { module: 'Guardian', action: 'Create' },
+  'Update Guardian': { module: 'Guardian', action: 'Update' },
+  'Verify Guardian': { module: 'Guardian', action: 'Verify' },
+  'Revoke Guardian': { module: 'Guardian', action: 'Revoke Access' },
+  'Create Academic Year': { module: 'Academic Year', action: 'Create' },
+  'Update Academic Year': { module: 'Academic Year', action: 'Update' },
+  'Change Academic Year Status': { module: 'Academic Year', action: 'Change Status' },
+  'Create Incident': { module: 'Disciplinary', action: 'Create' },
+  'Update Incident': { module: 'Disciplinary', action: 'Update' },
+  'View Incident': { module: 'Disciplinary', action: 'View' },
+  'Update Permissions': { module: 'Permissions', action: 'Update' },
+  'Export Data': { module: 'Permissions', action: 'Export' },
 } as const satisfies Record<string, { module: AuditModule; action: string }>;
 
 export type AuditEvent = keyof typeof AUDIT_EVENTS;
@@ -82,6 +105,11 @@ export const AUDIT_MODULES: AuditModule[] = [
   'Complaints',
   'Communication Template',
   'System Defaults',
+  'Staff',
+  'Guardian',
+  'Academic Year',
+  'Disciplinary',
+  'Permissions',
 ];
 
 export type AuditStatus = 'Success' | 'Failed';

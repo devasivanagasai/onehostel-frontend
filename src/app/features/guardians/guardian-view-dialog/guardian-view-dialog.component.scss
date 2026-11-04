@@ -1,0 +1,105 @@
+// Guardian detail. Frame comes from <app-dialog>.
+@use '../gd-kit';
+
+$line: #e8edf3;
+
+.gw-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 4px 0 12px;
+
+  @media (max-width: 720px) { grid-template-columns: 1fr; }
+}
+
+.gw-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  strong { font-size: 14.5px; color: #0f172a; overflow-wrap: anywhere; }
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.gw-label {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.gw-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gw-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e6f7f5;
+  color: #0f766e;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.gw-section {
+  margin-top: 16px;
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+}
+
+.gw-kinds,
+.gw-others,
+.gw-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gw-kinds li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid $line;
+  font-size: 13.5px;
+  color: #334155;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; color: #94a3b8; }
+  mat-icon.is-on { color: #0d9488; }
+  small { margin-left: auto; font-size: 12.5px; color: #64748b; }
+}
+
+.gw-others li {
+  padding: 4px 0;
+  font-size: 13.5px;
+
+  small { color: #64748b; }
+}
+
+.gw-history li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid $line;
+  font-size: 13.5px;
+
+  small { color: #64748b; margin-left: 4px; }
+  .gw-note { display: block; margin: 2px 0 0; }
+
+  @media (max-width: 560px) { grid-template-columns: 1fr; gap: 2px; }
+}
+
+.gw-when {
+  font-size: 12.5px;
+  color: #64748b;
+}

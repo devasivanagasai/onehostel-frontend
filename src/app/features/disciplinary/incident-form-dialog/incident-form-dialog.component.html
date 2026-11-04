@@ -1,0 +1,114 @@
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <app-dialog [title]="title" [subtitle]="subtitle" icon="gavel" [tone]="mode === 'correct' ? 'amber' : 'red'" (closed)="cancel()">
+    <div class="inc">
+      <div class="inc__grid">
+        <div class="fk-field">
+          <label class="fk-label" for="inc-resident">Resident<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="missing('residentId', 'x')">
+            <select id="inc-resident" formControlName="residentId" [class.is-placeholder]="!form.controls.residentId.value">
+              <option value="" disabled>Select resident</option>
+              @for (r of residents; track r.id) { <option [value]="r.id">{{ r.name }} ({{ r.id }})</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (missing('residentId', 'Select the resident involved'); as e) { <span class="fk-error">{{ e }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="inc-when">Incident date and time<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="dateError">
+            <input id="inc-when" type="datetime-local" formControlName="occurredAt" [max]="maxDateTime" />
+          </span>
+          @if (dateError) { <span class="fk-error">{{ dateError }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="inc-category">Category<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="missing('category', 'x')">
+            <select id="inc-category" formControlName="category" [class.is-placeholder]="!form.controls.category.value">
+              <option value="" disabled>Select category</option>
+              @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (missing('category', 'Select a category'); as e) { <span class="fk-error">{{ e }}</span> }
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="inc-class">Access classification<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="missing('classification', 'x')">
+            <select id="inc-class" formControlName="classification" [class.is-placeholder]="!form.controls.classification.value">
+              <option value="" disabled>Select classification</option>
+              @for (c of classifications; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          @if (missing('classification', 'Select the access classification'); as e) { <span class="fk-error">{{ e }}</span> }
+        </div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="inc-desc">Description<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="descriptionError">
+          <textarea id="inc-desc" rows="5" formControlName="description" [attr.maxlength]="descriptionMax + 200"
+            placeholder="State what happened, where and who was present. Facts only, no opinions."></textarea>
+        </span>
+        <span class="fk-hint inc__count" [class.is-bad]="descriptionError">{{ descCount }} / {{ descriptionMax }} characters (minimum {{ descriptionMin }})</span>
+        @if (descriptionError) { <span class="fk-error">{{ descriptionError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label" id="inc-ev-label">Evidence <span class="opt">(Optional)</span></span>
+        <label class="inc__drop" for="inc-ev">
+          <mat-icon fontSet="material-icons-outlined">attach_file</mat-icon>
+          <span>JPG, PNG or PDF, up to {{ maxCount }} files, {{ maxMb }} MB each</span>
+          <input id="inc-ev" type="file" multiple [accept]="accept" (change)="onFiles($event)" aria-labelledby="inc-ev-label" />
+        </label>
+        <span class="fk-hint">Only the file name, type and size are recorded; the file itself is not stored.</span>
+        @for (e of fileErrors; track e) { <span class="fk-error" role="alert">{{ e }}</span> }
+        @if (evidence.length) {
+          <ul class="inc__files" aria-label="Attached evidence">
+            @for (f of evidence; track $index) {
+              <li>
+                <mat-icon fontSet="material-icons-outlined">{{ f.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+                <span class="inc__fname">{{ f.name }}</span>
+                <small>{{ sizeLabel(f.size) }}</small>
+                <app-button variant="icon" size="sm" icon="close" [ariaLabel]="'Remove ' + f.name" (clicked)="removeFile($index)"></app-button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="inc-action">Action taken <span class="opt">(Optional)</span></label>
+        <span class="fk-control">
+          <textarea id="inc-action" rows="3" formControlName="actionTaken" [attr.maxlength]="actionMax" placeholder="Follow-up or action already taken"></textarea>
+        </span>
+      </div>
+
+      @if (mode === 'correct') {
+        @if (hasClosingNote) {
+          <div class="fk-field">
+            <label class="fk-label" for="inc-close">Closing note</label>
+            <span class="fk-control"><textarea id="inc-close" rows="2" formControlName="closingNote" [attr.maxlength]="actionMax"></textarea></span>
+          </div>
+        }
+        <div class="fk-field">
+          <label class="fk-label" for="inc-reason">Reason for correction<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="reasonError">
+            <textarea id="inc-reason" rows="2" formControlName="reason" placeholder="Why is this closed record being corrected?"></textarea>
+          </span>
+          @if (reasonError) { <span class="fk-error">{{ reasonError }}</span> }
+        </div>
+      }
+
+      @if (saveError) { <p class="inc__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ saveError }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="cancel()">Cancel</app-button>
+      <app-button type="submit" variant="accent" icon="save" [iconOutlined]="true" [loading]="saving">{{ mode === 'create' ? 'Report Incident' : mode === 'edit' ? 'Save Changes' : 'Save Correction' }}</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

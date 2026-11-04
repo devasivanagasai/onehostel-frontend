@@ -5,8 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { LeaveOutpassService } from '../leave-outpass.service';
-import { LeavePolicy } from '../leave-outpass.models';
+import { LeaveOutpassService } from '../../../core/services/leave-outpass.service';
+import { LeavePolicy } from '../../../core/models/leave-outpass.models';
 
 /** Hostel rules for leave / outpass requests, kept locally. Closes with true when saved. */
 @Component({

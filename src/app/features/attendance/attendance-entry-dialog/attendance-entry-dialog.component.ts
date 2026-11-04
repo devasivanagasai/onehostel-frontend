@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent, AppDialogTone } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { LeaveOutpassService } from '../../leave-outpass/leave-outpass.service';
+import { LeaveOutpassService } from '../../../core/services/leave-outpass.service';
 import { AttendanceService } from '../attendance.service';
 import {
   AttendanceMethod,
@@ -72,6 +72,8 @@ export class AttendanceEntryDialogComponent {
   method: AttendanceMethod = this.methods[0];
   remarks = this.record?.remarks ?? '';
   reason = '';
+  /** Check-out after midnight: the time falls on the day after the record's date. */
+  nextDay = false;
   /** Time for check-in / check-out: now today, blank on a past date. */
   when = this.isToday ? this.nowHm() : '';
   sessions: SessionDraft[] = (this.record?.sessions ?? []).map((s) => ({ in: s.in.slice(11, 16), out: s.out?.slice(11, 16) ?? '', inMethod: s.inMethod, outMethod: s.outMethod }));
@@ -104,6 +106,14 @@ export class AttendanceEntryDialogComponent {
     return hm ? `${this.date}T${hm}:00` : '';
   }
 
+  private isoOut(): string {
+    if (!this.nextDay || !this.when) return this.iso(this.when);
+    const d = new Date(`${this.date}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${this.when}:00`;
+  }
+
   /** Stays as they would be saved. */
   private get draft(): AttendanceSession[] {
     if (this.mode === 'edit') {
@@ -113,7 +123,7 @@ export class AttendanceEntryDialogComponent {
     if (this.mode === 'checkin') list.push({ in: this.iso(this.when), inMethod: this.method });
     else {
       const open = list.find((s) => !s.out);
-      if (open) open.out = this.iso(this.when);
+      if (open) open.out = this.isoOut();
     }
     return list;
   }
@@ -170,7 +180,7 @@ export class AttendanceEntryDialogComponent {
       const id = this.row.resident.residentId;
       const rec =
         this.mode === 'checkin' ? this.service.checkIn(id, this.date, this.iso(this.when), this.method, this.reason)
-        : this.mode === 'checkout' ? this.service.checkOut(id, this.date, this.iso(this.when), this.method, this.reason)
+        : this.mode === 'checkout' ? this.service.checkOut(id, this.date, this.isoOut(), this.method, this.reason)
         : this.service.save(id, this.date, { status: this.status, sessions: this.draft, remarks: this.remarks }, this.method, this.reason);
       this.dialogRef.close(rec);
     } catch (err: any) {

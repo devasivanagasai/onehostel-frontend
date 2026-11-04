@@ -1,10 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { FeesService } from '../fees-payments/fees.service';
-import { RoomsService } from '../rooms-management/rooms.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident, residentFullName } from '../residents/residents.models';
+import { FeesService } from '../../core/services/fees.service';
+import { RoomsService } from '../../core/services/rooms.service';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident, residentFullName } from '../../core/models/residents.models';
 import {
   LaundryAvailability,
   LaundryBooking,
@@ -27,6 +27,9 @@ import {
 
 const STORAGE_KEY = 'onehostel_laundry_v1';
 export const HOSTEL_ID = 'HST-OWNER-01';
+
+/** How far ahead a booking can be made. */
+export const BOOKING_WINDOW_DAYS = 14;
 
 /** Days after billing that a laundry charge is due. */
 const CHARGE_DUE_DAYS = 7;
@@ -178,7 +181,10 @@ export class LaundryService {
     if (u.state !== 'Active') throw new Error(`${u.name} is ${u.state === 'Maintenance' ? 'under maintenance' : 'inactive'} and can't be booked.`);
     const r = this.currentResidents.find((x) => x.residentId === input.residentId);
     if (!r) throw new Error('Select a current resident.');
-    if (u.priceUnit === 'per item' && !(Number(input.items) >= 1)) throw new Error('Enter the number of items.');
+    if (u.priceUnit === 'per item' && !(Number.isInteger(input.items) && (input.items as number) >= 1)) throw new Error('Enter the number of items as a whole number.');
+    if (input.date < todayStr() || input.date > addDays(todayStr(), BOOKING_WINDOW_DAYS)) {
+      throw new Error(`Pick a date within the next ${BOOKING_WINDOW_DAYS} days.`);
+    }
     const slot = this.slots(u.id, input.date).find((s) => s.start === input.start);
     if (!slot) throw new Error(`${u.name} has no ${clock(input.start)} slot on that day.`);
     if (slot.blocked === 'Past') throw new Error('That slot has already started.');
@@ -211,6 +217,7 @@ export class LaundryService {
     const b = this.requireBooking(id);
     if (b.status !== 'Requested') throw new Error('Only requested bookings can be confirmed.');
     if (this.unit(b.unitId)?.state !== 'Active') throw new Error('The machine is not available.');
+    if (`${b.date}T${b.end}` <= localIso()) throw new Error('This slot has already ended.');
     this.patchBooking(id, { status: 'Confirmed' });
   }
 
@@ -275,7 +282,16 @@ export class LaundryService {
     const clean = { ...input, name: input.name.trim(), location: input.location.trim(), days: [...input.days].sort() };
     if (id) {
       const next = { ...this.requireUnit(id), ...clean, updatedAt: now };
-      this.commit({ units: this.units.map((u) => (u.id === id ? next : u)) });
+      // A schedule change must not leave open future bookings on slots that no longer exist: cancel and notify
+      // them the same way setState does for maintenance.
+      const affected = this.futureBookings(id).filter((b) => !this.fitsSchedule(next, b));
+      const ids = new Set(affected.map((b) => b.id));
+      const reason = `${next.name} schedule changed`;
+      this.commit({
+        units: this.units.map((u) => (u.id === id ? next : u)),
+        bookings: this.bookings.map((b) => (ids.has(b.id) ? { ...b, status: 'Cancelled', cancelReason: reason, notifiedAt: now, updatedAt: now } : b)),
+        notices: [...this.cancellationNotices(next, affected, reason, now), ...this.notices],
+      });
       return next;
     }
     const created: LaundryUnit = { id: this.nextUnitId(), hostelId: HOSTEL_ID, ...clean, state: 'Active', createdAt: now, updatedAt: now };
@@ -301,14 +317,7 @@ export class LaundryService {
     const affected = state === 'Active' ? [] : this.futureBookings(unitId);
     const reason = state === 'Maintenance' ? `${u.name} under maintenance` : `${u.name} taken out of service`;
     const ids = new Set(affected.map((b) => b.id));
-    const notices: LaundryNotice[] = affected.map((b, i) => ({
-      id: `LN${Date.now()}${i}`,
-      residentId: b.residentId,
-      residentName: b.residentName,
-      bookingId: b.id,
-      message: `Your ${u.name} booking on ${b.date} at ${clock(b.start)} was cancelled: ${reason}${note ? ` (${note})` : ''}. Please book another slot.`,
-      at: now,
-    }));
+    const notices = this.cancellationNotices(u, affected, reason, now, note);
     this.commit({
       units: this.units.map((x) =>
         x.id === unitId
@@ -323,6 +332,30 @@ export class LaundryService {
 
   // ---------------------------------------------------------------------------
 
+  /** (Mock) notifications for bookings cancelled by a machine change. */
+  private cancellationNotices(u: LaundryUnit, affected: LaundryBooking[], reason: string, now: string, note?: string): LaundryNotice[] {
+    return affected.map((b, i) => ({
+      id: `LN${Date.now()}${i}`,
+      residentId: b.residentId,
+      residentName: b.residentName,
+      bookingId: b.id,
+      message: `Your ${u.name} booking on ${b.date} at ${clock(b.start)} was cancelled: ${reason}${note ? ` (${note})` : ''}. Please book another slot.`,
+      at: now,
+    }));
+  }
+
+  /** Does the booking still sit on a slot of the unit's operating days / hours / slot length? */
+  private fitsSchedule(u: LaundryUnit, b: LaundryBooking): boolean {
+    const start = toMinutes(b.start);
+    return (
+      u.days.includes(dayOfWeek(b.date)) &&
+      toMinutes(b.end) - start === u.slotMinutes &&
+      start >= toMinutes(u.openTime) &&
+      toMinutes(b.end) <= toMinutes(u.closeTime) &&
+      (start - toMinutes(u.openTime)) % u.slotMinutes === 0
+    );
+  }
+
   private validateUnit(input: LaundryUnitInput, id?: string): void {
     if (!input.name.trim()) throw new Error('Name is required.');
     const dup = this.units.find((u) => u.id !== id && u.name.trim().toLowerCase() === input.name.trim().toLowerCase());
@@ -333,7 +366,7 @@ export class LaundryService {
     if (!(input.slotMinutes > 0)) throw new Error('Slot duration must be a positive number of minutes.');
     if (!input.days.length) throw new Error('Pick at least one operating day.');
     if (toMinutes(input.closeTime) - toMinutes(input.openTime) < input.slotMinutes) throw new Error('Operating hours must fit at least one slot.');
-    if (!(input.limitCount >= 1)) throw new Error('Booking limit must be at least 1.');
+    if (!Number.isInteger(input.limitCount) || input.limitCount < 1) throw new Error('Booking limit must be a whole number of at least 1.');
   }
 
   private weekOf(date: string): [string, string] {

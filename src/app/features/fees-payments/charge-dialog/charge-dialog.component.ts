@@ -8,10 +8,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
-import { ResidentsService } from '../../residents/residents.service';
-import { residentFullName } from '../../residents/residents.models';
-import { OneTimeChargeInput } from '../fees.service';
-import { TAX_OPTIONS } from '../fees.models';
+import { ResidentsService } from '../../../core/services/residents.service';
+import { residentFullName } from '../../../core/models/residents.models';
+import { localDateIso } from '../../../shared/utils/local-date';
+import { OneTimeChargeInput } from '../../../core/services/fees.service';
+import { TAX_OPTIONS } from '../../../core/models/fees.models';
 
 /** Authorised one-time charge (fine, damage, event fee…) for one or more residents. */
 @Component({
@@ -78,7 +79,7 @@ export class ChargeDialogComponent {
   private readonly fb = inject(FormBuilder);
   private readonly dialogRef = inject(MatDialogRef<ChargeDialogComponent, OneTimeChargeInput>);
 
-  readonly today = new Date().toISOString().slice(0, 10);
+  readonly today = localDateIso();
   readonly taxOptions = TAX_OPTIONS;
   readonly residents = inject(ResidentsService)
     .residents.filter((r) => !r.deactivatedAt && r.status !== 'Checked Out')

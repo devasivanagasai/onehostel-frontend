@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { HostelSettingsService } from '../hostel-settings/hostel-settings.service';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident } from '../residents/residents.models';
+import { HostelSettingsService } from '../../core/services/hostel-settings.service';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident } from '../../core/models/residents.models';
 import {
   DEFAULT_RULES,
   MOBILE_PATTERN,
@@ -258,6 +258,7 @@ export class VisitorsService {
     if (v.approval === 'Pending') return 'Waiting for approval.';
     if (v.approval === 'Rejected') return 'The request was rejected.';
     if (this.isMissed(v)) return 'The visit date has passed. Register the visitor again.';
+    if (v.expectedAt.slice(0, 10) > today()) return 'Visit is scheduled for a later date.';
     return '';
   }
 
@@ -340,6 +341,7 @@ export class VisitorsService {
     const v = this.require(id);
     if (v.approval !== 'Pending') throw new Error('This request has already been decided.');
     if (!approve && !reason?.trim()) throw new Error('Give a reason for the rejection.');
+    if (approve && this.isMissed(v)) throw new Error('The visit date has passed and it can no longer be approved. Reject it or register the visitor again.');
     const now = localIso();
     const note = reason?.trim() || undefined;
     return this.update(v, {

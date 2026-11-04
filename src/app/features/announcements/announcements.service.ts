@@ -2,10 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
-import { RoomsService } from '../rooms-management/rooms.service';
-import { Room } from '../rooms-management/rooms.models';
-import { ResidentsService } from '../residents/residents.service';
-import { HostelResident } from '../residents/residents.models';
+import { RoomsService } from '../../core/services/rooms.service';
+import { Room } from '../../core/models/rooms.models';
+import { ResidentsService } from '../../core/services/residents.service';
+import { HostelResident } from '../../core/models/residents.models';
 import {
   Announcement,
   AnnouncementAudience,
@@ -329,7 +329,9 @@ export class AnnouncementsService {
     if (!input.message.trim() || input.message.length > MESSAGE_MAX) throw new Error(`Message is required (max ${MESSAGE_MAX} characters).`);
     if (!input.channels.length) throw new Error('Pick at least one channel.');
     if (!this.recipients(input.audience).length) throw new Error('The selected audience has no residents to receive it.');
-    const publishAt = input.publishAt ? new Date(input.publishAt).getTime() : Date.now();
+    // Mirror publish(): a publish time that isn't in the future means "now".
+    const entered = input.publishAt ? new Date(input.publishAt).getTime() : Date.now();
+    const publishAt = entered > Date.now() ? entered : Date.now();
     if (input.expiryDate && expiryTime(input.expiryDate) <= publishAt) throw new Error('Expiry date must follow the publish date.');
   }
 

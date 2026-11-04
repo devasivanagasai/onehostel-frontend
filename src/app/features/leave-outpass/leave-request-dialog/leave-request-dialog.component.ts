@@ -6,9 +6,9 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { formatMobile, residentFullName } from '../../residents/residents.models';
-import { LeaveOutpassService } from '../leave-outpass.service';
-import { ContactSource, LEAVE_TYPES, LeaveContact, LeaveRequest, LeaveType, REASON_MAX, durationLabel, localIso } from '../leave-outpass.models';
+import { formatMobile, residentFullName } from '../../../core/models/residents.models';
+import { LeaveOutpassService } from '../../../core/services/leave-outpass.service';
+import { ContactSource, LEAVE_TYPES, LeaveContact, LeaveRequest, LeaveType, REASON_MAX, durationLabel, localIso } from '../../../core/models/leave-outpass.models';
 
 interface ResidentOption {
   id: string;

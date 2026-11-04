@@ -82,6 +82,24 @@ export class MainLayoutComponent {
       } else if (url.startsWith('/attendance')) {
         this.pageTitle = 'Attendance & Check-in';
         this.pageSubtitle = 'Daily attendance, check-ins, check-outs and corrections';
+      } else if (url.startsWith('/staff')) {
+        this.pageTitle = 'Staff Management';
+        this.pageSubtitle = 'Staff profiles, shifts, duties and task assignments';
+      } else if (url.startsWith('/guardians')) {
+        this.pageTitle = 'Parent / Guardian Management';
+        this.pageSubtitle = 'Guardian contacts, verification, consent and access scope';
+      } else if (url.startsWith('/academic-years')) {
+        this.pageTitle = 'Academic Year Management';
+        this.pageSubtitle = 'Academic years, allocation windows and year rollover for college hostels';
+      } else if (url.startsWith('/disciplinary')) {
+        this.pageTitle = 'Disciplinary Records';
+        this.pageSubtitle = 'Restricted incident records with review status and audit history';
+      } else if (url.startsWith('/analytics')) {
+        this.pageTitle = 'Advanced Analytics';
+        this.pageSubtitle = 'Occupancy, movement, revenue, complaints and service utilisation';
+      } else if (url.startsWith('/permissions')) {
+        this.pageTitle = 'Permissions & Audit History';
+        this.pageSubtitle = 'Role templates, approval limits, export controls and audit trail';
       } else if (url.startsWith('/parcels')) {
         this.pageTitle = 'Parcel Management';
         this.pageSubtitle = 'Log parcels, notify residents and record pickups';

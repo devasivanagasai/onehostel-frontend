@@ -1,0 +1,60 @@
+// New / edit academic year. Frame comes from <app-dialog>; labelled fields from styles/_dialog-kit.scss.
+@use '../../../../styles/dialog-kit' as *;
+@use '../ay-kit';
+
+@include form-fields;
+
+.af {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 4px;
+
+  @media (max-width: 620px) { grid-template-columns: 1fr; }
+}
+
+.af-wide { grid-column: 1 / -1; }
+
+.af-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  &:empty { display: none; }
+}
+
+.af-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: #e6f7f5;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 600;
+
+  button {
+    display: inline-flex;
+    padding: 2px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover { background: rgba(15, 118, 110, 0.15); }
+    &:focus-visible { outline: 2px solid #0d9488; }
+
+    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+  }
+}
+
+.af-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .fk-control { flex: 1; }
+}

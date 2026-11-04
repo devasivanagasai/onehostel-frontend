@@ -1,13 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { combineLatest, map } from 'rxjs';
 import { AppFormatService } from '../../core/services/app-format.service';
-import { ResidentsService } from '../residents/residents.service';
-import { RESIDENT_STATUSES, RESIDENT_TYPES, ResidentStatus, formatMobile, residentFullName } from '../residents/residents.models';
-import { RoomsService } from '../rooms-management/rooms.service';
-import { Room, RoomStatus } from '../rooms-management/rooms.models';
-import { FeesService } from '../fees-payments/fees.service';
-import { ChargeStatus, OFFLINE_METHODS, PAYMENT_STATUSES, PaymentStatus } from '../fees-payments/fees.models';
-import { ComplaintsService } from '../complaints/complaints.service';
+import { ResidentsService } from '../../core/services/residents.service';
+import { RESIDENT_STATUSES, RESIDENT_TYPES, ResidentStatus, formatMobile, residentFullName } from '../../core/models/residents.models';
+import { RoomsService } from '../../core/services/rooms.service';
+import { Room, RoomStatus } from '../../core/models/rooms.models';
+import { FeesService } from '../../core/services/fees.service';
+import { ChargeStatus, OFFLINE_METHODS, PAYMENT_STATUSES, PaymentStatus } from '../../core/models/fees.models';
+import { ComplaintsService } from '../../core/services/complaints.service';
 import {
   COMPLAINT_CATEGORIES,
   COMPLAINT_PRIORITIES,
@@ -17,7 +17,7 @@ import {
   STATUS_TONES as COMPLAINT_TONES,
   isActive,
   staffById,
-} from '../complaints/complaints.models';
+} from '../../core/models/complaints.models';
 import {
   DateRange,
   HostelReportKey,

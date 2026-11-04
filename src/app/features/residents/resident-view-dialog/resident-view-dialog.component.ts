@@ -5,8 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { AppDialogComponent } from '../../../shared/components/dialog/app-dialog.component';
 import { AppButtonComponent } from '../../../shared/components/button/app-button.component';
 import { AppFormatService } from '../../../core/services/app-format.service';
-import { ResidentsService } from '../residents.service';
-import { HostelResident, formatMobile, residentFullName } from '../residents.models';
+import { ResidentsService } from '../../../core/services/residents.service';
+import { HostelResident, formatMobile, residentFullName } from '../../../core/models/residents.models';
 
 export interface ResidentViewDialogData {
   residentId: string;

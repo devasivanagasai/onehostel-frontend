@@ -11,10 +11,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppTableCardComponent } from '../../shared/components/table-card/app-table-card.component';
 import { AppButtonComponent } from '../../shared/components/button/app-button.component';
 import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
-import { HostelOnboardingRow, ONBOARDED_HOSTELS } from './onboarded-hostels';
+import { HostelOnboardingRow, ONBOARDED_HOSTELS } from '../../core/models/onboarded-hostels';
 import { MOCK_HOSTEL_RECORDS } from './add-hostel/mock-hostel-records';
 
-export type { HostelOnboardingRow } from './onboarded-hostels';
+export type { HostelOnboardingRow } from '../../core/models/onboarded-hostels';
 
 type StatusFilter = 'All' | HostelOnboardingRow['status'];
 
