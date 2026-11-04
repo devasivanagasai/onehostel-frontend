@@ -2,6 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuthService } from './auth.service';
 import { ResidentsService } from './residents.service';
+import { TenantContextService } from './tenant-context.service';
+import { NewTenantNotification, TenantNotificationService } from './tenant-notification.service';
 import { HostelResident, formatMobile, residentFullName } from '../models/residents.models';
 import {
   ApprovalStatus,
@@ -31,6 +33,19 @@ export const HOSTEL_ID = 'HST-OWNER-01';
 
 /** Movement of an approved request; 'No-show' = the return time passed without the resident ever leaving. */
 export type LeaveMovement = MovementState | 'No-show';
+
+export interface TenantLeaveInput {
+  type: LeaveType;
+  reason: string;
+  /** yyyy-mm-ddTHH:mm */
+  departAt: string;
+  returnAt: string;
+  destination?: string;
+  /** Which contact on the Tenant's own profile to use during leave. */
+  contactSource?: LeaveContact['source'];
+  /** File name only (mock): PDF, PNG or JPG. */
+  supportingDocument?: string;
+}
 
 /** How early security may record an exit before the approved departure. */
 const EARLY_EXIT_MS = 2 * 3_600_000;
@@ -65,6 +80,8 @@ const at = (days: number, hhmm: string): string => {
 export class LeaveOutpassService {
   private readonly residents = inject(ResidentsService);
   private readonly auth = inject(AuthService);
+  private readonly tenantCtx = inject(TenantContextService);
+  private readonly tenantNotify = inject(TenantNotificationService);
 
   private readonly policySubject = new BehaviorSubject<LeavePolicy>(this.loadPolicy());
   readonly policy$ = this.policySubject.asObservable();
@@ -278,6 +295,7 @@ export class LeaveOutpassService {
       notifications: [...r.notifications, this.notice(now, r.residentId, 'Resident', `Your ${r.type.toLowerCase()} request ${r.id} was cancelled.`)],
     };
     this.replace(next);
+    this.notifyTenant(r.residentId, { category: 'Leave', title: `${r.type} request cancelled`, body: `${r.id} was cancelled.`, route: '/my/leave' });
     return next;
   }
 
@@ -322,6 +340,127 @@ export class LeaveOutpassService {
     return next;
   }
 
+  // ---- Tenant (resident app) -------------------------------------------------------
+  // The resident id always comes from TenantContextService. A Tenant raises, sees and cancels only their
+  // own requests; approval, rejection and movement records stay with staff and security.
+
+  private notifyTenant(residentId: string, n: NewTenantNotification): void {
+    try {
+      this.tenantNotify.push(residentId, n);
+    } catch {
+      // A notification must never block the action itself.
+    }
+  }
+
+  private requireOwn(id: string): LeaveRequest {
+    const me = this.tenantCtx.requireResidentId();
+    const r = this.byId(id);
+    if (!r || r.residentId !== me) throw new Error('Request not found.');
+    return r;
+  }
+
+  /** The signed-in Tenant's requests, newest first. */
+  tenantRequests(): LeaveRequest[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    return this.requests.filter((r) => r.residentId === me).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  }
+
+  /** Contacts already on the Tenant's own profile, which can be used as the contact during leave. */
+  tenantContacts(): LeaveContact[] {
+    const r = this.tenantCtx.resident;
+    return r ? this.contactsFor(r) : [];
+  }
+
+  /** Per-field problems with a new request (same rules as the owner screen) plus the Tenant-only overlap check. */
+  tenantCheck(input: TenantLeaveInput): { depart?: string; return?: string; reason?: string; destination?: string; contact?: string; document?: string; overlap?: string } {
+    const out: { depart?: string; return?: string; reason?: string; destination?: string; contact?: string; document?: string; overlap?: string } = {};
+    const me = this.tenantCtx.residentId;
+    const t = this.checkTimes(input.type, input.departAt, input.returnAt);
+    if (t.depart) out.depart = t.depart;
+    if (t.return) out.return = t.return;
+    const reason = input.reason?.trim() ?? '';
+    if (!reason) out.reason = 'Reason is required';
+    else if (reason.length > REASON_MAX) out.reason = `Reason can be at most ${REASON_MAX} characters`;
+    if (this.policy.destinationRequired[input.type] && !input.destination?.trim()) out.destination = 'Destination is required';
+    if (!this.tenantContacts().length) out.contact = 'No emergency contact on your profile. Ask the hostel office to add one.';
+    const doc = input.supportingDocument?.trim();
+    if (doc && (doc.length > 100 || !/\.(pdf|png|jpe?g)$/i.test(doc))) out.document = 'Use a PDF, PNG or JPG file name (up to 100 characters)';
+    if (me && !out.depart && !out.return) {
+      const clash = this.overlapping(me, input.departAt, input.returnAt);
+      if (clash) out.overlap = `This overlaps your ${clash.type.toLowerCase()} request ${clash.id} (${clash.status.toLowerCase()}). Cancel it first or pick other times.`;
+    }
+    return out;
+  }
+
+  /** Raises a request for the signed-in Tenant. It starts Pending; only staff can approve it. */
+  tenantCreate(input: TenantLeaveInput): LeaveRequest {
+    const me = this.tenantCtx.requireResidentId();
+    const resident = this.eligibleResidents.find((r) => r.residentId === me);
+    if (!resident) throw new Error('Leave and outpass requests are available while you are a current resident with a bed.');
+    const contacts = this.contactsFor(resident);
+    const contact = contacts.find((c) => c.source === input.contactSource) ?? contacts[0];
+    if (!contact) throw new Error('No emergency contact on your profile. Ask the hostel office to add one, then try again.');
+    const errors = this.tenantCheck(input);
+    const first = errors.depart || errors.return || errors.reason || errors.destination || errors.document || errors.overlap;
+    if (first) throw new Error(first);
+    const created = this.create({
+      residentId: me,
+      type: input.type,
+      reason: input.reason,
+      departAt: input.departAt,
+      returnAt: input.returnAt,
+      destination: input.destination,
+      contact,
+    });
+    const now = localIso();
+    const next: LeaveRequest = {
+      ...created,
+      submittedBy: residentFullName(resident),
+      submittedVia: 'Resident App',
+      supportingDocument: input.supportingDocument?.trim() || undefined,
+      notifications: [this.notice(now, me, 'Resident', `Your ${created.type.toLowerCase()} request ${created.id} was submitted and is awaiting approval.`)],
+    };
+    this.replace(next);
+    this.notifyTenant(me, { category: 'Leave', title: `${created.type} request submitted`, body: `${created.id} is waiting for approval.`, route: '/my/leave' });
+    return next;
+  }
+
+  /** Cancels one of the Tenant's own requests (Pending, or Approved but not yet left). After approval, changes mean cancel and resubmit. */
+  tenantCancel(id: string, reason?: string): LeaveRequest {
+    this.requireOwn(id);
+    return this.cancel(id, reason);
+  }
+
+  /** Print-ready approval record (a standalone HTML page) for one of the Tenant's own approved requests. */
+  tenantApprovalRecordHtml(id: string): string {
+    const r = this.requireOwn(id);
+    if (r.status !== 'Approved') throw new Error('An approval record is available only for approved requests.');
+    const resident = this.tenantCtx.requireResident();
+    const esc = (v: string | undefined): string =>
+      (v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const fmt = (iso?: string): string => (iso ? iso.replace('T', ' ').slice(0, 16) : '-');
+    const rows: [string, string][] = [
+      ['Request ID', r.id],
+      ['Type', r.type],
+      ['Resident', `${residentFullName(resident)} (${resident.residentId})`],
+      ['Reason', r.reason],
+      ['Departure', fmt(r.departAt)],
+      ['Expected return', fmt(r.returnAt)],
+      ['Destination', r.destination ?? '-'],
+      ['Contact during leave', `${r.contact.name} (${r.contact.mobile})`],
+      ['Approval status', 'Approved'],
+      ['Approved by', r.decidedBy ?? '-'],
+      ['Decision time', fmt(r.decidedAt)],
+      ['Remarks', r.decisionReason ?? '-'],
+    ];
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${esc(r.type)} approval ${esc(r.id)}</title>
+<style>body{font-family:Arial,Helvetica,sans-serif;margin:32px;color:#1e293b}h1{font-size:20px;margin:0 0 4px}p.sub{margin:0 0 20px;color:#64748b;font-size:13px}table{border-collapse:collapse;width:100%;max-width:640px}th,td{border:1px solid #cbd5e1;padding:8px 10px;text-align:left;font-size:14px}th{width:200px;background:#f1f5f9}.note{margin-top:20px;font-size:12px;color:#64748b;max-width:640px}@media print{body{margin:12mm}}</style></head><body>
+<h1>${esc(r.type)} approval record</h1><p class="sub">${esc(this.tenantCtx.hostelName)}</p>
+<table>${rows.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>
+<p class="note">This record shows the approval decision only. It does not prove that the resident has left or returned; gate movement is recorded separately by security. Generated ${esc(fmt(localIso()))}.</p></body></html>`;
+  }
+
   savePolicy(policy: LeavePolicy): void {
     const hours = Math.round(policy.outpassMaxHours);
     if (!(hours >= 1 && hours <= 24)) throw new Error('Outpass limit must be between 1 and 24 hours.');
@@ -344,6 +483,7 @@ export class LeaveOutpassService {
       notifications: [...r.notifications, ...this.decisionNotices(r, status, now, reason)],
     };
     this.replace(next);
+    this.notifyTenant(r.residentId, { category: 'Leave', title: `${r.type} request ${status.toLowerCase()}`, body: `${r.id} was ${status.toLowerCase()}${reason ? ': ' + reason : '.'}`, route: '/my/leave' });
     return next;
   }
 

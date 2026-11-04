@@ -10,6 +10,8 @@ export interface AuthUser {
   name: string;
   email: string;
   roles?: string[];
+  /** Set for Tenant sign-ins: the resident record this login belongs to. */
+  residentId?: string;
   /** Profile photo as a data URL, when one has been uploaded. */
   avatarUrl?: string;
 }

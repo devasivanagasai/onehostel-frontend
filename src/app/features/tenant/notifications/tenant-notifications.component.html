@@ -1,0 +1,76 @@
+<div class="tk-page">
+  @switch (state) {
+    @case ('loading') {
+      <div class="tk-card" role="status" aria-live="polite" aria-label="Loading notifications">
+        <div class="tk-skel"><span></span><span></span><span></span></div>
+      </div>
+    }
+    @case ('error') {
+      <div class="tk-card">
+        <div class="tk-state" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ errorMessage }}</p>
+          <app-button variant="outline" icon="refresh" (clicked)="load()">Try again</app-button>
+        </div>
+      </div>
+    }
+    @default {
+      <div class="tk-card">
+        <div class="tk-toolbar">
+          <label class="filter-select">
+            <span class="filter-select__control">
+              <select aria-label="Category" [(ngModel)]="category" (ngModelChange)="currentPage = 0">
+                <option value="All">All categories</option>
+                @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+              </select>
+              <mat-icon>expand_more</mat-icon>
+            </span>
+          </label>
+          <label class="tn-check">
+            <input type="checkbox" [(ngModel)]="unreadOnly" (ngModelChange)="currentPage = 0" />
+            Unread only
+          </label>
+          @if (hasFilters) {
+            <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+          }
+          <span class="tk-spacer tk-muted" aria-live="polite">{{ unread }} unread</span>
+          <app-button variant="outline" size="sm" icon="done_all" [disabled]="unread === 0" (clicked)="markAllRead()">Mark all read</app-button>
+        </div>
+
+        @if (filtered.length === 0) {
+          <app-empty-state
+            [icon]="hasFilters ? 'search_off' : 'notifications_none'"
+            [message]="hasFilters ? 'No notifications match your filters' : 'You have no notifications'"
+            [hint]="hasFilters ? 'Try another category or show read ones too.' : 'Alerts about your dues, complaints and notices will appear here.'"
+            [clearable]="hasFilters"
+            (clear)="clearFilters()"
+          ></app-empty-state>
+        } @else {
+          <ul class="tk-list">
+            @for (n of paged; track n.id) {
+              <li class="tn-item">
+                <button type="button" class="tk-row" [class.is-unread]="!n.read" (click)="open(n)">
+                  <span class="tk-dot" [class.tk-dot--read]="n.read" aria-hidden="true"></span>
+                  <span class="tk-row__icon" aria-hidden="true"><mat-icon fontSet="material-icons-outlined">{{ icons[n.category] }}</mat-icon></span>
+                  <span class="tk-row__body">
+                    <span class="tk-row__title">
+                      {{ n.title }}
+                      <span class="tk-chip">{{ n.category }}</span>
+                      @if (!n.read) { <span class="tk-sr">(unread)</span> }
+                    </span>
+                    <span class="tk-row__text">{{ n.body }}</span>
+                    <span class="tk-row__meta"><time [attr.datetime]="n.createdAt" [title]="absolute(n.createdAt)">{{ relative(n.createdAt) }}</time> · {{ absolute(n.createdAt) }}</span>
+                  </span>
+                </button>
+                <app-button class="tn-remove" variant="icon" size="sm" icon="close" [ariaLabel]="'Remove notification: ' + n.title" (clicked)="dismiss(n, $any($event))"></app-button>
+              </li>
+            }
+          </ul>
+          <app-pagination [page]="safePage" [totalPages]="totalPages" [pageSize]="pageSize" (pageChange)="currentPage = $event" (pageSizeChange)="pageSize = $event; currentPage = 0">
+            <span class="tk-muted">Showing {{ safePage * pageSize + 1 }}-{{ safePage * pageSize + paged.length }} of {{ filtered.length }}</span>
+          </app-pagination>
+        }
+      </div>
+    }
+  }
+</div>

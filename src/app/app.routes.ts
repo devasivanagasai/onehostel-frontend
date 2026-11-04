@@ -5,6 +5,7 @@ import { authGuard, guestGuard } from './core/guards/auth.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 import { passwordExpiryGuard } from './core/guards/password-expiry.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { tenantModuleGuard } from './core/guards/tenant-module.guard';
 import { AuthService } from './core/services/auth.service';
 
 export const routes: Routes = [
@@ -12,6 +13,11 @@ export const routes: Routes = [
     path: 'login',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'activate',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/activate/activate.component').then((m) => m.ActivateComponent),
   },
   {
     path: '',
@@ -22,6 +28,12 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       // Hostel Owners get their own hostel's dashboard; the platform-wide one is for everyone else.
+      {
+        path: 'dashboard',
+        canMatch: [() => inject(AuthService).isTenant],
+        loadComponent: () =>
+          import('./features/dashboard/tenant-dashboard.component').then((m) => m.TenantDashboardComponent),
+      },
       {
         path: 'dashboard',
         canMatch: [() => inject(AuthService).isHostelOwner],
@@ -88,6 +100,138 @@ export const routes: Routes = [
         path: 'hostel-reports',
         loadComponent: () =>
           import('./features/hostel-reports/hostel-reports.component').then((m) => m.HostelReportsComponent),
+      },
+      {
+        path: 'my/profile',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/profile/tenant-profile.component').then((m) => m.TenantProfileComponent),
+      },
+      {
+        path: 'my/hostel',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/hostel/tenant-hostel.component').then((m) => m.TenantHostelComponent),
+      },
+      {
+        path: 'my/fees',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/fees/tenant-fees.component').then((m) => m.TenantFeesComponent),
+      },
+      {
+        path: 'my/activity',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/activity/tenant-activity.component').then((m) => m.TenantActivityComponent),
+      },
+      {
+        path: 'my/complaints',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/complaints/tenant-complaints.component').then((m) => m.TenantComplaintsComponent),
+      },
+      {
+        path: 'my/announcements',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/announcements/tenant-announcements.component').then((m) => m.TenantAnnouncementsComponent),
+      },
+      {
+        path: 'my/notifications',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/notifications/tenant-notifications.component').then((m) => m.TenantNotificationsComponent),
+      },
+      {
+        path: 'my/support',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/support/tenant-support.component').then((m) => m.TenantSupportComponent),
+      },
+      {
+        path: 'my/laundry',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/laundry/tenant-laundry.component').then((m) => m.TenantLaundryComponent),
+      },
+      {
+        path: 'my/visitors',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/visitors/tenant-visitors.component').then((m) => m.TenantVisitorsComponent),
+      },
+      {
+        path: 'my/mess',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/mess/tenant-mess.component').then((m) => m.TenantMessComponent),
+      },
+      {
+        path: 'my/leave',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/leave/tenant-leave.component').then((m) => m.TenantLeaveComponent),
+      },
+      {
+        path: 'my/attendance',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/attendance/tenant-attendance.component').then((m) => m.TenantAttendanceComponent),
+      },
+      {
+        path: 'my/parcels',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/parcels/tenant-parcels.component').then((m) => m.TenantParcelsComponent),
+      },
+      {
+        path: 'my/events',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/events/tenant-events.component').then((m) => m.TenantEventsComponent),
+      },
+      {
+        path: 'my/guardians',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/guardians/tenant-guardians.component').then((m) => m.TenantGuardiansComponent),
+      },
+      {
+        path: 'my/academic',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/academic/tenant-academic.component').then((m) => m.TenantAcademicComponent),
+      },
+      {
+        path: 'my/documents',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/documents/tenant-documents.component').then((m) => m.TenantDocumentsComponent),
+      },
+      {
+        path: 'my/room-transfer',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/room-transfer/tenant-room-transfer.component').then((m) => m.TenantRoomTransferComponent),
+      },
+      {
+        path: 'my/surveys',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/surveys/tenant-surveys.component').then((m) => m.TenantSurveysComponent),
+      },
+      {
+        path: 'my/community',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/community/tenant-community.component').then((m) => m.TenantCommunityComponent),
+      },
+      {
+        path: 'my/preferences',
+        canActivate: [tenantModuleGuard],
+        loadComponent: () =>
+          import('./features/tenant/preferences/tenant-preferences.component').then((m) => m.TenantPreferencesComponent),
       },
       {
         path: 'staff',

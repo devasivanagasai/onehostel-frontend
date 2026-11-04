@@ -13,6 +13,9 @@ export const BUILT_IN_PASSWORD = 'Password@123';
 /** Same key AccountService uses for passwords changed on the Change Password screen. */
 const PASSWORD_KEY = 'onehostel_pw_';
 
+/** The resident record the built-in Tenant sign-in belongs to (a seeded, active resident with a bed). */
+export const BUILT_IN_TENANT_RESIDENT_ID = 'RES000001';
+
 export type BuiltInRole = 'Admin' | 'Tenant';
 
 export interface BuiltInAccount {

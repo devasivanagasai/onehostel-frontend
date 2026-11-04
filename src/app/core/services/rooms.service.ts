@@ -301,6 +301,19 @@ export class RoomsService {
     return this.roomsSubject.value;
   }
 
+  /** A resident's past and current bed allocations (from each bed's history), newest first. Read-only. */
+  allocationHistoryFor(residentId: string): { entry: NonNullable<Bed['allocationHistory']>[number]; room: Room; bed: Bed }[] {
+    const rows: { entry: NonNullable<Bed['allocationHistory']>[number]; room: Room; bed: Bed }[] = [];
+    for (const room of this.rooms) {
+      for (const bed of room.beds) {
+        for (const entry of bed.allocationHistory ?? []) {
+          if (entry.residentId === residentId) rows.push({ entry, room, bed });
+        }
+      }
+    }
+    return rows.sort((a, b) => b.entry.allocatedDate.localeCompare(a.entry.allocatedDate) || b.entry.id.localeCompare(a.entry.id));
+  }
+
   getRoomById(id: string): Room | undefined {
     return this.rooms.find((r) => r.id === id);
   }

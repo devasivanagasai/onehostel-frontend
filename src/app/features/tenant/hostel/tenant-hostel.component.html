@@ -1,0 +1,129 @@
+<div class="onboarding-page th">
+  @if (state === 'loading') {
+    <div class="th__state" role="status" aria-live="polite">
+      <span class="th__spinner" aria-hidden="true"></span>
+      <p>Loading your room and hostel details…</p>
+    </div>
+  } @else if (state === 'error' || !resident || !hostel || !rules) {
+    <div class="th__state th__state--error" role="alert">
+      <mat-icon fontSet="material-icons-outlined">error_outline</mat-icon>
+      <p>We couldn’t load your hostel details. Check your connection and try again.</p>
+      <app-button variant="secondary" icon="refresh" (clicked)="load()">Retry</app-button>
+    </div>
+  } @else {
+    <!-- Room -->
+    <section class="th__card" aria-labelledby="th-room">
+      <div class="th__head">
+        <h3 id="th-room">Your room</h3>
+        <a routerLink="/my/room-transfer" class="th__link"><mat-icon fontSet="material-icons-outlined">swap_horiz</mat-icon>Request a room transfer</a>
+      </div>
+
+      @if (allocation; as a) {
+        <dl class="th__grid">
+          <div><dt>Building / Block</dt><dd>{{ a.room.building }}</dd></div>
+          <div><dt>Floor</dt><dd>{{ a.room.floor }}</dd></div>
+          <div><dt>Room number</dt><dd>{{ a.room.roomNumber }}</dd></div>
+          <div><dt>Bed</dt><dd>{{ a.bed.bedNumber }}</dd></div>
+          <div><dt>Room type</dt><dd>{{ a.room.roomType }}</dd></div>
+          <div><dt>Joining date</dt><dd>{{ fmt.date(a.bed.joinedDate || resident.joiningDate) }}</dd></div>
+          <div><dt>Expected checkout</dt><dd>{{ resident.expectedCheckoutDate ? fmt.date(resident.expectedCheckoutDate) : 'Not set' }}</dd></div>
+        </dl>
+        <p class="th__note"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>Your room and bed are assigned by the hostel office and can’t be changed here. To move, send a room transfer request.</p>
+        <h4 class="th__sub">Room facilities</h4>
+        @if (roomFacilities.length) {
+          <ul class="th__chips" aria-label="Room facilities">
+            @for (f of roomFacilities; track f) { <li>{{ f }}</li> }
+          </ul>
+        } @else {
+          <p class="th__empty">No room facilities are listed.</p>
+        }
+      } @else {
+        <div class="th__none" role="status">
+          <mat-icon fontSet="material-icons-outlined">bed</mat-icon>
+          <strong>No bed allocated yet</strong>
+          <p>The hostel office will assign your room and bed. You will get a notification as soon as it is done.</p>
+        </div>
+      }
+    </section>
+
+    <!-- Hostel -->
+    <section class="th__card" aria-labelledby="th-hostel">
+      <div class="th__head"><h3 id="th-hostel">Your hostel</h3></div>
+      <dl class="th__grid">
+        <div><dt>Hostel</dt><dd>{{ hostel.hostelName }}</dd></div>
+        <div class="th__wide"><dt>Address</dt><dd>{{ address || '—' }}</dd></div>
+        <div><dt>Office phone</dt><dd>{{ hostel.phone || '—' }}</dd></div>
+        <div><dt>Office email</dt><dd>{{ hostel.email || '—' }}</dd></div>
+      </dl>
+      <h4 class="th__sub">Hostel facilities</h4>
+      @if (hostelFacilities.length) {
+        <ul class="th__chips" aria-label="Hostel facilities">
+          @for (f of hostelFacilities; track f) { <li>{{ f }}</li> }
+        </ul>
+      } @else {
+        <p class="th__empty">No hostel facilities are listed.</p>
+      }
+    </section>
+
+    <!-- Rules -->
+    <section class="th__card" aria-labelledby="th-rules">
+      <div class="th__head"><h3 id="th-rules">Hostel rules and timings</h3></div>
+      <dl class="th__grid">
+        <div><dt>Check-in time</dt><dd>{{ rules.checkInTime || '—' }}</dd></div>
+        <div><dt>Check-out time</dt><dd>{{ rules.checkOutTime || '—' }}</dd></div>
+        <div><dt>Gate closing time</dt><dd>{{ rules.gateClosingTime || '—' }}</dd></div>
+        <div class="th__wide">
+          <dt>Visitor policy</dt>
+          <dd>
+            @if (rules.visitorsAllowed) {
+              Visitors allowed {{ rules.visitingFrom }} to {{ rules.visitingTo }}, up to {{ rules.maxVisitors }} at a time{{ rules.visitorIdRequired ? '. A photo ID is required.' : '.' }}
+            } @else {
+              Visitors are not allowed.
+            }
+          </dd>
+        </div>
+      </dl>
+      <h4 class="th__sub">House rules</h4>
+      @if (rules.houseRules.length) {
+        <ol class="th__rules">
+          @for (r of rules.houseRules; track $index) { <li>{{ r }}</li> }
+        </ol>
+      } @else {
+        <p class="th__empty">No house rules have been published.</p>
+      }
+    </section>
+
+    <!-- Emergency -->
+    <section class="th__card th__emergency" aria-labelledby="th-emergency">
+      <div class="th__head"><h3 id="th-emergency">Hostel office and emergency contact</h3></div>
+      <p class="th__phone"><mat-icon fontSet="material-icons-outlined">call</mat-icon><strong>{{ hostel.phone || 'Not provided' }}</strong>{{ hostel.email ? ' · ' + hostel.email : '' }}</p>
+      <p class="th__warn" role="note"><mat-icon fontSet="material-icons-outlined">warning_amber</mat-icon>This contact is not a replacement for emergency services. In a medical, fire or safety emergency, call your local emergency number first.</p>
+    </section>
+
+    <!-- History -->
+    <section class="th__card" aria-labelledby="th-history">
+      <div class="th__head"><h3 id="th-history">Allocation history</h3></div>
+      @if (history.length) {
+        <div class="table-responsive">
+          <table class="saas-table" aria-label="Your room allocation history">
+            <thead><tr><th>Room / Bed</th><th>Building</th><th>Type</th><th>From</th><th>To</th><th>Status</th></tr></thead>
+            <tbody>
+              @for (h of history; track h.entry.id) {
+                <tr>
+                  <td><strong>Room {{ h.room.roomNumber }} · Bed {{ h.bed.bedNumber }}</strong></td>
+                  <td>{{ h.room.building }}, {{ h.room.floor }}</td>
+                  <td>{{ h.entry.allocationType }}</td>
+                  <td>{{ fmt.date(h.entry.allocatedDate) }}</td>
+                  <td>{{ h.entry.checkOutDate ? fmt.date(h.entry.checkOutDate) : '—' }}</td>
+                  <td><span class="status-badge status-badge--{{ h.entry.checkOutDate ? 'neutral' : 'success' }}">{{ allocationType(h) }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="th__empty">No allocation history yet.</p>
+      }
+    </section>
+  }
+</div>

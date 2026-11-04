@@ -1,0 +1,43 @@
+@use './tenant-kit' as kit;
+
+@include kit.tenant-kit;
+
+:host {
+  display: block;
+}
+
+.tk-card--flush {
+  padding: 16px 20px 8px;
+}
+
+.tc-title {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #0f172a;
+  vertical-align: bottom;
+}
+
+.rd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rd-gap {
+  margin-top: 14px;
+}
+
+.rd-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}

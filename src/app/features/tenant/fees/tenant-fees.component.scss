@@ -1,0 +1,115 @@
+// Fees & Payments. Table look comes from styles/_table.scss; KPI row and filter card from styles/_page-kit.scss.
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.tf {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0 16px;
+}
+
+.tf__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 64px 16px;
+  color: #64748b;
+  text-align: center;
+
+  mat-icon { @include icon(40px); color: #dc2626; }
+  p { margin: 0; }
+}
+
+.tf__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0d9488;
+  border-radius: 50%;
+  animation: tf-spin 0.8s linear infinite;
+}
+
+@keyframes tf-spin { to { transform: rotate(360deg); } }
+
+.tf__kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.tf__small { font-size: 20px !important; }
+.tf__red { color: #dc2626; }
+.tf__icon--red { background: #fee2e2; color: #dc2626; }
+.tf__latest { margin: 4px 0; }
+
+.tf__note,
+.tf__help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8fafb;
+  color: #475569;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); color: #64748b; flex-shrink: 0; }
+}
+
+.tf__tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: #64748b;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &.is-on { color: #0f766e; border-bottom-color: #0d9488; }
+    &:focus-visible { outline: 2px solid #0d9488; outline-offset: -2px; }
+  }
+}
+
+.tf__table {
+  th, td { vertical-align: top; }
+  .tf__sub { display: block; margin-top: 2px; color: #94a3b8; font-size: 12px; font-weight: 400; max-width: 220px; overflow-wrap: anywhere; }
+  .tf__num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .tf__nowrap { white-space: nowrap; }
+  .tf__ref { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  .tf__actions { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .is-overdue td:first-child { box-shadow: inset 3px 0 0 #ef4444; }
+}
+
+// Status badges outside list cards (the shared kit only styles them inside .saas-card / .saas-table).
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0284c7; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}

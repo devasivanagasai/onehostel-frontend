@@ -1,0 +1,77 @@
+<div class="tk-page">
+  @switch (state) {
+    @case ('loading') {
+      <div class="tk-card" role="status" aria-live="polite" aria-label="Loading announcements">
+        <div class="tk-skel"><span></span><span></span><span></span></div>
+      </div>
+    }
+    @case ('error') {
+      <div class="tk-card">
+        <div class="tk-state" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ errorMessage }}</p>
+          <app-button variant="outline" icon="refresh" (clicked)="load()">Try again</app-button>
+        </div>
+      </div>
+    }
+    @default {
+      <div class="tk-card">
+        <div class="tk-toolbar">
+          <div class="tk-tabs" role="tablist" aria-label="Announcement lists">
+            <button type="button" role="tab" [attr.aria-selected]="tab === 'current'" [class.is-active]="tab === 'current'" (click)="setTab('current')">
+              Current ({{ lists.live.length }})
+            </button>
+            <button type="button" role="tab" [attr.aria-selected]="tab === 'archive'" [class.is-active]="tab === 'archive'" (click)="setTab('archive')">
+              Archive ({{ lists.archive.length }})
+            </button>
+          </div>
+          <label class="filter-search">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Search notices" aria-label="Search announcements" [(ngModel)]="search" (ngModelChange)="currentPage = 0" />
+            @if (search) {
+              <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+            }
+          </label>
+          <span class="tk-spacer tk-muted" aria-live="polite">{{ unread }} unread</span>
+          <app-button variant="outline" size="sm" icon="done_all" [disabled]="unread === 0" (clicked)="markAllRead()">Mark all read</app-button>
+        </div>
+
+        @if (filtered.length === 0) {
+          <app-empty-state
+            [icon]="search ? 'search_off' : tab === 'current' ? 'campaign' : 'inventory_2'"
+            [message]="search ? 'No notices match your search' : tab === 'current' ? 'No announcements right now' : 'The archive is empty'"
+            [hint]="search ? 'Try different words.' : tab === 'current' ? 'New notices from the hostel will appear here.' : 'Expired notices are kept here.'"
+            [clearable]="!!search"
+            (clear)="search = ''; currentPage = 0"
+          ></app-empty-state>
+        } @else {
+          <ul class="tk-list">
+            @for (a of paged; track a.id) {
+              <li>
+                <button type="button" class="tk-row" [class.is-unread]="!a.read && !a.archived" (click)="open(a)">
+                  <span class="tk-dot" [class.tk-dot--read]="a.read || a.archived" aria-hidden="true"></span>
+                  <span class="tk-row__body">
+                    <span class="tk-row__title">
+                      {{ a.title }}
+                      @if (!a.read && !a.archived) { <span class="tk-sr">(unread)</span> }
+                    </span>
+                    <span class="tk-row__text">{{ a.message }}</span>
+                    <span class="tk-row__meta">
+                      {{ a.publishedBy }} · {{ fmt.date(a.publishedAt) }}
+                      @if (a.expiryDate) { · {{ a.archived ? 'Expired' : 'Expires' }} {{ fmt.date(a.expiryDate) }} }
+                      @if (a.attachments.length) { · <mat-icon class="tk-inline-icon">attach_file</mat-icon>{{ a.attachments.length }} attachment }
+                    </span>
+                  </span>
+                  <mat-icon aria-hidden="true">chevron_right</mat-icon>
+                </button>
+              </li>
+            }
+          </ul>
+          <app-pagination [page]="safePage" [totalPages]="totalPages" [pageSize]="pageSize" (pageChange)="currentPage = $event" (pageSizeChange)="pageSize = $event; currentPage = 0">
+            <span class="tk-muted">Showing {{ safePage * pageSize + 1 }}-{{ safePage * pageSize + paged.length }} of {{ filtered.length }}</span>
+          </app-pagination>
+        }
+      </div>
+    }
+  }
+</div>

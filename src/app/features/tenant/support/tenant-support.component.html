@@ -1,0 +1,114 @@
+<div class="tk-page">
+  <section class="tk-card" aria-labelledby="sp-contact-title">
+    <h2 class="tk-card__title" id="sp-contact-title">Contact the hostel office{{ contact.hostelName ? ' - ' + contact.hostelName : '' }}</h2>
+    <dl class="tk-facts sp-contact">
+      <div>
+        <dt>Phone</dt>
+        <dd>@if (contact.phone) { <a [href]="'tel:' + contact.phone">{{ contact.phone }}</a> } @else { Not available }</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd>@if (contact.email) { <a [href]="'mailto:' + contact.email">{{ contact.email }}</a> } @else { Not available }</dd>
+      </div>
+      <div>
+        <dt>Address</dt>
+        <dd>{{ contact.address || 'Not available' }}</dd>
+      </div>
+    </dl>
+    <div class="tk-notice tk-notice--danger" role="note">
+      <mat-icon>emergency</mat-icon>
+      <p>In an emergency call your local emergency number (112) first. Support requests are not monitored around the clock and are not a replacement for emergency services.</p>
+    </div>
+  </section>
+
+  @switch (state) {
+    @case ('loading') {
+      <div class="tk-card" role="status" aria-live="polite" aria-label="Loading support requests">
+        <div class="tk-skel"><span></span><span></span></div>
+      </div>
+    }
+    @case ('error') {
+      <div class="tk-card">
+        <div class="tk-state" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ errorMessage }}</p>
+          <app-button variant="outline" icon="refresh" (clicked)="load()">Try again</app-button>
+        </div>
+      </div>
+    }
+    @default {
+      @if (waitingCount) {
+        <div class="tk-notice" role="status"><mat-icon>reply</mat-icon><p>{{ waitingCount }} request{{ waitingCount === 1 ? ' is' : 's are' }} waiting for your reply.</p></div>
+      }
+      <app-table-card
+        class="tk-card tk-card--flush"
+        [empty]="filtered.length === 0"
+        [emptyIcon]="hasFilters ? 'search_off' : 'support_agent'"
+        [emptyMessage]="hasFilters ? 'No requests match your search' : 'You have no support requests'"
+        [emptyHint]="hasFilters ? 'Try a different search or status.' : 'Use New Request to contact the hostel office.'"
+        [clearable]="hasFilters"
+        (clear)="clearFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <div class="tk-toolbar" tableToolbar>
+          <label class="filter-search">
+            <mat-icon>search</mat-icon>
+            <input type="text" placeholder="Search reference or subject" aria-label="Search support requests" [(ngModel)]="search" (ngModelChange)="currentPage = 0" />
+            @if (search) {
+              <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+            }
+          </label>
+          <label class="filter-select">
+            <span class="filter-select__control">
+              <select aria-label="Status" [(ngModel)]="status" (ngModelChange)="currentPage = 0">
+                <option value="All">All statuses</option>
+                @for (s of statuses; track s) { <option [value]="s">{{ labels[s] }}</option> }
+              </select>
+              <mat-icon>expand_more</mat-icon>
+            </span>
+          </label>
+          @if (hasFilters) {
+            <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+          }
+          <app-button class="tk-spacer" icon="add" (clicked)="create()">New Request</app-button>
+        </div>
+
+        <table mat-table [dataSource]="paged" class="saas-table" aria-label="My support requests">
+          <ng-container matColumnDef="ref">
+            <th mat-header-cell *matHeaderCellDef>Reference</th>
+            <td mat-cell *matCellDef="let t"><span class="tk-mono">{{ t.id }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="subject">
+            <th mat-header-cell *matHeaderCellDef>Subject</th>
+            <td mat-cell *matCellDef="let t"><span class="sp-subject" [title]="t.subject">{{ t.subject }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="topic">
+            <th mat-header-cell *matHeaderCellDef>Topic</th>
+            <td mat-cell *matCellDef="let t"><span class="tk-chip">{{ t.topic }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let t"><span class="tk-badge tk-badge--{{ tone(t) }}">{{ label(t) }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="updated">
+            <th mat-header-cell *matHeaderCellDef>Last activity</th>
+            <td mat-cell *matCellDef="let t">{{ fmt.date(t.updatedAt) }} {{ fmt.date(t.updatedAt, 'time') }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="actions-header">Actions</th>
+            <td mat-cell *matCellDef="let t" class="actions-cell">
+              <app-button variant="outline" size="sm" icon="forum" [ariaLabel]="'Open request ' + t.id" (clicked)="view(t)">Open</app-button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      </app-table-card>
+    }
+  }
+</div>

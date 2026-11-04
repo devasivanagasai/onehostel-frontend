@@ -1,0 +1,134 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    [title]="created ? 'Complaint submitted' : 'Raise a Complaint'"
+    [subtitle]="created ? 'Keep your complaint ID for follow-up.' : 'Tell the hostel what needs attention. The hostel office sets the final priority.'"
+    [icon]="created ? 'check_circle' : 'report_problem'"
+    [tone]="created ? 'green' : 'teal'"
+    [hideClose]="saving"
+    (closed)="close()"
+  >
+    @if (created) {
+      <div class="tk-notice tk-notice--success" role="status">
+        <mat-icon>task_alt</mat-icon>
+        <p>
+          Your complaint <strong class="tk-mono">{{ created.id }}</strong> was received. You will see updates here and in your Notifications.
+        </p>
+      </div>
+      <dl class="tk-facts rd-gap">
+        <div><dt>Category</dt><dd>{{ created.category }}</dd></div>
+        <div><dt>Location</dt><dd>{{ created.location }}</dd></div>
+        <div><dt>Suggested priority</dt><dd>{{ created.priority }}</dd></div>
+        <div><dt>Status</dt><dd>{{ created.status }}</dd></div>
+      </dl>
+    } @else {
+      <div class="tk-notice tk-notice--danger" role="note">
+        <mat-icon>emergency</mat-icon>
+        <p>For fire, medical or safety emergencies call your local emergency number (112) and the hostel warden first. This form is not a replacement for emergency services.</p>
+      </div>
+
+      <div class="rd-grid rd-gap">
+        <div class="fk-field">
+          <label class="fk-label" for="rc-category">Category<span class="req">*</span></label>
+          <span class="fk-control fk-control--lead">
+            <mat-icon class="fk-lead" fontSet="material-icons-outlined">{{ categoryIcons[form.controls.category.value] }}</mat-icon>
+            <select id="rc-category" formControlName="category">
+              @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+
+        <div class="fk-field">
+          <label class="fk-label" for="rc-priority">Suggested priority<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rc-priority" formControlName="priority" aria-describedby="rc-priority-hint">
+              @for (p of priorities; track p) { <option [value]="p">{{ p }}</option> }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+          <span class="fk-hint" id="rc-priority-hint">The hostel decides the final priority.</span>
+        </div>
+      </div>
+
+      <div class="fk-field rd-gap">
+        <label class="fk-label" for="rc-title">Title<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid('title')">
+          <input id="rc-title" formControlName="title" [maxlength]="titleMax" placeholder="Short summary of the issue" autocomplete="off" [attr.aria-invalid]="invalid('title')" />
+        </span>
+        <span class="tk-meta-row">
+          @if (invalid('title')) { <span class="fk-error" role="alert">Enter a title (up to {{ titleMax }} characters).</span> }
+          <span class="tk-count">{{ form.controls.title.value.length }}/{{ titleMax }}</span>
+        </span>
+      </div>
+
+      <div class="fk-field rd-gap">
+        <label class="fk-label" for="rc-description">Description<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid('description')">
+          <textarea id="rc-description" formControlName="description" rows="4" [maxlength]="descriptionMax" placeholder="What is wrong, since when, and anything we should know" [attr.aria-invalid]="invalid('description')"></textarea>
+        </span>
+        <span class="tk-meta-row">
+          @if (invalid('description')) { <span class="fk-error" role="alert">Describe the issue in at least {{ descriptionMin }} characters.</span> }
+          <span class="tk-count">{{ form.controls.description.value.length }}/{{ descriptionMax }}</span>
+        </span>
+      </div>
+
+      <div class="rd-grid rd-gap">
+        <div class="fk-field">
+          <label class="fk-label" for="rc-kind">Location<span class="req">*</span></label>
+          <span class="fk-control">
+            <select id="rc-kind" formControlName="locationKind">
+              @for (k of locationKinds; track k) {
+                <option [value]="k" [disabled]="k === 'My room' && !hasRoom">{{ k === 'My room' && !hasRoom ? 'My room (no room allocated)' : k }}</option>
+              }
+            </select>
+            <mat-icon class="fk-caret">expand_more</mat-icon>
+          </span>
+        </div>
+        @if (needsDetail) {
+          <div class="fk-field">
+            <label class="fk-label" for="rc-detail">{{ form.controls.locationKind.value === 'Common area' ? 'Which common area?' : 'Where?' }}<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="invalid('locationDetail')">
+              <input id="rc-detail" formControlName="locationDetail" maxlength="80" placeholder="e.g. 2nd floor corridor" autocomplete="off" />
+            </span>
+            @if (invalid('locationDetail')) { <span class="fk-error" role="alert">Tell us the location.</span> }
+          </div>
+        }
+      </div>
+
+      <label class="tk-drop rd-gap" [class.is-disabled]="attachments.length >= maxFiles">
+        <mat-icon fontSet="material-icons-outlined">attach_file</mat-icon>
+        <span>
+          <strong>Add a photo or file (optional)</strong>
+          <small>Up to {{ maxFiles }} files, JPG, PNG or PDF, 5 MB each</small>
+        </span>
+        <input type="file" multiple [accept]="accept" (change)="onFiles($event)" class="tk-sr" [disabled]="attachments.length >= maxFiles" aria-label="Add attachments" />
+      </label>
+      @if (attachmentError) { <p class="tk-error" role="alert">{{ attachmentError }}</p> }
+      @if (attachments.length) {
+        <ul class="tk-attach rd-gap">
+          @for (a of attachments; track $index) {
+            <li>
+              <mat-icon>{{ a.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+              <span>{{ a.name }}</span><small>{{ formatFileSize(a.size) }}</small>
+              <app-button variant="icon" size="sm" icon="close" [ariaLabel]="'Remove ' + a.name" (clicked)="removeAttachment($index)"></app-button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (submitError) {
+        <div class="tk-notice tk-notice--danger rd-gap" role="alert"><mat-icon>error</mat-icon><p>{{ submitError }}</p></div>
+      }
+
+    }
+
+    <ng-container dialogFooter>
+      @if (created) {
+        <app-button type="button" (clicked)="close()">Done</app-button>
+      } @else {
+        <app-button variant="secondary" type="button" [disabled]="saving" (clicked)="close()">Cancel</app-button>
+        <app-button variant="accent" type="submit" [loading]="saving">Submit complaint</app-button>
+      }
+    </ng-container>
+  </app-dialog>
+</form>

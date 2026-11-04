@@ -1,0 +1,122 @@
+<app-dialog
+  eyebrow="Complaint ID"
+  [title]="c ? c.id : 'Complaint'"
+  [icon]="c ? icons[c.category] : 'report_problem'"
+  tone="teal"
+>
+  <ng-container dialogMeta>
+    @if (c) { <span class="tk-badge tk-badge--{{ tone }}">{{ c.status }}</span> }
+  </ng-container>
+
+  @if (c; as k) {
+    <h2 class="rd-title">{{ k.title }}</h2>
+
+    <dl class="tk-facts">
+      <div><dt>Category</dt><dd>{{ k.category }}</dd></div>
+      <div><dt>Location</dt><dd>{{ k.location }}</dd></div>
+      <div><dt>Submitted</dt><dd>{{ fmt.date(k.createdAt) }} {{ fmt.date(k.createdAt, 'time') }}</dd></div>
+      <div><dt>Priority</dt><dd>{{ k.priority }}</dd></div>
+      <div><dt>Assigned team</dt><dd>{{ k.assignedTeam }}</dd></div>
+      @if (k.reopenCount) { <div><dt>Reopened</dt><dd>{{ k.reopenCount }} time(s)</dd></div> }
+    </dl>
+
+    <section class="tk-section">
+      <h3>Description</h3>
+      <p>{{ k.description }}</p>
+    </section>
+
+    @if (k.attachments.length) {
+      <section class="tk-section">
+        <h3>Attachments</h3>
+        <ul class="tk-attach">
+          @for (a of k.attachments; track $index) {
+            <li><mat-icon>{{ a.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon><span>{{ a.name }}</span>@if (a.size) { <small>{{ formatFileSize(a.size) }}</small> }</li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (k.resolutionNote) {
+      <div class="tk-notice tk-notice--success rd-gap" role="status">
+        <mat-icon>task_alt</mat-icon>
+        <p><strong>Resolution note.</strong> {{ k.resolutionNote }}</p>
+      </div>
+    }
+
+    <section class="tk-section rd-gap">
+      <h3>Updates</h3>
+      @if (k.updates.length) {
+        <ol class="tk-timeline">
+          @for (u of k.updates; track $index) {
+            <li [class.is-you]="u.by === 'You'">
+              <div class="tk-timeline__head"><strong>{{ u.by }}</strong><span>{{ fmt.date(u.at) }} {{ fmt.date(u.at, 'time') }}</span></div>
+              <p class="tk-timeline__text">{{ u.text }}</p>
+            </li>
+          }
+        </ol>
+      } @else {
+        <p class="tk-muted">No updates yet.</p>
+      }
+    </section>
+
+    @if (k.status === 'Resolved') {
+      <section class="tk-section" aria-label="Resolution response">
+        @if (k.confirmed) {
+          <div class="tk-notice tk-notice--info" role="status"><mat-icon>thumb_up</mat-icon><p>You confirmed this issue is resolved. The hostel office will close it.</p></div>
+        }
+        @if (k.canReopen) {
+          <p class="tk-muted">Is the problem fixed? You can reopen this complaint until {{ fmt.date(k.reopenUntil) }}.</p>
+        } @else if (k.reopenBlockedReason) {
+          <div class="tk-notice" role="note"><mat-icon>lock_clock</mat-icon><p>{{ k.reopenBlockedReason }}</p></div>
+        }
+        @if (reopening) {
+          <label class="fk-label" for="cd-reason">Why are you reopening?<span class="req">*</span></label>
+          <textarea id="cd-reason" class="tk-textarea" rows="3" maxlength="1000" [(ngModel)]="reason" placeholder="What is still wrong?"></textarea>
+          <div class="tk-actions">
+            <app-button variant="secondary" size="sm" [disabled]="busy" (clicked)="cancelReopen()">Cancel</app-button>
+            <app-button variant="warning" size="sm" icon="replay" [loading]="busy" (clicked)="submitReopen()">Reopen complaint</app-button>
+          </div>
+        } @else {
+          <div class="tk-actions">
+            @if (k.canConfirm) {
+              <app-button variant="success" size="sm" icon="check_circle" [loading]="busy" (clicked)="confirm()">Confirm resolved</app-button>
+            }
+            @if (k.canReopen) {
+              <app-button variant="outline" size="sm" icon="replay" [disabled]="busy" (clicked)="startReopen()">Reopen</app-button>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    @if (k.canComment) {
+      <section class="tk-section">
+        <label class="fk-label" for="cd-comment">Add a comment</label>
+        <textarea id="cd-comment" class="tk-textarea" rows="2" maxlength="1000" [(ngModel)]="comment" placeholder="Share more details or a follow-up"></textarea>
+        <div class="tk-actions">
+          <app-button variant="accent" size="sm" icon="send" [loading]="busy" [disabled]="!comment.trim()" (clicked)="sendComment()">Send comment</app-button>
+        </div>
+      </section>
+    } @else {
+      <p class="tk-muted">This complaint is closed and read-only. Raise a new complaint if the problem returns.</p>
+    }
+
+    @if (error) {
+      <div class="tk-notice tk-notice--danger" role="alert"><mat-icon>error</mat-icon><p>{{ error }}</p></div>
+    }
+
+    <div class="tk-notice tk-notice--danger rd-gap" role="note">
+      <mat-icon>emergency</mat-icon>
+      <p>In an emergency call your local emergency number (112) and the hostel warden. This app is not a replacement for emergency services.</p>
+    </div>
+  } @else {
+    <div class="tk-state" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ loadError || 'This complaint could not be found.' }}</p>
+    </div>
+  }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" type="button" (clicked)="close()">Close</app-button>
+  </ng-container>
+</app-dialog>

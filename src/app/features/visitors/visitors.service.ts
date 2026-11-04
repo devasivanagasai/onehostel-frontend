@@ -4,6 +4,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { HostelSettingsService } from '../../core/services/hostel-settings.service';
 import { ResidentsService } from '../../core/services/residents.service';
 import { HostelResident } from '../../core/models/residents.models';
+import { TenantContextService } from '../../core/services/tenant-context.service';
+import { NewTenantNotification, TenantNotificationService } from '../../core/services/tenant-notification.service';
 import {
   DEFAULT_RULES,
   MOBILE_PATTERN,
@@ -12,7 +14,10 @@ import {
   VisitorInput,
   VisitorPolicy,
   VisitorRules,
+  clock,
   localIso,
+  maskId,
+  timeOf,
   withinHours,
 } from './visitors.models';
 
@@ -186,11 +191,53 @@ function seed(): Visitor[] {
   ];
 }
 
+/** What the Tenant sees of a visitor request: the ID reference is masked and approval and physical entry are kept apart. */
+export interface TenantVisitorView {
+  id: string;
+  name: string;
+  mobile?: string;
+  purpose: string;
+  count: number;
+  expectedAt: string;
+  expectedDepartureAt?: string;
+  /** Decision by hostel staff. */
+  approval: Visitor['approval'];
+  approvalAt?: string;
+  approvalReason?: string;
+  /** Physical movement recorded by security. */
+  status: Visitor['status'];
+  checkInAt?: string;
+  checkOutAt?: string;
+  cancelReason?: string;
+  idMasked?: string;
+  createdAt: string;
+  /** What the Tenant can do now. */
+  canCancel: boolean;
+  /** Plain-language label such as "Waiting for approval" or "Approved - not arrived yet". */
+  stage: string;
+  timeline: { at: string; by: string; action: string; note?: string }[];
+}
+
+export interface TenantVisitorInput {
+  name: string;
+  mobile?: string;
+  /** yyyy-mm-ddTHH:mm */
+  expectedAt: string;
+  /** yyyy-mm-ddTHH:mm; same day as arrival, after it. */
+  expectedDepartureAt?: string;
+  purpose: string;
+  count: number;
+  idType?: Visitor['idType'];
+  idReference?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class VisitorsService {
   private readonly auth = inject(AuthService);
   private readonly hostelSettings = inject(HostelSettingsService);
   private readonly residentsService = inject(ResidentsService);
+  private readonly tenantCtx = inject(TenantContextService);
+  private readonly tenantNotify = inject(TenantNotificationService);
 
   private readonly rulesSubject = new BehaviorSubject<VisitorRules>(this.loadRules());
   readonly rules$ = this.rulesSubject.asObservable();
@@ -344,13 +391,20 @@ export class VisitorsService {
     if (approve && this.isMissed(v)) throw new Error('The visit date has passed and it can no longer be approved. Reject it or register the visitor again.');
     const now = localIso();
     const note = reason?.trim() || undefined;
-    return this.update(v, {
+    const decided = this.update(v, {
       approval: approve ? 'Approved' : 'Rejected',
       approvalBy: this.userName,
       approvalAt: now,
       approvalReason: note,
       status: approve ? v.status : 'Cancelled',
     }, ev(now, this.userName, approve ? 'Approved' : 'Rejected', approve ? 'verified' : 'block', note));
+    this.notifyTenant(v.residentId, {
+      category: 'Visitor',
+      title: approve ? 'Visitor request approved' : 'Visitor request rejected',
+      body: `${v.id} for ${v.name} was ${approve ? 'approved' : 'rejected'}${note ? ': ' + note : '.'}${approve ? ' Approval is not entry: security records the visitor on arrival.' : ''}`,
+      route: '/my/visitors',
+    });
+    return decided;
   }
 
   /** Security records arrival after checking approval, ID and visiting hours. */
@@ -390,6 +444,165 @@ export class VisitorsService {
     if (!v.idReference) throw new Error('No ID reference on record.');
     this.update(v, {}, ev(localIso(), this.userName, 'ID reference revealed', 'visibility'));
     return v.idReference;
+  }
+
+  // ---- Tenant (resident app) -------------------------------------------------------
+  // The resident id always comes from TenantContextService. A Tenant can only create requests for
+  // themselves, only see and cancel their own, and can never approve, check in or check out.
+
+  private notifyTenant(residentId: string, n: NewTenantNotification): void {
+    try {
+      this.tenantNotify.push(residentId, n);
+    } catch {
+      // A notification must never block the action itself.
+    }
+  }
+
+  /** Visiting rules shown on the request form (read live from Hostel Settings and the owner's rules). */
+  tenantRules(): { policy: VisitorPolicy; approvalRequired: boolean } {
+    return { policy: this.policy, approvalRequired: this.rules.approvalRequired };
+  }
+
+  /** Problems with a Tenant's new request (owner rules plus Tenant-only checks); empty when it can be submitted. */
+  tenantValidate(input: TenantVisitorInput): string[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return ['Sign in as a Tenant to do this.'];
+    const p = this.policy;
+    const errors: string[] = [];
+    if (!input.name?.trim()) errors.push('Visitor name is required.');
+    if (p.idRequired && !input.mobile?.trim()) errors.push('A 10-digit mobile number is required.');
+    const expectedAt = input.expectedAt?.length === 16 ? `${input.expectedAt}:00` : input.expectedAt;
+    const base = this.validate({
+      name: input.name?.trim() ? input.name : 'x',
+      mobile: input.mobile?.trim() || undefined,
+      residentId: me,
+      purpose: input.purpose ?? '',
+      count: input.count,
+      idType: input.idType,
+      idReference: input.idReference,
+      expectedAt,
+      walkIn: false,
+    });
+    for (const e of base) {
+      // The visitor's ID is checked by security at the gate; a Tenant's request does not carry one.
+      if (e.startsWith('ID type and reference are required')) continue;
+      if (e.startsWith('The visit is outside visiting hours')) errors.push(`Visits are only allowed between ${clock(p.visitingFrom)} and ${clock(p.visitingTo)}.`);
+      else if (!errors.includes(e)) errors.push(e);
+    }
+    if (input.expectedDepartureAt) {
+      const arr = new Date(expectedAt).getTime();
+      const depRaw = input.expectedDepartureAt.length === 16 ? `${input.expectedDepartureAt}:00` : input.expectedDepartureAt;
+      const dep = new Date(depRaw).getTime();
+      if (isNaN(dep)) errors.push('Enter a valid expected departure.');
+      else if (!isNaN(arr) && dep <= arr) errors.push('Expected departure must be after the arrival time.');
+      else if (!isNaN(arr) && depRaw.slice(0, 10) !== expectedAt.slice(0, 10)) errors.push('Expected departure must be on the same day as arrival.');
+      else if (!isNaN(arr) && depRaw.slice(11, 16) > p.visitingTo) errors.push(`Expected departure must be by ${clock(p.visitingTo)}, when visiting hours end.`);
+    }
+    return errors;
+  }
+
+  /** Raises a visit request for the signed-in Tenant. Starts Pending (or Not Required when the hostel needs no approval). */
+  tenantRequest(input: TenantVisitorInput): Visitor {
+    const me = this.tenantCtx.requireResidentId();
+    const errors = this.tenantValidate(input);
+    if (errors.length) throw new Error(errors[0]);
+    const expectedAt = input.expectedAt.length === 16 ? `${input.expectedAt}:00` : input.expectedAt;
+    const name = input.name.trim();
+    const dup = this.visitors.find(
+      (v) => v.residentId === me && v.status === 'Expected' && v.approval !== 'Rejected' && v.expectedAt === expectedAt && v.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (dup) throw new Error(`You already have request ${dup.id} for ${name} at that time.`);
+    const now = localIso();
+    const me2 = this.tenantCtx.requireResident();
+    const byName = `${me2.firstName} ${me2.lastName}`.trim();
+    const needsApproval = this.rules.approvalRequired;
+    const departure = input.expectedDepartureAt ? (input.expectedDepartureAt.length === 16 ? `${input.expectedDepartureAt}:00` : input.expectedDepartureAt) : undefined;
+    const v: Visitor = {
+      id: this.nextId(),
+      hostelId: HOSTEL_ID,
+      name,
+      mobile: input.mobile?.trim() || undefined,
+      residentId: me,
+      purpose: input.purpose.trim(),
+      count: input.count,
+      idType: input.idReference?.trim() ? input.idType : undefined,
+      idReference: input.idReference?.trim() || undefined,
+      expectedAt,
+      expectedDepartureAt: departure,
+      walkIn: false,
+      source: 'Resident',
+      approval: needsApproval ? 'Pending' : 'Not Required',
+      status: 'Expected',
+      createdBy: byName,
+      createdAt: now,
+      history: [ev(now, byName, 'Request raised from the Resident App', 'add_circle')],
+    };
+    this.commit([v, ...this.visitors]);
+    this.notifyTenant(me, {
+      category: 'Visitor',
+      title: needsApproval ? 'Visitor request submitted' : 'Visitor registered',
+      body: `${v.id} for ${v.name} on ${expectedAt.slice(0, 10)} at ${timeOf(expectedAt)} is ${needsApproval ? 'waiting for approval' : 'registered; no approval is needed'}.`,
+      route: '/my/visitors',
+    });
+    return v;
+  }
+
+  /** The signed-in Tenant's visitor requests, newest first. */
+  tenantVisitors(): TenantVisitorView[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    return this.visitors
+      .filter((v) => v.residentId === me)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+      .map((v) => this.tenantView(v));
+  }
+
+  /** Pending or approved requests the visitor hasn't arrived for yet (approval never means the visitor entered). */
+  tenantCanCancel(v: Visitor): boolean {
+    return v.status === 'Expected' && v.approval !== 'Rejected' && !v.checkInAt && !this.isMissed(v);
+  }
+
+  /** Cancels one of the Tenant's own requests. */
+  tenantCancel(id: string, reason: string): Visitor {
+    const me = this.tenantCtx.requireResidentId();
+    const v = this.byId(id);
+    if (!v || v.residentId !== me) throw new Error('Visitor request not found.');
+    if (!this.tenantCanCancel(v)) throw new Error('Only a pending or approved request the visitor has not arrived for can be cancelled.');
+    if (!reason?.trim()) throw new Error('Give a reason for cancelling.');
+    const done = this.cancel(id, reason);
+    this.notifyTenant(me, { category: 'Visitor', title: 'Visitor request cancelled', body: `${done.id} for ${done.name} was cancelled.`, route: '/my/visitors' });
+    return done;
+  }
+
+  private tenantView(v: Visitor): TenantVisitorView {
+    let stage: string;
+    if (v.status === 'Checked In') stage = 'Visitor is inside';
+    else if (v.status === 'Checked Out') stage = 'Visit finished';
+    else if (v.status === 'Cancelled') stage = v.approval === 'Rejected' ? 'Rejected by the hostel' : 'Cancelled';
+    else if (v.approval === 'Pending') stage = 'Waiting for approval';
+    else if (this.isMissed(v)) stage = 'Visit date passed - visitor did not arrive';
+    else stage = v.approval === 'Approved' ? 'Approved - visitor not arrived yet' : 'Registered - visitor not arrived yet';
+    return {
+      id: v.id,
+      name: v.name,
+      mobile: v.mobile,
+      purpose: v.purpose,
+      count: v.count,
+      expectedAt: v.expectedAt,
+      expectedDepartureAt: v.expectedDepartureAt,
+      approval: v.approval,
+      approvalAt: v.approvalAt,
+      approvalReason: v.approvalReason,
+      status: v.status,
+      checkInAt: v.checkInAt,
+      checkOutAt: v.checkOutAt,
+      cancelReason: v.cancelReason,
+      idMasked: v.idReference ? maskId(v.idReference) : undefined,
+      createdAt: v.createdAt,
+      canCancel: this.tenantCanCancel(v),
+      stage,
+      timeline: v.history.filter((h) => h.action !== 'ID reference revealed').map((h) => ({ at: h.at, by: h.by, action: h.action, note: h.note })),
+    };
   }
 
   saveRules(rules: VisitorRules): void {

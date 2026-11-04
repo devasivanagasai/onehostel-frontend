@@ -1,0 +1,117 @@
+<app-dialog [title]="title" [subtitle]="invoice ? invoice.id + ' · ' + invoice.description : ''" icon="payments" tone="teal" [hideClose]="busy" (closed)="close()">
+  <div class="pd">
+    @if (!invoice) {
+      <p class="pd__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>This invoice isn’t available.</p>
+    } @else if (step === 'form') {
+      <div class="pd__sum">
+        <div><span>Total</span><strong>{{ fmt.money(invoice.total) }}</strong></div>
+        <div><span>Paid</span><strong>{{ fmt.money(invoice.paid) }}</strong></div>
+        <div><span>Outstanding</span><strong class="pd__due">{{ fmt.money(invoice.outstanding) }}</strong></div>
+        <div><span>Due date</span><strong>{{ fmt.date(invoice.dueDate) }}</strong></div>
+      </div>
+
+      <div class="fk-field">
+        <label class="fk-label" for="pd-amount">Amount to pay<span class="req">*</span></label>
+        <span class="fk-control fk-control--lead" [class.is-invalid]="submitted && amountError">
+          <span class="fk-lead">{{ fmt.currencySymbol }}</span>
+          <input id="pd-amount" type="number" inputmode="decimal" min="1" step="0.01" [max]="invoice.outstanding" [(ngModel)]="amount"
+            [attr.aria-invalid]="submitted && !!amountError" aria-describedby="pd-amount-help" />
+        </span>
+        <span id="pd-amount-help" class="pd__help">
+          {{ policy.allowPartial ? 'You can pay all of it or part of it, up to ' + fmt.money(invoice.outstanding) + '.' : 'The full amount of ' + fmt.money(invoice.outstanding) + ' must be paid.' }}
+          @if (policy.allowPartial && amount !== invoice.outstanding) { <button type="button" class="pd__link" (click)="payFull()">Pay full amount</button> }
+        </span>
+        @if (submitted && amountError) { <span class="fk-error">{{ amountError }}</span> }
+      </div>
+
+      <div class="fk-field">
+        <span class="fk-label" id="pd-method-label">Payment method<span class="req">*</span></span>
+        <div class="pd__methods" role="radiogroup" aria-labelledby="pd-method-label">
+          @for (m of methods; track m) {
+            <button type="button" role="radio" class="pd__method" [class.is-on]="method === m" [attr.aria-checked]="method === m" (click)="method = m">
+              <mat-icon fontSet="material-icons-outlined">{{ methodIcons[m] }}</mat-icon><span>{{ m }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (error) { <p class="pd__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+    } @else if (step === 'gateway' && attempt) {
+      <div class="pd__sim" role="region" aria-label="Payment gateway simulation">
+        <span class="pd__sim-tag"><mat-icon fontSet="material-icons-outlined">science</mat-icon>Payment gateway simulation</span>
+        <p>No real money moves. In a live app your bank or UPI app would confirm the payment. Choose the result the gateway should report.</p>
+        <dl>
+          <div><dt>Gateway reference</dt><dd class="pd__ref">{{ attempt.ref }}</dd></div>
+          <div><dt>Amount</dt><dd>{{ fmt.money(attempt.amount) }}</dd></div>
+          <div><dt>Method</dt><dd>{{ attempt.method }}</dd></div>
+          <div><dt>Status</dt><dd>{{ attempt.status }}</dd></div>
+        </dl>
+        @if (connecting) {
+          <p class="pd__connecting" role="status"><span class="pd__spinner" aria-hidden="true"></span>Contacting the payment gateway…</p>
+        } @else {
+          @if (attempt.status === 'Pending') {
+            <p class="pd__pending" role="status"><mat-icon fontSet="material-icons-outlined">hourglass_top</mat-icon>This payment is waiting for confirmation. You can’t start another payment for this invoice until it is resolved.</p>
+          }
+          <div class="pd__results">
+            <app-button variant="accent" icon="check_circle" [disabled]="busy" (clicked)="report('success')">Success</app-button>
+            <app-button variant="danger-outline" icon="cancel" [disabled]="busy" (clicked)="report('failed')">Failed</app-button>
+            @if (attempt.status === 'Initiated') {
+              <app-button variant="secondary" icon="hourglass_top" [disabled]="busy" (clicked)="report('pending')">Pending</app-button>
+            }
+          </div>
+        }
+      </div>
+      @if (error) { <p class="pd__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+    } @else if (step === 'result' && attempt) {
+      @switch (attempt.status) {
+        @case ('Successful') {
+          <div class="pd__result pd__result--ok" role="status">
+            <mat-icon fontSet="material-icons-outlined">check_circle</mat-icon>
+            <h4>Payment successful</h4>
+            <p>{{ fmt.money(attempt.amount) }} was received for {{ attempt.invoiceId }}.</p>
+            <dl>
+              <div><dt>Transaction reference</dt><dd class="pd__ref">{{ attempt.ref }}</dd></div>
+              <div><dt>Receipt number</dt><dd>{{ receiptNumber() || '—' }}</dd></div>
+            </dl>
+            <div class="pd__results">
+              <app-button variant="outline" icon="download" (clicked)="receipt()">Download receipt</app-button>
+              <app-button variant="outline" icon="print" (clicked)="receipt(true)">Print</app-button>
+            </div>
+            @if (receiptError) { <p class="pd__error" role="alert">{{ receiptError }}</p> }
+          </div>
+        }
+        @case ('Failed') {
+          <div class="pd__result pd__result--bad" role="alert">
+            <mat-icon fontSet="material-icons-outlined">cancel</mat-icon>
+            <h4>Payment did not go through</h4>
+            <p>{{ attempt.failureReason || 'The payment was not completed.' }} Nothing was charged to your invoice, so it is still unpaid.</p>
+            <dl><div><dt>Transaction reference</dt><dd class="pd__ref">{{ attempt.ref }}</dd></div></dl>
+            <p class="pd__hint">You can try again with the same or another method. If money left your account, keep this reference and contact the hostel office from Help &amp; Support.</p>
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <ng-container dialogFooter>
+    @if (step === 'form') {
+      <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+      <app-button icon="lock" [loading]="busy" [disabled]="!invoice" (clicked)="start()">Continue to pay {{ amount && !amountError ? fmt.money(amount) : '' }}</app-button>
+    } @else if (step === 'gateway' && attempt) {
+      @if (attempt.status === 'Initiated') {
+        <app-button variant="danger-outline" [disabled]="busy" (clicked)="abandon()">Cancel payment</app-button>
+      } @else {
+        <app-button variant="secondary" icon="refresh" [disabled]="busy" (clicked)="checkStatus()">Check status</app-button>
+      }
+      <span class="app-dialog__spacer"></span>
+      <app-button variant="secondary" [disabled]="busy" (clicked)="close()">Close, check later</app-button>
+    } @else {
+      @if (attempt?.status === 'Failed' && invoice && invoice.outstanding > 0) {
+        <app-button variant="secondary" (clicked)="close()">Close</app-button>
+        <app-button icon="replay" (clicked)="retry()">Try again</app-button>
+      } @else {
+        <app-button (clicked)="close()">Done</app-button>
+      }
+    }
+  </ng-container>
+</app-dialog>

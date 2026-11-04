@@ -1,0 +1,14 @@
+@use '../complaints/tenant-kit' as kit;
+
+@include kit.tenant-kit;
+
+:host {
+  display: block;
+}
+
+.tk-inline-icon {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  vertical-align: -2px;
+}

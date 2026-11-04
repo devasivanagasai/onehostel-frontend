@@ -4,6 +4,8 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantContextService } from '../../core/services/tenant-context.service';
+import { TENANT_MODULES, tenantRoute } from '../../core/models/tenant.models';
 
 export interface NavItem {
   label: string;
@@ -29,6 +31,7 @@ export class SidebarComponent {
   @Input() collapsed = false;
 
   private readonly auth = inject(AuthService);
+  private readonly tenant = inject(TenantContextService);
 
   /**
    * Menu for the signed-in user, filtered by role through AuthService.canAccess():
@@ -44,7 +47,7 @@ export class SidebarComponent {
       this.cachedRoleKey = cacheKey;
       this.cachedSections = ALL_SECTIONS.map((section) => ({
         ...section,
-        items: section.items.filter((item) => this.auth.canAccess(item.route)),
+        items: section.items.filter((item) => this.auth.canAccess(item.route) && this.tenant.isRouteEnabled(item.route)),
       })).filter((section) => section.items.length > 0); // drop sections the role sees nothing in
     }
     return this.cachedSections;
@@ -53,6 +56,12 @@ export class SidebarComponent {
   private cachedSections?: NavSection[];
   private cachedRoleKey?: string;
 }
+
+/** Tenant pages, grouped as in the FRD navigation (Home / My Hostel / Payments / Services / Updates / Profile). */
+const TENANT_SECTIONS: NavSection[] = (['My Stay', 'Requests & Updates', 'Daily Services', 'More'] as const).map((group) => ({
+  sectionTitle: group,
+  items: TENANT_MODULES.filter((m) => m.group === group).map((m) => ({ label: m.label, icon: m.icon, route: tenantRoute(m.key) })),
+}));
 
 const ALL_SECTIONS: NavSection[] = [
   {
@@ -87,4 +96,5 @@ const ALL_SECTIONS: NavSection[] = [
       { label: 'System Defaults', icon: 'settings', route: '/settings' },
     ],
   },
+  ...TENANT_SECTIONS,
 ];

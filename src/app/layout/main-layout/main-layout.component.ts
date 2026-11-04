@@ -1,4 +1,5 @@
 import { Component, DestroyRef, ElementRef, ViewChild } from '@angular/core';
+import { tenantModuleForUrl } from '../../core/models/tenant.models';
 import { AsyncPipe } from '@angular/common';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -82,6 +83,10 @@ export class MainLayoutComponent {
       } else if (url.startsWith('/attendance')) {
         this.pageTitle = 'Attendance & Check-in';
         this.pageSubtitle = 'Daily attendance, check-ins, check-outs and corrections';
+      } else if (tenantModuleForUrl(url)) {
+        const tenantPage = tenantModuleForUrl(url)!;
+        this.pageTitle = tenantPage.title;
+        this.pageSubtitle = tenantPage.subtitle;
       } else if (url.startsWith('/staff')) {
         this.pageTitle = 'Staff Management';
         this.pageSubtitle = 'Staff profiles, shifts, duties and task assignments';

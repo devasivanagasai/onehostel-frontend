@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { TenantNotificationService } from '../../core/services/tenant-notification.service';
 import { SystemSettingsService } from '../../core/services/system-settings.service';
 import { RoomsService } from '../../core/services/rooms.service';
 import { Room } from '../../core/models/rooms.models';
@@ -146,6 +147,7 @@ export class AnnouncementsService {
   private readonly residents = inject(ResidentsService);
   private readonly settings = inject(SystemSettingsService);
   private readonly auth = inject(AuthService);
+  private readonly tenantNotes = inject(TenantNotificationService);
 
   private readonly subject = new BehaviorSubject<Announcement[]>(this.load());
   readonly announcements$: Observable<Announcement[]> = this.subject.asObservable();
@@ -240,6 +242,25 @@ export class AnnouncementsService {
     }
   }
 
+  // ---- Tenant view -------------------------------------------------------------
+
+  /** Whether this notice is live or archived AND meant for the resident. Drafts, scheduled and cancelled never are. */
+  visibleToResident(residentId: string, a: Announcement): boolean {
+    const status = effectiveStatus(a);
+    if (status !== 'Published' && status !== 'Expired') return false;
+    return !!residentId && this.recipients(a.audience).some((r) => r.residentId === residentId);
+  }
+
+  /** Published (live) and expired (archive) notices addressed to the resident, newest first. */
+  forResident(residentId: string): { live: Announcement[]; archive: Announcement[] } {
+    const mine = this.announcements.filter((a) => this.visibleToResident(residentId, a));
+    const byDate = (x: Announcement, y: Announcement) => (y.publishAt ?? y.createdAt).localeCompare(x.publishAt ?? x.createdAt);
+    return {
+      live: mine.filter((a) => effectiveStatus(a) === 'Published').sort(byDate),
+      archive: mine.filter((a) => effectiveStatus(a) === 'Expired').sort(byDate),
+    };
+  }
+
   // ---- Delivery (mock) ---------------------------------------------------------
 
   /**
@@ -295,7 +316,20 @@ export class AnnouncementsService {
   publish(input: AnnouncementInput, id?: string): Announcement {
     this.validate(input);
     const scheduled = !!input.publishAt && new Date(input.publishAt).getTime() > Date.now();
-    return this.upsert({ ...input, publishAt: scheduled ? input.publishAt : localIso() }, scheduled ? 'Scheduled' : 'Published', id);
+    const saved = this.upsert({ ...input, publishAt: scheduled ? input.publishAt : localIso() }, scheduled ? 'Scheduled' : 'Published', id);
+    if (!scheduled) this.notifyAudience(saved);
+    return saved;
+  }
+
+  /** In-app notification for each Tenant the notice reaches (no notice text, just a pointer). */
+  private notifyAudience(a: Announcement): void {
+    for (const r of this.recipients(a.audience)) {
+      try {
+        this.tenantNotes.push(r.residentId, { category: 'Announcement', title: 'New notice from the hostel', body: 'A notice has been published for you. Open Announcements to read it.', route: '/my/announcements' });
+      } catch {
+        // never block publishing
+      }
+    }
   }
 
   cancel(id: string): Announcement {

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuditLogService } from './audit-log.service';
 import { AuthService } from './auth.service';
+import { TenantNotificationService } from './tenant-notification.service';
 import { ResidentsService } from './residents.service';
 import { residentFullName } from '../models/residents.models';
 import { localDateIso } from '../../shared/utils/local-date';
@@ -43,6 +44,12 @@ export interface NewComplaintInput {
 
 const todayIso = (): string => localDateIso();
 
+/** Event author used for anything a Tenant did (matches the seed data). */
+export const TENANT_AUTHOR = 'Resident App';
+export const CONFIRMED_TEXT = 'Tenant confirmed the issue is resolved.';
+/** Staff notes starting with this tag are internal: never shown to the Tenant. */
+export const INTERNAL_NOTE = /^\s*\[internal\]/i;
+
 /** Local wall-clock ISO (yyyy-mm-ddTHH:mm:ss), matching the rest of the mock data. */
 const nowIso = (): string => {
   const d = new Date();
@@ -54,6 +61,7 @@ export class ComplaintsService {
   private readonly residents = inject(ResidentsService);
   private readonly auditLog = inject(AuditLogService);
   private readonly auth = inject(AuthService);
+  private readonly tenantNotes = inject(TenantNotificationService);
 
   private readonly subject = new BehaviorSubject<Complaint[]>(this.load());
   readonly complaints$: Observable<Complaint[]> = this.subject.asObservable();
@@ -178,6 +186,7 @@ export class ComplaintsService {
     if (!this.canStart(c)) throw new Error(`${c.id} is ${c.status}; it can't be moved to In Progress.`);
     const next = this.patch(c, { status: 'In Progress' }, this.event('status', `Status changed ${c.status} → In Progress.`));
     this.auditLog.record('Update Complaint', this.entity(c), { details: `${c.status} → In Progress` });
+    this.notifyTenant(next, `${next.id} is now In Progress.`);
     return next;
   }
 
@@ -187,6 +196,8 @@ export class ComplaintsService {
     if (c.status === 'Closed') throw new Error('Closed complaints are read-only.');
     const next = this.patch(c, {}, this.event('note', text.trim(), undefined, attachments));
     this.auditLog.record('Update Complaint', this.entity(c), { details: `Note added${attachments.length ? ` (${attachments.length} attachment(s))` : ''}.` });
+    // Internal notes ("[Internal] ...") are never announced to the Tenant.
+    if (!INTERNAL_NOTE.test(text)) this.notifyTenant(next, `There is a new update on ${next.id}.`);
     return next;
   }
 
@@ -202,6 +213,7 @@ export class ComplaintsService {
     const notified = this.event('notified', 'Resident notified in the Resident App and by SMS.', now);
     const next = this.patch(c, { status: 'Resolved', resolvedAt: now, resolutionNote: note.trim() }, notified, resolved);
     this.auditLog.record('Resolve Complaint', this.entity(c), { details: note.trim() });
+    this.notifyTenant(next, `${next.id} was marked Resolved. Please confirm or reopen it.`);
     return next;
   }
 
@@ -213,6 +225,7 @@ export class ComplaintsService {
     const now = nowIso();
     const next = this.patch(c, { status: 'Closed', closedAt: now }, this.event('status', 'Status changed Resolved → Closed.', now));
     this.auditLog.record('Close Complaint', this.entity(c));
+    this.notifyTenant(next, `${next.id} is now Closed.`);
     return next;
   }
 
@@ -232,7 +245,89 @@ export class ComplaintsService {
       this.event('status', `Reopened: ${reason.trim()}`, now),
     );
     this.auditLog.record('Reopen Complaint', this.entity(c), { details: reason.trim() });
+    this.notifyTenant(next, `${next.id} was reopened.`);
     return next;
+  }
+
+  // ---- Tenant (Resident App) paths -----------------------------------------------
+  // Separate from the owner actions above so their permission checks stay as they are. Each takes the
+  // signed-in Tenant's resident id (from TenantContextService, never from a form) and refuses any
+  // complaint that belongs to someone else. Tenants cannot resolve, close or edit Admin updates.
+
+  /** A Tenant raising a complaint for themselves. Priority is only their suggestion; Admin sets the final one. */
+  createForTenant(residentId: string, input: Omit<NewComplaintInput, 'residentId' | 'assignedTo' | 'targetDate'> & { location: string }): Complaint {
+    const r = this.residents.byId(residentId);
+    if (!r) throw new Error('Resident not found.');
+    if (!input.title.trim()) throw new Error('Title is required.');
+    const now = nowIso();
+    const complaint: Complaint = {
+      id: this.nextId(),
+      residentId: r.residentId,
+      residentName: residentFullName(r),
+      location: input.location.trim(),
+      category: input.category,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      attachments: input.attachments,
+      priority: input.priority,
+      createdAt: now,
+      status: 'Open',
+      source: 'Resident App',
+      reopenCount: 0,
+      updatedAt: now,
+      history: [{ at: now, type: 'created', by: TENANT_AUTHOR, text: `Submitted from the Resident App. Suggested priority: ${input.priority}.` }],
+    };
+    this.commit([complaint, ...this.complaints]);
+    this.auditLog.record('Create Complaint', this.entity(complaint), { details: `${complaint.category} · ${complaint.priority} · ${complaint.title}` });
+    return complaint;
+  }
+
+  /** Adds the Tenant's follow-up comment (not allowed once Closed). */
+  tenantComment(residentId: string, id: string, text: string): Complaint {
+    const c = this.requireOwned(residentId, id);
+    if (c.status === 'Closed') throw new Error('Closed complaints are read-only.');
+    if (!text.trim()) throw new Error('Write a comment first.');
+    if (text.trim().length > 1000) throw new Error('Comments can be up to 1000 characters.');
+    return this.patch(c, {}, { at: nowIso(), type: 'note', by: TENANT_AUTHOR, text: text.trim() });
+  }
+
+  /** The Tenant agrees a Resolved complaint is fixed. It stays Resolved (only the hostel closes it). */
+  tenantConfirmResolved(residentId: string, id: string): Complaint {
+    const c = this.requireOwned(residentId, id);
+    if (c.status !== 'Resolved') throw new Error('Only a resolved complaint can be confirmed.');
+    if (c.history.some((e) => e.by === TENANT_AUTHOR && e.text === CONFIRMED_TEXT && e.at >= (c.resolvedAt ?? ''))) {
+      throw new Error('You have already confirmed this resolution.');
+    }
+    return this.patch(c, {}, { at: nowIso(), type: 'status', by: TENANT_AUTHOR, text: CONFIRMED_TEXT });
+  }
+
+  /** Resolved -> Reopened by its own Tenant, inside the reopen window. */
+  tenantReopen(residentId: string, id: string, reason: string): Complaint {
+    const c = this.requireOwned(residentId, id);
+    if (!this.canReopen(c)) {
+      throw new Error(c.status === 'Resolved' ? `Reopening is only allowed within ${REOPEN_WINDOW_DAYS} days of resolution. Please raise a new complaint.` : 'Only resolved complaints can be reopened.');
+    }
+    if (reason.trim().length < 10) throw new Error('Give a reason for reopening (at least 10 characters).');
+    if (reason.trim().length > 1000) throw new Error('The reason can be up to 1000 characters.');
+    const next = this.patch(
+      c,
+      { status: 'Reopened', reopenCount: c.reopenCount + 1, resolvedAt: undefined, resolutionNote: undefined },
+      { at: nowIso(), type: 'status', by: TENANT_AUTHOR, text: `Reopened: ${reason.trim()}` },
+    );
+    this.auditLog.record('Reopen Complaint', this.entity(c), { details: reason.trim() });
+    return next;
+  }
+
+  /** Demo data: adds the given complaints (new ids) unless the same resident already has one with that title. */
+  seedIfMissing(rows: Complaint[]): void {
+    const fresh = rows.filter((r) => !this.complaints.some((c) => c.residentId === r.residentId && c.title === r.title));
+    if (!fresh.length) return;
+    let list = this.complaints;
+    for (const r of fresh) {
+      const max = list.reduce((m, c) => Math.max(m, Number(c.id.slice(3)) || 0), 0);
+      list = [{ ...r, id: `CMP${String(max + 1).padStart(6, '0')}` }, ...list];
+    }
+    this.commit(list);
   }
 
   // ---------------------------------------------------------------------------
@@ -254,6 +349,22 @@ export class ComplaintsService {
     const next: Complaint = { ...c, ...changes, updatedAt: nowIso(), history: [...events, ...c.history] };
     this.commit(this.complaints.map((x) => (x.id === c.id ? next : x)));
     return next;
+  }
+
+  /** The complaint, only if it belongs to `residentId`; anything else reads as "not found". */
+  private requireOwned(residentId: string, id: string): Complaint {
+    const c = this.byId(id);
+    if (!residentId || !c || c.residentId !== residentId) throw new Error('Complaint not found.');
+    return c;
+  }
+
+  /** In-app notification for the complaint's Tenant; never blocks the owner action. */
+  private notifyTenant(c: Complaint, body: string): void {
+    try {
+      this.tenantNotes.push(c.residentId, { category: 'Complaint', title: 'Complaint update', body, route: '/my/complaints' });
+    } catch {
+      // notification text rules or storage; the status change itself already succeeded
+    }
   }
 
   private require(id: string): Complaint {

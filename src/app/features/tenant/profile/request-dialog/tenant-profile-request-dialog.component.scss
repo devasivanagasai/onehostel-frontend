@@ -1,0 +1,77 @@
+// Request profile update. Frame comes from <app-dialog>; fields from styles/_dialog-kit.scss.
+@use '../../../../../styles/dialog-kit' as *;
+
+@include form-fields;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.rq {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.rq__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 520px) { grid-template-columns: 1fr; }
+}
+
+.rq__current {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8fafb;
+
+  span { font-size: 12.5px; color: #64748b; }
+  strong { font-size: 14px; color: #0f172a; overflow-wrap: anywhere; }
+}
+
+.rq__verify {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eff6ff;
+
+  > p {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    color: #1e3a8a;
+
+    mat-icon { @include icon(18px); flex-shrink: 0; }
+  }
+
+  .fk-field { align-self: stretch; }
+}
+
+.rq__sim {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.rq__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); flex-shrink: 0; }
+}

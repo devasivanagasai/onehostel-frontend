@@ -107,6 +107,7 @@ export class FeesService {
 
   constructor() {
     if (!this.hasStoredState()) this.seedHistory();
+    this.ensureTenantDemoCharges();
     this.applyLateFees();
     this.syncResidentBalances();
   }
@@ -405,6 +406,32 @@ export class FeesService {
   }
 
   // ---------------------------------------------------------------------------
+
+  /**
+   * Demo data for the built-in Tenant (RES000001): one overdue and one upcoming charge so the Tenant
+   * Fees page has something to pay. Runs once per browser (also on data stored before this existed).
+   */
+  private ensureTenantDemoCharges(): void {
+    const r = this.residents.byId('RES000001');
+    if (!r) return;
+    const demo: [string, number, string, string][] = [
+      ['Mess · Oct 2026 extra meals', 800, '2026-10-10', '2026-10-25'],
+      ['Maintenance · Nov 2026', 1500, '2026-11-01', '2026-11-20'],
+    ];
+    const add = demo.filter(([d]) => !this.charges.some((c) => c.residentId === r.residentId && c.description === d));
+    if (!add.length) return;
+    const ids = this.charges.map((c) => c.id);
+    const created = add.map(([description, amount, issueDate, dueDate]): Charge => {
+      const id = this.nextId('INV', ids, 6);
+      ids.push(id);
+      return {
+        id, residentId: r.residentId, residentName: residentFullName(r), description, issueDate, dueDate,
+        baseAmount: amount, taxAmount: 0, lateFeeAmount: 0, total: amount, reminderCount: 0,
+        createdBy: 'Hostel Owner', createdAt: `${issueDate}T10:00:00`,
+      };
+    });
+    this.commit({ charges: [...this.charges, ...created] });
+  }
 
   private get userName(): string {
     return this.auth.currentUser?.name ?? 'Hostel Owner';

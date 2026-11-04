@@ -3,6 +3,8 @@ import { BehaviorSubject, Observable, map } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ResidentsService } from '../../core/services/residents.service';
 import { HostelResident } from '../../core/models/residents.models';
+import { TenantContextService } from '../../core/services/tenant-context.service';
+import { TenantNotificationService } from '../../core/services/tenant-notification.service';
 import {
   NotificationStatus,
   OVERDUE_DAYS,
@@ -167,10 +169,31 @@ function seed(): Parcel[] {
   ];
 }
 
+/** What a Tenant sees of a parcel addressed to them: no internal staff notes, ID references or other residents. */
+export interface TenantParcelView {
+  id: string;
+  courier: string;
+  tracking?: string;
+  pickupLocation?: string;
+  /** When staff recorded the parcel as received. */
+  receivedAt: string;
+  recordedBy: string;
+  status: Parcel['status'];
+  ageDays: number;
+  overdue: boolean;
+  /** Pickup confirmation as recorded by staff; absent until staff hand the parcel over. */
+  pickup?: { at: string; confirmedBy?: string; collectedBy: string; relation?: string; self: boolean };
+  returnedAt?: string;
+  /** Messages the hostel sent about this parcel, oldest first. */
+  notices: { at: string; kind: ParcelNotice['kind']; status: ParcelNotice['status']; channels: string }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ParcelsService {
   private readonly auth = inject(AuthService);
   private readonly residentsService = inject(ResidentsService);
+  private readonly tenantCtx = inject(TenantContextService);
+  private readonly tenantNotify = inject(TenantNotificationService);
 
   private readonly subject = new BehaviorSubject<Parcel[]>(this.load());
   readonly parcels$: Observable<Parcel[]> = this.subject.asObservable();
@@ -274,6 +297,13 @@ export class ParcelsService {
     };
     if (input.notify) parcel = this.withNotice(parcel, 'Arrival');
     this.commit([parcel, ...this.parcels]);
+    if (input.notify) {
+      try {
+        this.tenantNotify.push(parcel.residentId, { category: 'Parcel', title: 'Parcel received', body: `${parcel.courier} parcel ${parcel.id} is waiting for pickup${parcel.storage ? ' at ' + parcel.storage : ''}.`, route: '/my/parcels' });
+      } catch {
+        // A notification must never block logging the parcel.
+      }
+    }
     return parcel;
   }
 
@@ -334,6 +364,48 @@ export class ParcelsService {
       returnedTo: details.returnedTo.trim(),
       history: [...p.history, ev(now, this.userName, `Returned to sender · handed to ${details.returnedTo.trim()}`, 'assignment_return', details.reason.trim())],
     });
+  }
+
+  // ---- Tenant (resident app) -------------------------------------------------------
+  // Read-only: a Tenant sees only parcels addressed to them (resident id from TenantContextService) and
+  // can never mark one collected; pickup is confirmed by staff through `collect`.
+
+  /** The signed-in Tenant's parcels, newest first. */
+  tenantParcels(): TenantParcelView[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    return this.parcels
+      .filter((p) => p.residentId === me)
+      .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt) || b.id.localeCompare(a.id))
+      .map((p) => this.tenantView(p));
+  }
+
+  /** One of the Tenant's own parcels; throws for anyone else's. */
+  tenantParcel(id: string): TenantParcelView {
+    const me = this.tenantCtx.requireResidentId();
+    const p = this.byId(id);
+    if (!p || p.residentId !== me) throw new Error('Parcel not found.');
+    return this.tenantView(p);
+  }
+
+  private tenantView(p: Parcel): TenantParcelView {
+    return {
+      id: p.id,
+      courier: p.courier,
+      tracking: p.tracking,
+      pickupLocation: p.storage,
+      receivedAt: p.receivedAt,
+      recordedBy: p.receivedBy,
+      status: p.status,
+      ageDays: this.ageDays(p),
+      overdue: this.isOverdue(p),
+      pickup:
+        p.status === 'Collected' && p.collectedAt
+          ? { at: p.collectedAt, confirmedBy: p.handedOverBy, collectedBy: p.collector?.name ?? 'Recorded by staff', relation: p.collector?.self ? undefined : p.collector?.relation, self: !!p.collector?.self }
+          : undefined,
+      returnedAt: p.status === 'Returned' ? p.returnedAt : undefined,
+      notices: p.notices.map((n) => ({ at: n.at, kind: n.kind, status: n.status, channels: n.channels })),
+    };
   }
 
   // ---------------------------------------------------------------------------

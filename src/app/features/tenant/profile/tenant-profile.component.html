@@ -1,0 +1,118 @@
+<div class="onboarding-page tp">
+  @if (state === 'loading') {
+    <div class="tp__state" role="status" aria-live="polite">
+      <span class="tp__spinner" aria-hidden="true"></span>
+      <p>Loading your profile…</p>
+    </div>
+  } @else if (state === 'error' || !profile) {
+    <div class="tp__state tp__state--error" role="alert">
+      <mat-icon fontSet="material-icons-outlined">error_outline</mat-icon>
+      <p>We couldn’t load your profile. Check your connection and try again.</p>
+      <app-button variant="secondary" icon="refresh" (clicked)="load()">Retry</app-button>
+    </div>
+  } @else {
+    <!-- Identity card -->
+    <section class="tp__card tp__hero" aria-label="Profile summary">
+      <div class="tp__avatar-wrap">
+        @if (profile.photoUrl) {
+          <img class="tp__avatar" [src]="profile.photoUrl" alt="Your profile photo" />
+        } @else {
+          <span class="tp__avatar tp__avatar--initials" aria-hidden="true">{{ initials(profile.fullName) }}</span>
+        }
+      </div>
+      <div class="tp__hero-text">
+        <h2>{{ profile.fullName }}</h2>
+        <p>Resident ID {{ profile.residentId }} · {{ profile.residentType }}</p>
+        <span class="status-badge status-badge--{{ accountTone(profile.accountStatus) }}">{{ profile.accountStatus }}</span>
+      </div>
+      <div class="tp__hero-actions">
+        <label class="tp__upload" [class.is-busy]="uploading">
+          <mat-icon fontSet="material-icons-outlined">photo_camera</mat-icon>
+          <span>{{ service.hasUploadedPhoto() ? 'Change photo' : 'Upload photo' }}</span>
+          <input type="file" accept="image/jpeg,image/png" aria-label="Upload profile photo (JPG or PNG, up to 2 MB)" (change)="onPhoto($event)" [disabled]="uploading" />
+        </label>
+        @if (service.hasUploadedPhoto()) {
+          <app-button variant="text" size="sm" icon="delete_outline" (clicked)="removePhoto()">Remove</app-button>
+        }
+        <small>JPG or PNG, up to 2 MB</small>
+        @if (photoError) { <small class="tp__error" role="alert">{{ photoError }}</small> }
+      </div>
+    </section>
+
+    <!-- Details -->
+    <section class="tp__card" aria-labelledby="tp-details">
+      <div class="tp__head">
+        <h3 id="tp-details">Your details</h3>
+        <app-button icon="edit_note" (clicked)="openRequestDialog()">Request profile update</app-button>
+      </div>
+      <p class="tp__note"><mat-icon fontSet="material-icons-outlined">lock</mat-icon>These details are kept by your hostel, so you can’t edit them directly. Send a request and the hostel office will review it.</p>
+      <dl class="tp__grid">
+        <div><dt>Resident ID</dt><dd>{{ profile.residentId }}</dd></div>
+        <div><dt>Full name</dt><dd>{{ profile.fullName }}</dd></div>
+        <div><dt>Mobile number</dt><dd>{{ profile.mobile }}</dd></div>
+        <div><dt>Email address</dt><dd>{{ profile.email || '—' }}</dd></div>
+        @if (profile.dateOfBirth) { <div><dt>Date of birth</dt><dd>{{ fmt.date(profile.dateOfBirth) }}</dd></div> }
+        @if (profile.gender) { <div><dt>Gender</dt><dd>{{ profile.gender }}</dd></div> }
+        <div><dt>Emergency contact</dt><dd>{{ profile.emergencyContact || '—' }}</dd></div>
+        <div><dt>Account status</dt><dd><span class="status-badge status-badge--{{ accountTone(profile.accountStatus) }}">{{ profile.accountStatus }}</span></dd></div>
+        <div class="tp__wide"><dt>Permanent address</dt><dd>{{ profile.permanentAddress || '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <!-- Documents -->
+    <section class="tp__card" aria-labelledby="tp-docs">
+      <div class="tp__head"><h3 id="tp-docs">Documents</h3></div>
+      @if (profile.documents.length) {
+        <ul class="tp__docs">
+          @for (d of profile.documents; track d.id) {
+            <li>
+              <mat-icon fontSet="material-icons-outlined">description</mat-icon>
+              <span class="tp__doc-text"><strong>{{ d.type }}</strong><small>{{ d.fileName }} · uploaded {{ fmt.date(d.uploadedAt) }}</small></span>
+              <span class="status-badge status-badge--{{ d.status === 'Verified' ? 'success' : d.status === 'Rejected' ? 'danger' : 'warning' }}">{{ d.status }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="tp__empty">No documents are available for you yet. Documents your hostel shares will appear here.</p>
+      }
+    </section>
+
+    <!-- Requests -->
+    <section class="tp__card" aria-labelledby="tp-requests">
+      <div class="tp__head"><h3 id="tp-requests">Profile update requests</h3></div>
+      <app-table-card
+        [empty]="requests.length === 0"
+        emptyIcon="edit_note"
+        emptyMessage="No update requests yet"
+        emptyHint="Use “Request profile update” to ask for a change to your name, contact details or address."
+        [paginate]="false"
+      >
+        <table class="saas-table tp__table" aria-label="Your profile update requests">
+          <thead>
+            <tr><th>Request</th><th>Change</th><th>Reason</th><th>Status</th><th>Decision remark</th><th class="actions-header">Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (r of requests; track r.id) {
+              <tr>
+                <td><strong>{{ labels[r.field] }}</strong><small class="tp__sub">{{ r.id }} · {{ fmt.date(r.createdAt, 'datetime') }}</small></td>
+                <td>
+                  <span class="tp__from">{{ r.currentValue || '—' }}</span>
+                  <span class="tp__to"><mat-icon aria-hidden="true">arrow_forward</mat-icon>{{ requestValue(r) }}</span>
+                  @if (r.needsVerification) { <small class="tp__sub tp__verified"><mat-icon fontSet="material-icons-outlined">verified</mat-icon>New contact verified</small> }
+                </td>
+                <td class="tp__reason">{{ r.reason }}</td>
+                <td><span class="status-badge status-badge--{{ requestTone(r.status) }}">{{ r.status }}</span></td>
+                <td class="tp__reason">{{ r.remark || '—' }}@if (r.decidedAt) { <small class="tp__sub">{{ fmt.date(r.decidedAt, 'datetime') }}</small> }</td>
+                <td class="actions-cell">
+                  @if (r.status === 'Pending') {
+                    <app-button variant="danger-outline" size="sm" icon="close" [ariaLabel]="'Cancel request ' + r.id" (clicked)="cancel(r)">Cancel</app-button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </app-table-card>
+    </section>
+  }
+</div>

@@ -1,0 +1,72 @@
+<app-dialog eyebrow="Support reference" [title]="t ? t.id : 'Support request'" icon="support_agent" tone="teal">
+  <ng-container dialogMeta>
+    @if (t) { <span class="tk-badge tk-badge--{{ tones[t.status] }}">{{ labels[t.status] }}</span> }
+  </ng-container>
+  @if (t; as k) {
+    <h2 class="sp-title">{{ k.subject }}</h2>
+    <dl class="tk-facts">
+      <div><dt>Help topic</dt><dd>{{ k.topic }}</dd></div>
+      <div><dt>Submitted</dt><dd>{{ fmt.date(k.createdAt) }} {{ fmt.date(k.createdAt, 'time') }}</dd></div>
+      <div><dt>Last activity</dt><dd>{{ fmt.date(k.updatedAt) }} {{ fmt.date(k.updatedAt, 'time') }}</dd></div>
+    </dl>
+
+    @if (k.status === 'Waiting for Resident') {
+      <div class="tk-notice" role="status"><mat-icon>reply</mat-icon><p>The hostel office is waiting for your reply.</p></div>
+    }
+
+    <section class="tk-section sp-gap">
+      <h3>Conversation</h3>
+      <ol class="tk-timeline">
+        <li class="is-you">
+          <div class="tk-timeline__head"><strong>You</strong><span>{{ fmt.date(k.createdAt) }} {{ fmt.date(k.createdAt, 'time') }}</span></div>
+          <p class="tk-timeline__text">{{ k.description }}</p>
+          @if (k.attachments.length) {
+            <ul class="tk-attach sp-gap-sm">
+              @for (a of k.attachments; track $index) {
+                <li><mat-icon>{{ a.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon><span>{{ a.name }}</span><small>{{ formatFileSize(a.size) }}</small></li>
+              }
+            </ul>
+          }
+        </li>
+        @for (m of k.messages; track m.id) {
+          <li [class.is-you]="m.author === 'Tenant'">
+            <div class="tk-timeline__head"><strong>{{ m.by }}</strong><span>{{ fmt.date(m.at) }} {{ fmt.date(m.at, 'time') }}</span></div>
+            <p class="tk-timeline__text">{{ m.text }}</p>
+            @if (m.attachments.length) {
+              <ul class="tk-attach sp-gap-sm">
+                @for (a of m.attachments; track $index) {
+                  <li><mat-icon>{{ a.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon><span>{{ a.name }}</span></li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ol>
+    </section>
+
+    @if (k.status !== 'Closed') {
+      <section class="tk-section">
+        <label class="fk-label" for="sd-reply">Your reply</label>
+        <textarea id="sd-reply" class="tk-textarea" rows="3" [attr.maxlength]="max" [(ngModel)]="reply" placeholder="Write a message to the hostel office"></textarea>
+        <div class="tk-actions">
+          <app-button variant="accent" size="sm" icon="send" [loading]="busy" [disabled]="!reply.trim()" (clicked)="send()">Send reply</app-button>
+          @if (k.status === 'Resolved') {
+            <app-button variant="outline" size="sm" icon="check_circle" [disabled]="busy" (clicked)="closeTicket()">Close request</app-button>
+          }
+        </div>
+      </section>
+    } @else {
+      <p class="tk-muted">This request is closed. Submit a new request if you still need help.</p>
+    }
+
+    @if (error) {
+      <div class="tk-notice tk-notice--danger" role="alert"><mat-icon>error</mat-icon><p>{{ error }}</p></div>
+    }
+  } @else {
+    <div class="tk-state" role="alert"><mat-icon>error_outline</mat-icon><p>{{ loadError || 'This request could not be found.' }}</p></div>
+  }
+
+  <ng-container dialogFooter>
+    <app-button variant="secondary" type="button" (clicked)="close()">Close</app-button>
+  </ng-container>
+</app-dialog>

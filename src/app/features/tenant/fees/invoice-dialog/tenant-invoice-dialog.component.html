@@ -1,0 +1,74 @@
+@if (inv; as i) {
+  <app-dialog [eyebrow]="'Invoice · ' + i.id" [title]="i.description" icon="receipt_long" tone="teal" (closed)="close()">
+    <ng-container dialogMeta>
+      <span class="status-badge status-badge--{{ invoiceTone[i.status] }} iv__badge">{{ i.status }}</span>
+    </ng-container>
+
+    <div class="iv">
+      <dl class="iv__facts">
+        <div><dt>Fee type</dt><dd>{{ i.feeType }}</dd></div>
+        <div><dt>Billing period</dt><dd>{{ i.period }}</dd></div>
+        <div><dt>Invoice date</dt><dd>{{ fmt.date(i.issueDate) }}</dd></div>
+        <div><dt>Due date</dt><dd>{{ fmt.date(i.dueDate) }}</dd></div>
+      </dl>
+
+      <section class="iv__card" aria-label="Amount breakdown">
+        <h4>Breakdown</h4>
+        <table class="iv__sum">
+          <tbody>
+            <tr><th scope="row">Base amount</th><td>{{ fmt.money(i.baseAmount) }}</td></tr>
+            @if (i.taxAmount > 0) { <tr><th scope="row">Tax</th><td>{{ fmt.money(i.taxAmount) }}</td></tr> }
+            @if (i.lateFeeAmount > 0) { <tr><th scope="row">Late fee</th><td>{{ fmt.money(i.lateFeeAmount) }}</td></tr> }
+            <tr class="iv__total"><th scope="row">Total</th><td>{{ fmt.money(i.total) }}</td></tr>
+            <tr><th scope="row">Paid</th><td>{{ fmt.money(i.paid) }}</td></tr>
+            <tr class="iv__due"><th scope="row">Outstanding</th><td>{{ fmt.money(i.outstanding) }}</td></tr>
+            @if (i.pendingAmount > 0) { <tr><th scope="row">Waiting for confirmation</th><td>{{ fmt.money(i.pendingAmount) }}</td></tr> }
+          </tbody>
+        </table>
+      </section>
+
+      <section class="iv__card" aria-label="Payments for this invoice">
+        <h4>Payments</h4>
+        @if (payments.length) {
+          <ul class="iv__pay">
+            @for (p of payments; track p.ref) {
+              <li>
+                <div class="iv__pay-main">
+                  <strong>{{ fmt.money(p.amount) }}</strong>
+                  <span class="status-badge status-badge--{{ txTone[p.status] }}">{{ p.status }}</span>
+                  <small>{{ p.method }} · {{ fmt.date(p.date, 'datetime') }} · Ref {{ p.ref }}</small>
+                  @if (p.note) { <small>{{ p.note }}</small> }
+                </div>
+                @if (p.status === 'Successful' && p.paymentId) {
+                  <span class="iv__pay-actions">
+                    <small>Receipt {{ p.receiptNumber }}</small>
+                    <app-button variant="icon-outline" size="sm" icon="download" [ariaLabel]="'Download receipt ' + p.receiptNumber" (clicked)="receipt(p)"></app-button>
+                    <app-button variant="icon-outline" size="sm" icon="print" [ariaLabel]="'Print receipt ' + p.receiptNumber" (clicked)="receipt(p, true)"></app-button>
+                  </span>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="iv__empty">No payments have been made against this invoice.</p>
+        }
+      </section>
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" icon="download" (clicked)="downloadInvoice()">Download invoice</app-button>
+      <app-button variant="secondary" icon="print" (clicked)="downloadInvoice(true)">Print</app-button>
+      <span class="app-dialog__spacer"></span>
+      @if (canPay) {
+        <app-button icon="payments" (clicked)="pay()">{{ i.activeAttemptRef ? 'Check payment status' : 'Pay Now' }}</app-button>
+      } @else {
+        <app-button variant="secondary" (clicked)="close()">Close</app-button>
+      }
+    </ng-container>
+  </app-dialog>
+} @else {
+  <app-dialog title="Invoice not found" icon="error_outline" tone="red" (closed)="close()">
+    <p class="iv__empty">This invoice isn’t available.</p>
+    <ng-container dialogFooter><app-button variant="secondary" (clicked)="close()">Close</app-button></ng-container>
+  </app-dialog>
+}

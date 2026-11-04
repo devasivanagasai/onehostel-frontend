@@ -1,0 +1,213 @@
+// My Profile. Cards and the requests table use the shared kits (styles/_table.scss).
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+.tp {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 4px 0 16px;
+}
+
+.tp__card {
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 34, 74, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+
+  @media (max-width: 600px) { padding: 16px; }
+}
+
+.tp__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 64px 16px;
+  color: #64748b;
+  text-align: center;
+
+  mat-icon { @include icon(40px); color: #dc2626; }
+  p { margin: 0; }
+}
+
+.tp__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0d9488;
+  border-radius: 50%;
+  animation: tp-spin 0.8s linear infinite;
+}
+
+@keyframes tp-spin { to { transform: rotate(360deg); } }
+
+.tp__hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.tp__avatar {
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  &--initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0ecff;
+    color: #1d4ed8;
+    font-size: 28px;
+    font-weight: 700;
+  }
+}
+
+.tp__hero-text {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+
+  h2 { margin: 0; font-size: 22px; color: #0f172a; }
+  p { margin: 0; color: #64748b; font-size: 14px; }
+}
+
+.tp__hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  small { color: #64748b; font-size: 12px; }
+}
+
+.tp__upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid #dbe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  mat-icon { @include icon(18px); }
+  input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  &:focus-within { outline: 2px solid #0d9488; outline-offset: 2px; }
+  &.is-busy { opacity: 0.6; pointer-events: none; }
+}
+
+.tp__error { color: #dc2626 !important; }
+
+.tp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  h3 { margin: 0; font-size: 17px; color: #0f172a; }
+}
+
+.tp__note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafb;
+  color: #475569;
+  font-size: 13px;
+
+  mat-icon { @include icon(18px); color: #64748b; flex-shrink: 0; }
+}
+
+.tp__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+  margin: 0;
+
+  @media (max-width: 960px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+
+  div { min-width: 0; }
+  dt { font-size: 12.5px; color: #64748b; margin-bottom: 2px; }
+  dd { margin: 0; font-size: 14.5px; font-weight: 600; color: #0f172a; overflow-wrap: anywhere; }
+}
+
+.tp__wide { grid-column: 1 / -1; }
+
+.tp__docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child { border-bottom: none; }
+    > mat-icon { @include icon(22px); color: #64748b; }
+  }
+}
+
+.tp__doc-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+
+  strong { font-size: 14px; color: #0f172a; }
+  small { font-size: 12.5px; color: #64748b; overflow-wrap: anywhere; }
+}
+
+.tp__empty { margin: 0; color: #94a3b8; font-size: 14px; }
+
+.tp__table {
+  .tp__sub { display: block; margin-top: 2px; color: #94a3b8; font-size: 12px; }
+  .tp__from { display: block; color: #94a3b8; text-decoration: line-through; overflow-wrap: anywhere; }
+  .tp__to { display: flex; align-items: center; gap: 4px; color: #0f172a; font-weight: 600; overflow-wrap: anywhere; mat-icon { @include icon(14px); color: #64748b; flex-shrink: 0; } }
+  .tp__verified { display: flex; align-items: center; gap: 4px; color: #16a34a; mat-icon { @include icon(14px); } }
+  .tp__reason { max-width: 220px; overflow-wrap: anywhere; }
+  td, th { vertical-align: top; }
+}
+
+// Status badges outside list cards (the shared kit only styles them inside .saas-card / .saas-table).
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  &--success { background: #dcfce7; color: #16a34a; }
+  &--warning { background: #ffedd5; color: #ea580c; }
+  &--danger { background: #fee2e2; color: #dc2626; }
+  &--info { background: #e0f2fe; color: #0284c7; }
+  &--neutral { background: #f1f5f9; color: #64748b; }
+}

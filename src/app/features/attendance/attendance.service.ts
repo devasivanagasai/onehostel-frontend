@@ -5,6 +5,8 @@ import { AppFormatService } from '../../core/services/app-format.service';
 import { ResidentsService } from '../../core/services/residents.service';
 import { HostelResident, residentFullName } from '../../core/models/residents.models';
 import { LeaveOutpassService } from '../../core/services/leave-outpass.service';
+import { TenantContextService } from '../../core/services/tenant-context.service';
+import { NewTenantNotification, TenantNotificationService } from '../../core/services/tenant-notification.service';
 import { dayEnd, dayStart, localDate, localIso, time } from '../../core/models/leave-outpass.models';
 import {
   AttendanceChange,
@@ -13,6 +15,7 @@ import {
   AttendanceRecord,
   AttendanceRow,
   AttendanceSession,
+  AttendanceStatus,
   DEFAULT_METHODS,
   MANUAL_METHODS,
   MethodSettings,
@@ -26,6 +29,7 @@ import {
 
 const STORAGE_KEY = 'onehostel_attendance_v1';
 const METHODS_KEY = 'onehostel_attendance_methods_v1';
+const CORRECTIONS_KEY = 'onehostel_attendance_corrections_v1';
 export const HOSTEL_ID = 'HST-OWNER-01';
 
 const DAY_MS = 86_400_000;
@@ -38,12 +42,69 @@ const dayOffset = (days: number): string => {
   return localDate(d);
 };
 
+export type CorrectionStatus = 'Open' | 'Accepted' | 'Declined' | 'Withdrawn';
+
+/**
+ * A resident's query about an attendance day. It never changes the official record: staff review it and,
+ * if justified, correct the record themselves through `save` (with a reason) and then `decideCorrectionRequest`.
+ */
+export interface AttendanceCorrectionRequest {
+  /** e.g. ACR000001 */
+  id: string;
+  hostelId: string;
+  residentId: string;
+  /** Hostel-local date the query is about (yyyy-mm-dd). */
+  date: string;
+  reason: string;
+  /** What the official record said when the request was raised. */
+  recordedStatus: AttendanceStatus;
+  status: CorrectionStatus;
+  createdAt: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  decisionNote?: string;
+}
+
+export const CORRECTION_WINDOW_DAYS = 14;
+export const CORRECTION_REASON_MIN = 10;
+export const CORRECTION_REASON_MAX = 300;
+/** How far back a Tenant can browse attendance. */
+export const HISTORY_MONTHS = 12;
+
+export interface TenantAttendanceRow {
+  date: string;
+  status: AttendanceStatus;
+  /** First check-in and last check-out of the day (local date-times), when the system captured them. */
+  checkIn?: string;
+  checkOut?: string;
+  sessions: AttendanceSession[];
+  method?: AttendanceMethod;
+  /** Approved leave covering the day: an approval, not proof the resident was away. */
+  leave?: { id: string; type: string; departAt: string; returnAt: string; movement: string | null };
+  /** Security's gate records say the resident was out all day. */
+  physicallyOut: boolean;
+  openCorrection?: AttendanceCorrectionRequest;
+}
+
+export interface TenantAttendanceSummary {
+  Present: number;
+  Absent: number;
+  'On Leave': number;
+  'Not Expected': number;
+  Unknown: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly residents = inject(ResidentsService);
   private readonly leave = inject(LeaveOutpassService);
   private readonly auth = inject(AuthService);
   private readonly fmt = inject(AppFormatService);
+  private readonly tenantCtx = inject(TenantContextService);
+  private readonly tenantNotify = inject(TenantNotificationService);
+
+  private readonly corrections = new BehaviorSubject<AttendanceCorrectionRequest[]>(this.loadCorrections());
+  readonly corrections$: Observable<AttendanceCorrectionRequest[]> = this.corrections.asObservable();
 
   private readonly methodsSubject = new BehaviorSubject<MethodSettings>(this.loadMethods());
   readonly methods$ = this.methodsSubject.asObservable();
@@ -242,6 +303,187 @@ export class AttendanceService {
       marked++;
     }
     return { marked, skipped: unmarked.length - marked };
+  }
+
+  // ---- Tenant (resident app) -------------------------------------------------------
+  // Read-only access to the Tenant's own record. The only write is a correction request, which is a
+  // query for staff; the official record is never edited from here.
+
+  /** Months a Tenant can browse, newest first, as yyyy-mm (current month back `HISTORY_MONTHS`). */
+  tenantMonths(): string[] {
+    const out: string[] = [];
+    const now = new Date();
+    for (let i = 0; i <= HISTORY_MONTHS; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return out;
+  }
+
+  /** The Tenant's attendance for a month (today and earlier), newest day first. Months outside the permitted period are refused. */
+  tenantHistory(month: string): TenantAttendanceRow[] {
+    const me = this.tenantCtx.requireResidentId();
+    if (!/^\d{4}-\d{2}$/.test(month) || !this.tenantMonths().includes(month)) {
+      throw new Error(`Attendance is available for the current month and the previous ${HISTORY_MONTHS} months.`);
+    }
+    const resident = this.tenantCtx.requireResident();
+    const today = this.today;
+    const [y, m] = month.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const rows: TenantAttendanceRow[] = [];
+    for (let day = 1; day <= lastDay; day++) {
+      const date = `${month}-${String(day).padStart(2, '0')}`;
+      if (date > today) break;
+      const expected = resident.joiningDate <= date && (!resident.checkOutDate || resident.checkOutDate >= date);
+      const record = expected ? this.recordFor(me, date) : undefined;
+      const leave = expected ? this.leave.approvedOn(me, date) : undefined;
+      const sessions = record?.sessions ?? [];
+      const lastOut = [...sessions].reverse().find((s) => s.out)?.out;
+      rows.push({
+        date,
+        status: !expected ? 'Not Expected' : record?.status ?? 'Unknown',
+        checkIn: sessions[0]?.in,
+        checkOut: sessions.every((s) => s.out) ? lastOut : undefined,
+        sessions,
+        method: record?.method,
+        leave: leave ? { id: leave.id, type: leave.type, departAt: leave.departAt, returnAt: leave.returnAt, movement: this.leave.movement(leave) } : undefined,
+        physicallyOut: !!leave && this.leave.outAllDay(leave, date),
+        openCorrection: this.corrections.value.find((c) => c.residentId === me && c.date === date && c.status === 'Open'),
+      });
+    }
+    return rows.reverse();
+  }
+
+  tenantSummary(rows: TenantAttendanceRow[]): TenantAttendanceSummary {
+    const s: TenantAttendanceSummary = { Present: 0, Absent: 0, 'On Leave': 0, 'Not Expected': 0, Unknown: 0 };
+    for (const r of rows) s[r.status]++;
+    return s;
+  }
+
+  /** The Tenant's correction requests, newest first. */
+  tenantCorrections(): AttendanceCorrectionRequest[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    return this.corrections.value.filter((c) => c.residentId === me).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  }
+
+  /** Problem with a new correction request, or '' when it can be raised. */
+  correctionError(date: string, reason: string): string {
+    const me = this.tenantCtx.residentId;
+    if (!me) return 'Sign in as a Tenant to do this.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '') || isNaN(new Date(`${date}T00:00:00`).getTime())) return 'Pick the attendance date.';
+    if (date > this.today) return 'You can only query a date that has already happened.';
+    if (date < dayOffset(-CORRECTION_WINDOW_DAYS)) return `Corrections can be requested only for the last ${CORRECTION_WINDOW_DAYS} days.`;
+    const resident = this.tenantCtx.resident;
+    if (!resident || resident.joiningDate > date || (resident.checkOutDate && resident.checkOutDate < date)) return 'You were not expected at the hostel on that date.';
+    const text = reason?.trim() ?? '';
+    if (text.length < CORRECTION_REASON_MIN) return `Give a reason of at least ${CORRECTION_REASON_MIN} characters.`;
+    if (text.length > CORRECTION_REASON_MAX) return `Reason can be at most ${CORRECTION_REASON_MAX} characters.`;
+    const open = this.corrections.value.find((c) => c.residentId === me && c.date === date && c.status === 'Open');
+    if (open) return `You already have an open request (${open.id}) for this date.`;
+    return '';
+  }
+
+  /** Raises a correction request for one of the Tenant's own days. The official record is not changed. */
+  createCorrectionRequest(input: { date: string; reason: string }): AttendanceCorrectionRequest {
+    const me = this.tenantCtx.requireResidentId();
+    const err = this.correctionError(input.date, input.reason);
+    if (err) throw new Error(err);
+    const req: AttendanceCorrectionRequest = {
+      id: this.nextCorrectionId(),
+      hostelId: HOSTEL_ID,
+      residentId: me,
+      date: input.date,
+      reason: input.reason.trim(),
+      recordedStatus: this.recordFor(me, input.date)?.status ?? 'Unknown',
+      status: 'Open',
+      createdAt: localIso(),
+    };
+    this.commitCorrections([req, ...this.corrections.value]);
+    this.notifyTenant(me, { category: 'Support', title: 'Attendance query received', body: `${req.id} for ${req.date} is with the hostel office for review.`, route: '/my/attendance' });
+    return req;
+  }
+
+  /** The Tenant withdraws their own open request. */
+  withdrawCorrectionRequest(id: string): AttendanceCorrectionRequest {
+    const me = this.tenantCtx.requireResidentId();
+    const c = this.corrections.value.find((x) => x.id === id);
+    if (!c || c.residentId !== me) throw new Error('Correction request not found.');
+    if (c.status !== 'Open') throw new Error('Only an open request can be withdrawn.');
+    const next: AttendanceCorrectionRequest = { ...c, status: 'Withdrawn', decidedAt: localIso(), decidedBy: 'Resident' };
+    this.commitCorrections(this.corrections.value.map((x) => (x.id === id ? next : x)));
+    return next;
+  }
+
+  /** OWNER SIDE (for the owner screen to use later): every correction request, newest first. Owner / Admin only. */
+  allCorrectionRequests(): AttendanceCorrectionRequest[] {
+    if (!this.canCorrect) throw new Error('You do not have permission to view correction requests.');
+    return [...this.corrections.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  }
+
+  /**
+   * OWNER SIDE: accept or decline a request. Accepting does not edit the record: correct it with `save`
+   * (which needs a reason) and then record the outcome here. A decline needs a note.
+   */
+  decideCorrectionRequest(id: string, accept: boolean, note: string): AttendanceCorrectionRequest {
+    if (!this.canCorrect) throw new Error('You do not have permission to decide correction requests.');
+    const c = this.corrections.value.find((x) => x.id === id);
+    if (!c) throw new Error('Correction request not found.');
+    if (c.status !== 'Open') throw new Error('This request has already been decided.');
+    if (!accept && !note?.trim()) throw new Error('Give a reason for declining.');
+    const next: AttendanceCorrectionRequest = { ...c, status: accept ? 'Accepted' : 'Declined', decidedBy: this.userName, decidedAt: localIso(), decisionNote: note?.trim() || undefined };
+    this.commitCorrections(this.corrections.value.map((x) => (x.id === id ? next : x)));
+    this.notifyTenant(c.residentId, {
+      category: 'Support',
+      title: accept ? 'Attendance query accepted' : 'Attendance query declined',
+      body: `${c.id} for ${c.date} was ${accept ? 'accepted' : 'declined'}${next.decisionNote ? ': ' + next.decisionNote : '.'}`,
+      route: '/my/attendance',
+    });
+    return next;
+  }
+
+  private notifyTenant(residentId: string, n: NewTenantNotification): void {
+    try {
+      this.tenantNotify.push(residentId, n);
+    } catch {
+      // A notification must never block the action itself.
+    }
+  }
+
+  private nextCorrectionId(): string {
+    const max = this.corrections.value.reduce((m, c) => Math.max(m, Number(c.id.slice(3)) || 0), 0);
+    return `ACR${String(max + 1).padStart(6, '0')}`;
+  }
+
+  private commitCorrections(list: AttendanceCorrectionRequest[]): void {
+    this.corrections.next(list);
+    this.store(CORRECTIONS_KEY, list);
+  }
+
+  private loadCorrections(): AttendanceCorrectionRequest[] {
+    try {
+      const raw = localStorage.getItem(CORRECTIONS_KEY);
+      if (raw) return JSON.parse(raw) as AttendanceCorrectionRequest[];
+    } catch {
+      // Fall through to the seed data.
+    }
+    const list: AttendanceCorrectionRequest[] = [
+      {
+        id: 'ACR000001',
+        hostelId: HOSTEL_ID,
+        residentId: 'RES000001',
+        date: dayOffset(-9),
+        reason: 'I was in the college library until late and did not scan at the gate.',
+        recordedStatus: 'Unknown',
+        status: 'Declined',
+        createdAt: `${dayOffset(-8)}T09:30:00`,
+        decidedBy: 'Hostel Owner',
+        decidedAt: `${dayOffset(-8)}T15:10:00`,
+        decisionNote: 'No gate or CCTV record found for that night. Please raise it with your warden.',
+      },
+    ];
+    this.store(CORRECTIONS_KEY, list);
+    return list;
   }
 
   saveMethods(methods: MethodSettings): void {

@@ -262,6 +262,47 @@ export class ResidentsService {
     return next;
   }
 
+  /**
+   * Applies a Hostel Owner-approved profile change that a Tenant requested (name, mobile, email,
+   * emergency contact, permanent address). Duplicate mobile / email are refused; nothing else can change here.
+   */
+  applyProfileChange(
+    residentId: string,
+    patch: Partial<Pick<HostelResident, 'firstName' | 'lastName' | 'mobile' | 'email' | 'emergencyContactName' | 'emergencyContactMobile' | 'permanentAddress'>>,
+  ): HostelResident {
+    const existing = this.require(residentId);
+    const next = { ...existing, ...patch, updatedAt: this.nowIso() } as HostelResident;
+    this.assertUnique({ mobile: next.mobile, email: next.email } as ResidentInput, residentId);
+    const changed = this.changedFields(existing, next);
+    if (changed.length) {
+      next.activity = [act(next.updatedAt, 'Profile updated', 'edit', `${changed.join(', ')} (tenant request approved)`), ...next.activity];
+    }
+    this.replace(next);
+    this.auditLog.record('Update Resident', this.auditEntity(next), { details: `Tenant profile request approved: ${changed.join(', ') || 'no change'}` });
+    return next;
+  }
+
+  /** Called when a resident asks for an activation code themselves (logged, no status change). */
+  recordActivationCodeSent(residentId: string): void {
+    const r = this.byId(residentId);
+    if (!r || r.status !== 'Invited') return;
+    const now = this.nowIso();
+    this.replace({ ...r, updatedAt: now, activity: [act(now, 'Activation code requested', 'sms', 'Requested by the resident'), ...r.activity] });
+  }
+
+  /** The resident verified their contact and created a password: Invited → Active. */
+  markActivated(residentId: string): void {
+    const r = this.require(residentId);
+    if (r.status !== 'Invited') throw new Error(`${residentFullName(r)} has already activated their account.`);
+    const now = this.nowIso();
+    this.replace({
+      ...r,
+      status: 'Active',
+      updatedAt: now,
+      activity: [act(now, 'Account activated', 'verified_user', 'Activated by the resident'), ...r.activity],
+    });
+  }
+
   sendInvite(residentId: string): void {
     const r = this.require(residentId);
     if (r.status !== 'Invited') throw new Error(`${residentFullName(r)} has already activated their account.`);

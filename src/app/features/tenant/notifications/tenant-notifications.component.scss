@@ -1,0 +1,36 @@
+@use '../complaints/tenant-kit' as kit;
+
+@include kit.tenant-kit;
+
+:host {
+  display: block;
+}
+
+.tn-item {
+  position: relative;
+}
+
+.tn-item .tk-row {
+  padding-right: 44px;
+}
+
+.tn-remove {
+  position: absolute;
+  top: 10px;
+  right: 6px;
+}
+
+.tn-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: #0d9488;
+  }
+}

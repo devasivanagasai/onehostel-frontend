@@ -77,6 +77,8 @@ export interface Visitor {
   idPurgedAt?: string;
   /** Local date-time (yyyy-mm-ddTHH:mm:ss). */
   expectedAt: string;
+  /** Optional departure time given by the resident (local date-time). */
+  expectedDepartureAt?: string;
   walkIn: boolean;
   /** Who raised it: the resident (app) or staff at the desk. */
   source: 'Resident' | 'Staff';

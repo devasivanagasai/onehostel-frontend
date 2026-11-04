@@ -1,0 +1,106 @@
+// Invoice details. Frame comes from <app-dialog>.
+
+.iv__badge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge--success { background: #dcfce7; color: #16a34a; }
+.status-badge--warning { background: #ffedd5; color: #ea580c; }
+.status-badge--danger { background: #fee2e2; color: #dc2626; }
+.status-badge--info { background: #e0f2fe; color: #0284c7; }
+.status-badge--neutral { background: #f1f5f9; color: #64748b; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.iv {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.iv__facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+
+  @media (max-width: 640px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  dt { font-size: 12.5px; color: #64748b; }
+  dd { margin: 0; font-size: 14px; font-weight: 600; color: #0f172a; overflow-wrap: anywhere; }
+}
+
+.iv__card {
+  padding: 14px 16px;
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+  background: #ffffff;
+
+  h4 { margin: 0 0 8px; font-size: 14.5px; color: #0f172a; }
+}
+
+.iv__sum {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td { padding: 6px 0; font-size: 14px; text-align: left; color: #475569; font-weight: 400; }
+  td { text-align: right; font-variant-numeric: tabular-nums; color: #0f172a; }
+  .iv__total th, .iv__total td { border-top: 1px solid #e2e8f0; font-weight: 700; color: #0f172a; }
+  .iv__due th, .iv__due td { font-weight: 700; color: #b45309; }
+}
+
+.iv__pay {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+
+    &:last-child { border-bottom: none; }
+  }
+}
+
+.iv__pay-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+
+  strong { font-size: 14.5px; color: #0f172a; }
+  small { flex-basis: 100%; font-size: 12.5px; color: #64748b; overflow-wrap: anywhere; }
+}
+
+.iv__pay-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  small { font-size: 12.5px; color: #64748b; }
+}
+
+.iv__empty { margin: 0; color: #94a3b8; font-size: 14px; }

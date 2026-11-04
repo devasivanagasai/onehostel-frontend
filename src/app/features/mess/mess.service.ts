@@ -4,6 +4,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FeesService } from '../../core/services/fees.service';
 import { ResidentsService } from '../../core/services/residents.service';
 import { HostelResident, residentFullName } from '../../core/models/residents.models';
+import { TenantContextService } from '../../core/services/tenant-context.service';
 import {
   AttendanceMark,
   DietaryAccess,
@@ -18,6 +19,7 @@ import {
   MessMenu,
   MessNotice,
   MessSettings,
+  PLAN_HINTS,
   PLAN_MEALS,
   addDays,
   clock,
@@ -65,11 +67,53 @@ export const billingRef = (period: string, residentId: string): string => `MESS-
 
 const attKey = (date: string, meal: MealType): string => `${date}|${meal}`;
 
+/** Opting out of a meal closes this many hours before it starts. */
+export const MEAL_OPTOUT_LEAD_HOURS = 3;
+
+export interface TenantMessCharge {
+  id: string;
+  description: string;
+  dueDate: string;
+  total: number;
+  balance: number;
+  status: string;
+}
+
+/** The Tenant's own meal plan, dietary note and mess charges. */
+export interface TenantMessPlan {
+  plan: MealPlan;
+  hint: string;
+  meals: MealType[];
+  /** Supplied by the hostel; only the Tenant's own. */
+  dietaryNote?: string;
+  noteUpdatedAt?: string;
+  /** Monthly Mess fee for monthly plans. */
+  monthlyFee?: number;
+  /** Per-meal rates, for Pay per Meal. */
+  rates?: Record<MealType, number>;
+  charges: TenantMessCharge[];
+  optOutSupported: boolean;
+}
+
+export interface TenantMealStatus {
+  /** The plan covers this meal. */
+  covered: boolean;
+  /** The owner's meal attendance switch is on, so preferences can be recorded. */
+  supported: boolean;
+  mark?: AttendanceMark;
+  canChange: boolean;
+  /** Last moment the preference can change (local date-time, yyyy-mm-ddTHH:mm). */
+  deadline: string;
+  reason: string;
+  billingImpact: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MessService {
   private readonly residents = inject(ResidentsService);
   private readonly fees = inject(FeesService);
   private readonly auth = inject(AuthService);
+  private readonly tenantCtx = inject(TenantContextService);
 
   private readonly state = new BehaviorSubject<MessState>(this.load());
   readonly state$ = this.state.asObservable();
@@ -304,6 +348,94 @@ export class MessService {
       else delete day[id];
     }
     this.commit({ attendance: { ...this.state.value.attendance, [key]: day } });
+  }
+
+  // ---- Tenant (resident app) -------------------------------------------------------
+  // Tenants see only Published menus, their own plan and dietary note, and can change only their own
+  // meal preference (opt-in / opt-out), never anyone else's and never a meal that has started.
+
+  /** Published menus from `from` to `to` (inclusive, yyyy-mm-dd). Drafts are never returned. */
+  tenantMenus(from: string, to: string): MessMenu[] {
+    if (!this.tenantCtx.residentId) return [];
+    return this.menus
+      .filter((m) => m.status === 'Published' && m.date >= from && m.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date) || MEAL_TYPES.indexOf(a.mealType) - MEAL_TYPES.indexOf(b.mealType));
+  }
+
+  /** The published menu for a date and meal, if any. */
+  tenantMenuFor(date: string, meal: MealType): MessMenu | undefined {
+    const m = this.menuFor(date, meal);
+    return this.tenantCtx.residentId && m?.status === 'Published' ? m : undefined;
+  }
+
+  /** The Tenant's own plan, dietary note and mess charges. */
+  tenantPlan(): TenantMessPlan | undefined {
+    const me = this.tenantCtx.residentId;
+    if (!me) return undefined;
+    const p = this.profile(me);
+    const messFee = this.fees.fees.find((f) => f.name === 'Mess' && f.status === 'Active');
+    const charges = this.fees.charges
+      .filter((c) => c.residentId === me && (this.fees.feeById(c.feeId)?.name === 'Mess' || c.description.startsWith('Mess')))
+      .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
+      .map((c) => ({ id: c.id, description: c.description.replace(/\s*\(MESS-[^)]*\)/, ''), dueDate: c.dueDate, total: c.total, balance: this.fees.balance(c), status: this.fees.chargeStatus(c) }));
+    return {
+      plan: p.plan,
+      hint: PLAN_HINTS[p.plan],
+      meals: PLAN_MEALS[p.plan],
+      dietaryNote: p.dietaryNote,
+      noteUpdatedAt: p.noteUpdatedAt,
+      monthlyFee: MONTHLY_PLANS.includes(p.plan) && messFee ? messFee.amount : undefined,
+      rates: p.plan === 'Pay per Meal' ? this.settings.rates : undefined,
+      charges,
+      optOutSupported: this.settings.attendanceEnabled,
+    };
+  }
+
+  /** Whether the meal has been served: today's meal counts once its serving window has ended. */
+  tenantServed(date: string, meal: MealType): boolean {
+    const today = todayStr();
+    if (date < today) return true;
+    if (date > today) return false;
+    const end = this.menuFor(date, meal)?.end ?? MEAL_TIMES[meal][1];
+    return end <= localIso().slice(11, 16);
+  }
+
+  /** Opt-in / opt-out state of one meal for the Tenant, with the deadline and billing impact. */
+  tenantMealStatus(date: string, meal: MealType): TenantMealStatus {
+    const me = this.tenantCtx.residentId;
+    const plan = me ? this.profile(me).plan : 'No Mess';
+    const covered = PLAN_MEALS[plan].includes(meal);
+    const supported = this.settings.attendanceEnabled;
+    const mark = me ? this.marks(date, meal)[me] : undefined;
+    const start = this.menuFor(date, meal)?.start ?? MEAL_TIMES[meal][0];
+    const deadline = localIso(new Date(new Date(`${date}T${start}:00`).getTime() - MEAL_OPTOUT_LEAD_HOURS * 3_600_000)).slice(0, 16);
+    let reason = '';
+    if (!me) reason = 'Sign in as a Tenant to do this.';
+    else if (!supported) reason = 'The hostel has not turned on meal opt-in / opt-out.';
+    else if (!covered) reason = plan === 'No Mess' ? 'You are not on a mess plan.' : `Your ${plan} plan does not cover ${meal}.`;
+    else if (mark === 'Present') reason = 'Attendance is already recorded for this meal.';
+    else if (`${date}T${start}` <= localIso().slice(0, 16)) reason = 'This meal has already started.';
+    else if (localIso().slice(0, 16) > deadline) reason = `The deadline passed at ${clock(deadline.slice(11, 16))}; changes close ${MEAL_OPTOUT_LEAD_HOURS} hours before the meal.`;
+    const billingImpact =
+      plan === 'Pay per Meal'
+        ? mark === 'Opted out'
+          ? `You will not be billed for this meal (normally ${this.settings.rates[meal]}).`
+          : `Billed ${this.settings.rates[meal]} if you attend; opting out means no charge.`
+        : plan === 'No Mess'
+          ? 'No mess charges apply to you.'
+          : 'Your monthly Mess fee does not change when you skip a meal.';
+    return { covered, supported, mark, canChange: !reason, deadline, reason, billingImpact };
+  }
+
+  /** Opts the signed-in Tenant out of (or back into) one meal. Only their own preference changes. */
+  tenantSetOptOut(date: string, meal: MealType, optOut: boolean): void {
+    const me = this.tenantCtx.requireResidentId();
+    if (!MEAL_TYPES.includes(meal)) throw new Error('Pick a valid meal.');
+    const s = this.tenantMealStatus(date, meal);
+    if (!s.canChange) throw new Error(s.reason);
+    if (optOut && s.mark === 'Opted out') throw new Error('You have already opted out of this meal.');
+    if (!optOut && s.mark !== 'Opted out') throw new Error('You are already opted in for this meal.');
+    this.mark(date, meal, [me], optOut ? 'Opted out' : null);
   }
 
   // ---- Billing ------------------------------------------------------------------

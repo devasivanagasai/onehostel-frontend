@@ -1,0 +1,331 @@
+// Shared look for the Tenant daily-service pages (laundry, visitors, mess, leave, attendance, parcels, events).
+
+$primary: #3f73cd;
+$primary-dark: #2956ba;
+$text: #0f172a;
+$text-2: #475569;
+$muted: #64748b;
+$line: #e8edf3;
+$field-line: #cbd5e1;
+
+@mixin icon($size) {
+  font-size: $size;
+  width: $size;
+  height: $size;
+}
+
+:host {
+  display: block;
+}
+
+.td-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0 24px;
+  color: $text;
+}
+
+.td-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 { margin: 0; font-size: 18px; font-weight: 600; }
+  p { margin: 2px 0 0; font-size: 13.5px; color: $muted; }
+}
+
+.td-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  padding: 18px 20px;
+
+  h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  &__sub { margin: 0 0 12px; font-size: 13px; color: $muted; }
+}
+
+.td-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.td-split {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+
+  @media (max-width: 960px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Tabs ---- */
+.td-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid $line;
+  overflow-x: auto;
+}
+
+.td-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: $muted;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 44px;
+
+  mat-icon { @include icon(18px); }
+  &:hover { color: $text; }
+  &:focus-visible { outline: 2px solid $primary; outline-offset: -2px; border-radius: 6px; }
+  &.is-active { color: $primary-dark; border-bottom-color: $primary; }
+}
+
+.td-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #eef2f7;
+  font-size: 12px;
+  color: $text-2;
+}
+
+/* ---- Forms ---- */
+.td-form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  @media (max-width: 640px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+.td-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+
+  &--wide { grid-column: 1 / -1; }
+
+  label, .td-label { font-size: 13px; font-weight: 600; color: $text-2; }
+  .td-req { color: #d32f2f; margin-left: 2px; }
+
+  input, select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid $field-line;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 14px;
+    color: $text;
+
+    &:focus-visible { outline: 2px solid $primary; outline-offset: 1px; border-color: $primary; }
+    &:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+    &[aria-invalid='true'] { border-color: #d32f2f; }
+  }
+
+  textarea { min-height: 84px; resize: vertical; }
+}
+
+.td-hint { font-size: 12.5px; color: $muted; }
+.td-err { margin: 0; font-size: 12.5px; color: #c62828; }
+
+.td-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* ---- Banners ---- */
+.td-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  background: #eef4ff;
+  color: #1e3a8a;
+  border: 1px solid #d7e4ff;
+
+  mat-icon { @include icon(20px); flex: none; margin-top: 1px; }
+  p { margin: 0; }
+  &--warn { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+  &--ok { background: #ecfdf3; color: #166534; border-color: #bbf7d0; }
+  &--bad { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+}
+
+/* ---- Pills ---- */
+.td-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  background: #eef2f7;
+  color: #475569;
+
+  &--success { background: #e3f6ea; color: #166534; }
+  &--info { background: #e5effe; color: #1d4ed8; }
+  &--warning { background: #fff0dc; color: #b45309; }
+  &--danger { background: #fde8e8; color: #b91c1c; }
+  &--neutral { background: #eef2f7; color: #475569; }
+}
+
+/* ---- List rows ---- */
+.td-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.td-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid $line;
+  border-radius: 12px;
+  background: #fff;
+
+  &__main { flex: 1 1 260px; min-width: 0; }
+  &__title { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 600; font-size: 14.5px; }
+  &__sub { margin-top: 3px; font-size: 13px; color: $muted; }
+  &__meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 13px; color: $text-2; }
+  &__side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+}
+
+.td-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  mat-icon { @include icon(16px); color: $muted; }
+}
+
+.td-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 13.5px;
+
+  dt { color: $muted; }
+  dd { margin: 0; color: $text; word-break: break-word; }
+}
+
+.td-sep { border: none; border-top: 1px solid $line; margin: 12px 0; }
+
+.td-timeline {
+  margin: 8px 0 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid $line;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+
+  li { position: relative; }
+  li::before { content: ''; position: absolute; left: -22px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: $primary; }
+  .t-at { color: $muted; margin-right: 6px; }
+}
+
+/* ---- Filter bar ---- */
+.td-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+
+  select, input {
+    min-height: 40px;
+    padding: 6px 10px;
+    border: 1px solid $field-line;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 13.5px;
+    &:focus-visible { outline: 2px solid $primary; outline-offset: 1px; }
+  }
+}
+
+/* ---- Table (simple) ---- */
+.td-table-wrap { overflow-x: auto; }
+
+.td-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid $line; vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: $muted; font-weight: 600; white-space: nowrap; }
+  .nowrap { white-space: nowrap; }
+}
+
+/* ---- Slots / chips ---- */
+.td-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.td-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid $field-line;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: $text;
+  cursor: pointer;
+
+  small { font-size: 11.5px; font-weight: 500; color: $muted; }
+  &:hover:not(:disabled) { border-color: $primary; }
+  &:focus-visible { outline: 2px solid $primary; outline-offset: 2px; }
+  &.is-on { border-color: $primary; background: #eaf1fd; color: $primary-dark; }
+  &:disabled { cursor: not-allowed; background: #f8fafc; color: #94a3b8; border-style: dashed; small { color: #94a3b8; } }
+}
+
+.td-stars { display: inline-flex; gap: 2px; }
+.td-star {
+  border: none;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+  color: #cbd5e1;
+  line-height: 0;
+  mat-icon { @include icon(28px); }
+  &.is-on { color: #f59e0b; }
+  &:focus-visible { outline: 2px solid $primary; border-radius: 6px; }
+  &:disabled { cursor: default; }
+}
+
+.td-muted { color: $muted; }
+.td-small { font-size: 12.5px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

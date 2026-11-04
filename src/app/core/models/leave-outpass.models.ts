@@ -59,6 +59,8 @@ export interface LeaveRequest {
   departAt: string;
   returnAt: string;
   destination?: string;
+  /** Name of a supporting document the resident attached (file name only in this mock). */
+  supportingDocument?: string;
   contact: LeaveContact;
   status: ApprovalStatus;
   /** Who raised it: the resident (app) or staff on their behalf. */

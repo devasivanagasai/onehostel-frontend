@@ -1,0 +1,44 @@
+@use '../complaints/tenant-kit' as kit;
+
+@include kit.tenant-kit;
+
+:host {
+  display: block;
+}
+
+.tk-card--flush {
+  padding: 16px 20px 8px;
+}
+
+.sp-contact {
+  a {
+    color: #0d9488;
+    font-weight: 500;
+  }
+}
+
+.sp-subject {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #0f172a;
+  vertical-align: bottom;
+}
+
+.sp-gap {
+  margin-top: 14px;
+}
+
+.sp-gap-sm {
+  margin-top: 8px;
+}
+
+.sp-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}

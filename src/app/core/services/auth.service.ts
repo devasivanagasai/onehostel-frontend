@@ -6,7 +6,8 @@ import { environment } from '../../../environments/environment';
 import { AuthUser, LoginErrorCode, LoginRequest, LoginResponse } from '../models/auth.models';
 import { AuditLogService } from './audit-log.service';
 import { HostelAdminAccount, HostelAdminAccountService } from './hostel-admin-account.service';
-import { builtInPassword, findBuiltInAccount } from '../models/built-in-accounts';
+import { BUILT_IN_TENANT_RESIDENT_ID, builtInPassword, findBuiltInAccount } from '../models/built-in-accounts';
+import { TenantAccountService } from './tenant-account.service';
 import { SystemSettingsService } from './system-settings.service';
 
 const TOKEN_KEY = 'onehostel_token';
@@ -29,6 +30,12 @@ export const ADMIN_ONLY_ROUTES = [
  * Hostel Owner modules: shown only to users with the Hostel Owner role.
  * Hidden from Admins (Super Admin) and Tenants, in the menu, global search and by URL (adminGuard).
  */
+/**
+ * Tenant self-service modules ("/my/..."): shown only to users with the Tenant role.
+ * Hidden from Admins and Hostel Owners, in the menu, global search and by URL (adminGuard).
+ */
+export const TENANT_ROUTES = ['/my'];
+
 export const HOSTEL_OWNER_ROUTES = [
   '/rooms',
   '/residents',
@@ -81,6 +88,7 @@ export class AuthService {
     private auditLog: AuditLogService,
     private hostelAdmins: HostelAdminAccountService,
     private systemSettings: SystemSettingsService,
+    private tenantAccounts: TenantAccountService,
   ) {}
 
   get currentUser(): AuthUser | null {
@@ -105,6 +113,29 @@ export class AuthService {
       return this.completeLogin(this.hostelAdminResponse(account), request.rememberMe ?? false);
     }
 
+    // Tenants who activated their own account (see TenantAccountService).
+    const tenant = this.tenantAccounts.findByIdentifier(identifier);
+    if (tenant) {
+      const result = this.tenantAccounts.login(tenant, request.password);
+      if (!result.ok) {
+        this.auditLog.record('Login', tenant.email || tenant.mobile || tenant.residentId, { status: 'Failed', details: result.message });
+        return this.fail(result.message, 401, result.locked ? 'LOCKED' : undefined);
+      }
+      return this.completeLogin(
+        {
+          token: `mock-token-${Date.now()}`,
+          user: {
+            id: tenant.userId,
+            name: this.tenantAccounts.displayName(tenant.residentId),
+            email: tenant.email || '',
+            roles: ['Tenant'],
+            residentId: tenant.residentId,
+          },
+        },
+        request.rememberMe ?? false,
+      );
+    }
+
     // Built-in Admin / Tenant sign-ins (see built-in-accounts.ts) check their password.
     const builtIn = findBuiltInAccount(identifier);
     if (builtIn) {
@@ -117,9 +148,10 @@ export class AuthService {
           token: `mock-token-${Date.now()}`,
           user: {
             id: builtIn.id,
-            name: `${builtIn.firstName} ${builtIn.lastName}`,
+            name: builtIn.role === 'Tenant' ? this.tenantAccounts.displayName(BUILT_IN_TENANT_RESIDENT_ID) : `${builtIn.firstName} ${builtIn.lastName}`,
             email: builtIn.email,
             roles: [builtIn.role],
+            ...(builtIn.role === 'Tenant' ? { residentId: BUILT_IN_TENANT_RESIDENT_ID } : {}),
           },
         },
         request.rememberMe ?? false,
@@ -193,6 +225,7 @@ export class AuthService {
    *  - Everything else (Dashboard, Profile, Change Password): every signed-in user.
    */
   canAccess(route: string): boolean {
+    if (TENANT_ROUTES.some((r) => matchesRoute(route, r))) return this.isTenant;
     if (HOSTEL_OWNER_ROUTES.some((r) => matchesRoute(route, r))) return this.isHostelOwner;
     if (ADMIN_ONLY_ROUTES.some((r) => matchesRoute(route, r))) return this.isAdmin;
     return true;

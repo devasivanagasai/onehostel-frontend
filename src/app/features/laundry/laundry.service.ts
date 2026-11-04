@@ -4,6 +4,8 @@ import { AuthService } from '../../core/services/auth.service';
 import { FeesService } from '../../core/services/fees.service';
 import { RoomsService } from '../../core/services/rooms.service';
 import { ResidentsService } from '../../core/services/residents.service';
+import { TenantContextService } from '../../core/services/tenant-context.service';
+import { NewTenantNotification, TenantNotificationService } from '../../core/services/tenant-notification.service';
 import { HostelResident, residentFullName } from '../../core/models/residents.models';
 import {
   LaundryAvailability,
@@ -13,6 +15,7 @@ import {
   LaundryUnitInput,
   OPEN_STATUSES,
   Slot,
+  daysLabel,
   addDays,
   clock,
   dayOfWeek,
@@ -59,6 +62,52 @@ export interface BookingInput {
   notes?: string;
 }
 
+/** Free cancellation closes this many hours before a confirmed slot starts. */
+export const TENANT_CANCEL_CUTOFF_HOURS = 2;
+
+/** Shown to residents before they book. */
+export const NO_SHOW_POLICY =
+  'If you do not arrive within 15 minutes of the slot start, staff may mark the booking as a No-show. A no-show slot is not refunded and still counts towards your booking limit.';
+
+export type TenantSlotState = 'Available' | 'Full' | 'Maintenance' | 'Past' | 'Yours' | 'Clash';
+
+/** A slot as the resident sees it: only `Available` can be booked. */
+export interface TenantSlot extends Slot {
+  state: TenantSlotState;
+  /** Places left in this slot (machines and pickup windows hold one booking each). */
+  remaining: number;
+  capacity: number;
+}
+
+export type LaundryPaymentStatus = 'Not Required' | 'Unpaid' | 'Paid' | 'Refunded';
+
+export interface TenantBookingInput {
+  unitId: string;
+  date: string;
+  start: string;
+  items?: number;
+  notes?: string;
+}
+
+export interface TenantLaundryReminder {
+  bookingId: string;
+  kind: 'Reminder' | 'Notice';
+  message: string;
+  at: string;
+}
+
+export interface TenantBookingSummary {
+  unit: LaundryUnit;
+  date: string;
+  start: string;
+  end: string;
+  durationMinutes: number;
+  amount: number;
+  status: 'Requested' | 'Confirmed';
+  cancelCutoff: string;
+  rules: string[];
+}
+
 /** Booking reference written into the charge description; used to find an existing charge. */
 export const chargeRef = (bookingId: string): string => `(${bookingId})`;
 
@@ -68,6 +117,8 @@ export class LaundryService {
   private readonly rooms = inject(RoomsService);
   private readonly fees = inject(FeesService);
   private readonly auth = inject(AuthService);
+  private readonly tenantCtx = inject(TenantContextService);
+  private readonly tenantNotify = inject(TenantNotificationService);
 
   private readonly state = new BehaviorSubject<LaundryState>(this.load());
 
@@ -219,6 +270,7 @@ export class LaundryService {
     if (this.unit(b.unitId)?.state !== 'Active') throw new Error('The machine is not available.');
     if (`${b.date}T${b.end}` <= localIso()) throw new Error('This slot has already ended.');
     this.patchBooking(id, { status: 'Confirmed' });
+    this.notifyTenant(b.residentId, { category: 'Booking', title: 'Booking confirmed', body: `${this.unit(b.unitId)?.name ?? 'Your booking'} on ${b.date} at ${clock(b.start)} (${b.id}) is confirmed.`, route: '/my/laundry' });
   }
 
   /** Completes the booking; a paid booking is billed once (see postCharge). Returns the charge ID if one was created. */
@@ -241,6 +293,7 @@ export class LaundryService {
     const b = this.requireBooking(id);
     if (!OPEN_STATUSES.includes(b.status)) throw new Error('Only requested or confirmed bookings can be cancelled.');
     this.patchBooking(id, { status: 'Cancelled', cancelReason: reason });
+    this.notifyTenant(b.residentId, { category: 'Booking', title: 'Booking cancelled', body: `${this.unit(b.unitId)?.name ?? 'Your booking'} on ${b.date} at ${clock(b.start)} (${b.id}) was cancelled: ${reason}.`, route: '/my/laundry' });
   }
 
   /**
@@ -272,6 +325,170 @@ export class LaundryService {
 
   started(b: LaundryBooking): boolean {
     return `${b.date}T${b.start}` <= localIso();
+  }
+
+  // ---- Tenant (resident app) ------------------------------------------------------
+  // Every method works on the signed-in Tenant's own bookings only. The resident id comes from
+  // TenantContextService, never from the caller, and the booking rules are the owner's (`book`, `cancel`).
+
+  /** Machines / services a Tenant can see (inactive ones are hidden; maintenance ones are shown but not bookable). */
+  tenantUnits(): LaundryUnit[] {
+    if (!this.tenantCtx.residentId) return [];
+    return this.units.filter((u) => u.state !== 'Inactive');
+  }
+
+  /** The signed-in Tenant's bookings, newest first. */
+  tenantBookings(): LaundryBooking[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    return this.bookings
+      .filter((b) => b.residentId === me)
+      .sort((a, b) => `${b.date}${b.start}`.localeCompare(`${a.date}${a.start}`) || b.id.localeCompare(a.id));
+  }
+
+  /** The Tenant's own open booking that overlaps the window on that date, on any machine. */
+  private tenantClash(me: string, date: string, start: string, end: string): LaundryBooking | undefined {
+    return this.bookings.find((x) => x.residentId === me && OPEN_STATUSES.includes(x.status) && x.date === date && x.start < end && start < x.end);
+  }
+
+  /** Slots for a date as the Tenant sees them. Maintenance-blocked, past, full and clashing slots are never `Available`. */
+  tenantSlots(unitId: string, date: string): TenantSlot[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    if (date < todayStr() || date > addDays(todayStr(), BOOKING_WINDOW_DAYS)) return [];
+    return this.slots(unitId, date).map((s) => {
+      const own = this.tenantClash(me, date, s.start, s.end);
+      let state: TenantSlotState;
+      if (s.blocked === 'Maintenance') state = 'Maintenance';
+      else if (s.blocked === 'Past') state = 'Past';
+      else if (s.blocked === 'Booked') state = own && own.unitId === unitId ? 'Yours' : 'Full';
+      else state = own ? 'Clash' : 'Available';
+      return { ...s, state, remaining: state === 'Available' ? 1 : 0, capacity: 1 };
+    });
+  }
+
+  /** Bookings used / allowed in the limit period around `date` for this machine. */
+  tenantQuota(unitId: string, date: string): { used: number; limit: number; period: 'day' | 'week' } {
+    const me = this.tenantCtx.residentId;
+    const u = this.requireUnit(unitId);
+    return { used: me ? this.usedQuota(u, me, date) : 0, limit: u.limitCount, period: u.limitPeriod };
+  }
+
+  /** Price, duration and rules shown before the Tenant confirms. */
+  tenantBookingSummary(input: TenantBookingInput): TenantBookingSummary {
+    const u = this.requireUnit(input.unitId);
+    const slot = this.slots(u.id, input.date).find((s) => s.start === input.start);
+    if (!slot) throw new Error(`${u.name} has no ${clock(input.start)} slot on that day.`);
+    return {
+      unit: u,
+      date: input.date,
+      start: slot.start,
+      end: slot.end,
+      durationMinutes: u.slotMinutes,
+      amount: this.amountFor(u, input.items),
+      status: u.type === 'Laundry Service' ? 'Requested' : 'Confirmed',
+      cancelCutoff: this.cancelCutoff({ date: input.date, start: slot.start }),
+      rules: [
+        `Open ${clock(u.openTime)} – ${clock(u.closeTime)}, ${daysLabel(u.days)}; each slot is ${u.slotMinutes} minutes.`,
+        `Limit: ${u.limitCount} booking(s) per ${u.limitPeriod} for this ${u.type === 'Laundry Service' ? 'service' : 'machine'}.`,
+        u.type === 'Laundry Service' ? 'Staff confirm laundry service bookings; you will be notified.' : 'Machine bookings are confirmed straight away.',
+        u.price > 0 ? `${this.priceLabel(u)}; charged to Fees & Payments after the slot is completed.` : 'No charge for this booking.',
+        `Free cancellation until ${TENANT_CANCEL_CUTOFF_HOURS} hours before the slot starts. ${NO_SHOW_POLICY}`,
+      ],
+    };
+  }
+
+  /**
+   * Books for the signed-in Tenant under the owner's rules (operating hours, slot, booking window, limit,
+   * maintenance, no double-booking) plus: no overlap with the Tenant's own other bookings. A staffed
+   * laundry service starts as Requested (staff confirm); a self-service machine is Confirmed at once.
+   */
+  tenantBook(input: TenantBookingInput): LaundryBooking {
+    const me = this.tenantCtx.requireResidentId();
+    const u = this.requireUnit(input.unitId);
+    const slot = this.slots(u.id, input.date).find((s) => s.start === input.start);
+    if (slot) {
+      const clash = this.tenantClash(me, input.date, slot.start, slot.end);
+      if (clash) throw new Error(`You already have booking ${clash.id} at ${clock(clash.start)} on that day. Cancel it first or pick another time.`);
+    }
+    const booking = this.book({ unitId: input.unitId, residentId: me, date: input.date, start: input.start, items: input.items, notes: input.notes });
+    const status = u.type === 'Laundry Service' ? 'Requested' : 'Confirmed';
+    this.patchBooking(booking.id, { status, createdBy: 'Resident App' });
+    this.notifyTenant(me, {
+      category: 'Booking',
+      title: status === 'Confirmed' ? 'Booking confirmed' : 'Booking requested',
+      body: `${u.name} on ${booking.date} at ${clock(booking.start)} (${booking.id}) is ${status.toLowerCase()}.`,
+      route: '/my/laundry',
+    });
+    return this.requireBooking(booking.id);
+  }
+
+  /** Last moment a booking can be cancelled for free (local date-time, yyyy-mm-ddTHH:mm). */
+  cancelCutoff(b: Pick<LaundryBooking, 'date' | 'start'>): string {
+    return localIso(new Date(new Date(`${b.date}T${b.start}:00`).getTime() - TENANT_CANCEL_CUTOFF_HOURS * 3_600_000)).slice(0, 16);
+  }
+
+  /** Why the booking can't be cancelled online right now; '' when it can. */
+  tenantCancelBlocker(b: LaundryBooking): string {
+    if (!OPEN_STATUSES.includes(b.status)) return `A ${b.status.toLowerCase()} booking can't be cancelled.`;
+    const now = localIso().slice(0, 16);
+    if (`${b.date}T${b.start}` <= now) return 'The slot has already started.';
+    if (b.status === 'Confirmed' && now > this.cancelCutoff(b)) {
+      return `Free cancellation closed ${TENANT_CANCEL_CUTOFF_HOURS} hours before the slot. Contact the hostel office.`;
+    }
+    return '';
+  }
+
+  /** Cancels one of the Tenant's own bookings inside the cancellation window. */
+  tenantCancel(id: string): void {
+    const me = this.tenantCtx.requireResidentId();
+    const b = this.bookings.find((x) => x.id === id);
+    if (!b || b.residentId !== me) throw new Error('Booking not found.');
+    const blocker = this.tenantCancelBlocker(b);
+    if (blocker) throw new Error(blocker);
+    this.cancel(id, 'Cancelled by resident');
+  }
+
+  /** Not Required (free, or cancelled before billing), Unpaid (billed after completion), Paid or Refunded. */
+  paymentStatus(b: LaundryBooking): LaundryPaymentStatus {
+    if (!(b.amount > 0)) return 'Not Required';
+    if (b.chargeId) {
+      if (this.fees.paymentsFor(b.chargeId).some((p) => p.status === 'Refunded')) return 'Refunded';
+      const c = this.fees.chargeById(b.chargeId);
+      if (c?.cancelledAt) return 'Not Required';
+      if (c && this.fees.chargeStatus(c) === 'Paid') return 'Paid';
+      return 'Unpaid';
+    }
+    return b.status === 'Cancelled' ? 'Not Required' : 'Unpaid';
+  }
+
+  /** Reminders for the Tenant's upcoming bookings (next 48 hours) and notices about bookings the hostel cancelled. */
+  tenantReminders(): TenantLaundryReminder[] {
+    const me = this.tenantCtx.residentId;
+    if (!me) return [];
+    const now = Date.now();
+    const out: TenantLaundryReminder[] = [];
+    for (const b of this.bookings.filter((x) => x.residentId === me && OPEN_STATUSES.includes(x.status))) {
+      const startMs = new Date(`${b.date}T${b.start}:00`).getTime();
+      if (startMs < now || startMs - now > 48 * 3_600_000) continue;
+      const hours = Math.max(1, Math.round((startMs - now) / 3_600_000));
+      out.push({
+        bookingId: b.id,
+        kind: 'Reminder',
+        message: `${this.unit(b.unitId)?.name ?? 'Booking'} ${b.id} starts in about ${hours} hour(s), at ${clock(b.start)} on ${b.date}.`,
+        at: `${b.date}T${b.start}`,
+      });
+    }
+    for (const n of this.notices.filter((x) => x.residentId === me)) out.push({ bookingId: n.bookingId, kind: 'Notice', message: n.message, at: n.at });
+    return out.sort((a, b) => a.at.localeCompare(b.at));
+  }
+
+  private notifyTenant(residentId: string, n: NewTenantNotification): void {
+    try {
+      this.tenantNotify.push(residentId, n);
+    } catch {
+      // A notification must never block the booking itself.
+    }
   }
 
   // ---- Machines / services --------------------------------------------------------
@@ -334,6 +551,7 @@ export class LaundryService {
 
   /** (Mock) notifications for bookings cancelled by a machine change. */
   private cancellationNotices(u: LaundryUnit, affected: LaundryBooking[], reason: string, now: string, note?: string): LaundryNotice[] {
+    affected.forEach((b) => this.notifyTenant(b.residentId, { category: 'Booking', title: 'Booking cancelled', body: `${u.name} on ${b.date} at ${clock(b.start)} (${b.id}) was cancelled: ${reason}. Please book another slot.`, route: '/my/laundry' }));
     return affected.map((b, i) => ({
       id: `LN${Date.now()}${i}`,
       residentId: b.residentId,

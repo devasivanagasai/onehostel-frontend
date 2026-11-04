@@ -1,0 +1,81 @@
+<form (ngSubmit)="submit()" novalidate>
+  <app-dialog title="Request profile update" subtitle="The hostel office reviews every change before it is applied." icon="edit_note" tone="teal" (closed)="close()">
+    <div class="rq">
+      <div class="fk-field">
+        <label class="fk-label" for="rq-field">What do you want to change?<span class="req">*</span></label>
+        <span class="fk-control">
+          <select id="rq-field" name="field" [(ngModel)]="field" (ngModelChange)="onFieldChange()">
+            @for (f of fields; track f) { <option [value]="f">{{ labels[f] }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+      </div>
+
+      <div class="rq__current"><span>Current value</span><strong>{{ current }}</strong></div>
+
+      @if (field === 'emergencyContact') {
+        <div class="rq__grid">
+          <div class="fk-field">
+            <label class="fk-label" for="rq-name">Contact name<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="submitted && problem">
+              <input id="rq-name" name="value" [(ngModel)]="value" (ngModelChange)="onValueChange()" maxlength="60" autocomplete="off" />
+            </span>
+          </div>
+          <div class="fk-field">
+            <label class="fk-label" for="rq-mobile2">Contact mobile<span class="req">*</span></label>
+            <span class="fk-control" [class.is-invalid]="submitted && problem">
+              <input id="rq-mobile2" name="value2" [(ngModel)]="value2" (ngModelChange)="onValueChange()" inputmode="numeric" maxlength="10" placeholder="10 digits" autocomplete="off" />
+            </span>
+          </div>
+        </div>
+      } @else if (field === 'permanentAddress') {
+        <div class="fk-field">
+          <label class="fk-label" for="rq-value">New permanent address<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="submitted && problem">
+            <textarea id="rq-value" name="value" rows="3" [(ngModel)]="value" (ngModelChange)="onValueChange()" maxlength="200"></textarea>
+          </span>
+        </div>
+      } @else {
+        <div class="fk-field">
+          <label class="fk-label" for="rq-value">New {{ labels[field].toLowerCase() }}<span class="req">*</span></label>
+          <span class="fk-control" [class.is-invalid]="submitted && problem">
+            <input id="rq-value" name="value" [(ngModel)]="value" (ngModelChange)="onValueChange()"
+              [attr.inputmode]="field === 'mobile' ? 'numeric' : null" [attr.maxlength]="field === 'mobile' ? 10 : 80"
+              [placeholder]="field === 'mobile' ? '10 digits, no country code' : field === 'email' ? 'name@example.com' : ''" autocomplete="off" />
+          </span>
+        </div>
+      }
+
+      @if (needsVerification) {
+        <div class="rq__verify">
+          <p><mat-icon fontSet="material-icons-outlined">verified_user</mat-icon>A change of {{ field === 'mobile' ? 'mobile number' : 'email address' }} needs verification. We send a code to the <strong>new</strong> {{ field === 'mobile' ? 'number' : 'address' }}.</p>
+          <app-button variant="outline" size="sm" icon="send" [loading]="sending" (clicked)="sendCode()">{{ codeSentForValue ? 'Resend code' : 'Send verification code' }}</app-button>
+          @if (codeSentForValue && sent) {
+            <p class="rq__sim" role="status">Simulation: no real message is sent. Your code for {{ sent.sentTo }} is <strong>{{ sent.simulatedCode }}</strong> (valid {{ sent.expiresInMinutes }} minutes).</p>
+            <div class="fk-field">
+              <label class="fk-label" for="rq-code">Verification code<span class="req">*</span></label>
+              <span class="fk-control">
+                <input id="rq-code" name="code" [(ngModel)]="code" inputmode="numeric" maxlength="6" placeholder="6-digit code" autocomplete="one-time-code" />
+              </span>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="fk-field">
+        <label class="fk-label" for="rq-reason">Reason for the change<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="submitted && reason.trim().length < 5">
+          <textarea id="rq-reason" name="reason" rows="2" [(ngModel)]="reason" (ngModelChange)="error = ''" maxlength="200" placeholder="e.g. I changed my phone number"></textarea>
+        </span>
+      </div>
+
+      @if (submitted && problem) { <p class="rq__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ problem }}</p> }
+      @else if (error) { <p class="rq__error" role="alert"><mat-icon fontSet="material-icons-outlined">error</mat-icon>{{ error }}</p> }
+    </div>
+
+    <ng-container dialogFooter>
+      <app-button variant="secondary" (clicked)="close()">Cancel</app-button>
+      <app-button type="submit" icon="send" [loading]="saving">Send request</app-button>
+    </ng-container>
+  </app-dialog>
+</form>

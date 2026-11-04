@@ -1,0 +1,84 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-dialog
+    [title]="created ? 'Request submitted' : 'New Support Request'"
+    [subtitle]="created ? 'The hostel office will reply here.' : 'Ask the hostel office for help with your account or stay.'"
+    [icon]="created ? 'check_circle' : 'support_agent'"
+    [tone]="created ? 'green' : 'teal'"
+    [hideClose]="saving"
+    (closed)="close()"
+  >
+    @if (created) {
+      <div class="tk-notice tk-notice--success" role="status">
+        <mat-icon>task_alt</mat-icon>
+        <p>Your support reference is <strong class="tk-mono">{{ created.id }}</strong>. Quote it if you contact the office.</p>
+      </div>
+    } @else {
+      <div class="fk-field">
+        <label class="fk-label" for="sp-topic">Help topic<span class="req">*</span></label>
+        <span class="fk-control">
+          <select id="sp-topic" formControlName="topic">
+            @for (t of topics; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          <mat-icon class="fk-caret">expand_more</mat-icon>
+        </span>
+      </div>
+
+      <div class="fk-field sp-gap">
+        <label class="fk-label" for="sp-subject">Subject<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid('subject')">
+          <input id="sp-subject" formControlName="subject" [maxlength]="subjectMax" placeholder="Short summary" autocomplete="off" [attr.aria-invalid]="invalid('subject')" />
+        </span>
+        <span class="tk-meta-row">
+          @if (invalid('subject')) { <span class="fk-error" role="alert">Subject must be {{ subjectMin }} to {{ subjectMax }} characters.</span> }
+          <span class="tk-count">{{ form.controls.subject.value.length }}/{{ subjectMax }}</span>
+        </span>
+      </div>
+
+      <div class="fk-field sp-gap">
+        <label class="fk-label" for="sp-description">Description<span class="req">*</span></label>
+        <span class="fk-control" [class.is-invalid]="invalid('description')">
+          <textarea id="sp-description" formControlName="description" rows="4" [maxlength]="descriptionMax" placeholder="Tell us what happened and what you need" [attr.aria-invalid]="invalid('description')"></textarea>
+        </span>
+        <span class="tk-meta-row">
+          @if (invalid('description')) { <span class="fk-error" role="alert">Describe the problem in at least {{ descriptionMin }} characters.</span> }
+          <span class="tk-count">{{ form.controls.description.value.length }}/{{ descriptionMax }}</span>
+        </span>
+      </div>
+
+      <label class="tk-drop sp-gap" [class.is-disabled]="attachments.length >= maxFiles">
+        <mat-icon fontSet="material-icons-outlined">attach_file</mat-icon>
+        <span>
+          <strong>Add a screenshot or file (optional)</strong>
+          <small>Up to {{ maxFiles }} files, JPG, PNG or PDF, 5 MB each</small>
+        </span>
+        <input type="file" multiple [accept]="accept" (change)="onFiles($event)" class="tk-sr" [disabled]="attachments.length >= maxFiles" aria-label="Add attachments" />
+      </label>
+      @if (attachmentError) { <p class="tk-error" role="alert">{{ attachmentError }}</p> }
+      @if (attachments.length) {
+        <ul class="tk-attach sp-gap">
+          @for (a of attachments; track $index) {
+            <li>
+              <mat-icon>{{ a.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}</mat-icon>
+              <span>{{ a.name }}</span><small>{{ formatFileSize(a.size) }}</small>
+              <app-button variant="icon" size="sm" icon="close" [ariaLabel]="'Remove ' + a.name" (clicked)="removeAttachment($index)"></app-button>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (submitError) {
+        <div class="tk-notice tk-notice--danger sp-gap" role="alert"><mat-icon>error</mat-icon><p>{{ submitError }}</p></div>
+      }
+
+    }
+
+    <ng-container dialogFooter>
+      @if (created) {
+        <app-button type="button" (clicked)="close()">Done</app-button>
+      } @else {
+        <app-button variant="secondary" type="button" [disabled]="saving" (clicked)="close()">Cancel</app-button>
+        <app-button variant="accent" type="submit" [loading]="saving">Send request</app-button>
+      }
+    </ng-container>
+  </app-dialog>
+</form>

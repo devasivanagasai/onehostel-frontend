@@ -1,0 +1,189 @@
+<div class="onboarding-page tf">
+  @if (state === 'loading') {
+    <div class="tf__state" role="status" aria-live="polite">
+      <span class="tf__spinner" aria-hidden="true"></span>
+      <p>Loading your invoices…</p>
+    </div>
+  } @else if (state === 'error') {
+    <div class="tf__state tf__state--error" role="alert">
+      <mat-icon fontSet="material-icons-outlined">error_outline</mat-icon>
+      <p>We couldn’t load your invoices. Check your connection and try again.</p>
+      <app-button variant="secondary" icon="refresh" (clicked)="load()">Retry</app-button>
+    </div>
+  } @else {
+    <!-- Summary -->
+    <section class="kpi-row tf__kpis" aria-label="Fees summary">
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--orange"><mat-icon fontSet="material-icons-outlined">account_balance_wallet</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Outstanding</span>
+          <span class="kpi-card__value">{{ fmt.money(summary.outstandingTotal, 0) }}</span>
+          <span class="kpi-card__sub">{{ summary.outstandingTotal > 0 ? 'Across your open invoices' : 'You are all paid up' }}</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--blue"><mat-icon fontSet="material-icons-outlined">event</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Next due date</span>
+          <span class="kpi-card__value tf__small">{{ summary.nextDue ? fmt.date(summary.nextDue.date) : '—' }}</span>
+          <span class="kpi-card__sub">{{ summary.nextDue ? summary.nextDue.invoiceId + ' · ' + fmt.money(summary.nextDue.amount, 0) : 'Nothing due' }}</span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon kpi-card__icon--green"><mat-icon fontSet="material-icons-outlined">receipt_long</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Latest payment</span>
+          @if (summary.latestPayment; as lp) {
+            <span class="tf__latest"><span class="status-badge status-badge--{{ latestTone }}">{{ lp.status }}</span></span>
+            <span class="kpi-card__sub">{{ fmt.money(lp.amount, 0) }} · {{ fmt.date(lp.date) }}</span>
+          } @else {
+            <span class="kpi-card__value tf__small">—</span>
+            <span class="kpi-card__sub">No payments yet</span>
+          }
+        </div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-card__icon tf__icon--red"><mat-icon fontSet="material-icons-outlined">running_with_errors</mat-icon></span>
+        <div class="kpi-card__body">
+          <span class="kpi-card__label">Overdue invoices</span>
+          <span class="kpi-card__value" [class.tf__red]="summary.overdueCount > 0">{{ summary.overdueCount }}</span>
+          <span class="kpi-card__sub">{{ summary.overdueCount ? 'Please pay to avoid late fees' : 'None overdue' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <p class="tf__note"><mat-icon fontSet="material-icons-outlined">info</mat-icon>These are your hostel charges. They are separate from any subscription fee the hostel pays to ONEHOSTEL. You can’t change amounts, payment status or receipts.</p>
+
+    <!-- Tabs -->
+    <div class="tf__tabs" role="tablist" aria-label="Fees views">
+      <button type="button" role="tab" id="tf-tab-invoices" [attr.aria-selected]="tab === 'invoices'" [class.is-on]="tab === 'invoices'" (click)="tab = 'invoices'">Invoices</button>
+      <button type="button" role="tab" id="tf-tab-transactions" [attr.aria-selected]="tab === 'transactions'" [class.is-on]="tab === 'transactions'" (click)="tab = 'transactions'">Transaction history</button>
+    </div>
+
+    @if (tab === 'invoices') {
+      <div class="filter-card" role="tabpanel" aria-labelledby="tf-tab-invoices">
+        <label class="filter-search">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Search invoice ID, fee type or period" aria-label="Search invoices" [(ngModel)]="filters.search" (ngModelChange)="currentPage = 0" />
+          @if (filters.search) {
+            <button type="button" class="filter-search__clear" aria-label="Clear search" (click)="filters.search = ''; currentPage = 0"><mat-icon>close</mat-icon></button>
+          }
+        </label>
+        <label class="filter-select">
+          <span class="filter-select__control">
+            <select aria-label="Status" [(ngModel)]="filters.status" (ngModelChange)="currentPage = 0">
+              <option value="All">All Statuses</option>
+              @for (s of statuses; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+            <mat-icon>expand_more</mat-icon>
+          </span>
+        </label>
+        <label class="filter-select">
+          <span class="filter-select__control">
+            <select aria-label="Fee type" [(ngModel)]="filters.feeType" (ngModelChange)="currentPage = 0">
+              <option value="All">All Fee Types</option>
+              @for (t of feeTypes; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+            <mat-icon>expand_more</mat-icon>
+          </span>
+        </label>
+        @if (hasFilters) {
+          <app-button variant="text" size="sm" icon="restart_alt" (clicked)="clearFilters()">Reset</app-button>
+        }
+      </div>
+
+      <app-table-card
+        [empty]="filtered.length === 0"
+        [emptyIcon]="hasFilters ? 'search_off' : 'receipt_long'"
+        [emptyMessage]="hasFilters ? 'No invoices match your filters' : 'No invoices yet'"
+        [emptyHint]="hasFilters ? 'Try a different search, status or fee type.' : 'Invoices raised by your hostel will appear here.'"
+        [clearable]="hasFilters"
+        (clear)="clearFilters()"
+        [page]="safePage"
+        [totalPages]="totalPages"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+        (pageSizeChange)="onPageSizeChange($event)"
+      >
+        <table class="saas-table tf__table" aria-label="Your invoices">
+          <thead>
+            <tr>
+              <th>Invoice</th><th>Fee type</th><th>Period</th><th>Issued / Due</th>
+              <th class="tf__num">Total</th><th class="tf__num">Paid</th><th class="tf__num">Outstanding</th><th>Status</th><th class="actions-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (i of paged; track i.id) {
+              <tr [class.is-overdue]="i.status === 'Overdue'">
+                <td><strong>{{ i.id }}</strong><small class="tf__sub">{{ i.description }}</small></td>
+                <td>{{ i.feeType }}</td>
+                <td>{{ i.period }}</td>
+                <td class="tf__nowrap">{{ fmt.date(i.issueDate) }}<small class="tf__sub">Due {{ fmt.date(i.dueDate) }}</small></td>
+                <td class="tf__num">{{ fmt.money(i.total) }}</td>
+                <td class="tf__num">{{ fmt.money(i.paid) }}</td>
+                <td class="tf__num"><strong>{{ fmt.money(i.outstanding) }}</strong>@if (i.pendingAmount > 0) { <small class="tf__sub">{{ fmt.money(i.pendingAmount) }} pending</small> }</td>
+                <td><span class="status-badge status-badge--{{ invoiceTone[i.status] }}">{{ i.status }}</span></td>
+                <td class="actions-cell">
+                  <span class="tf__actions">
+                    <app-button variant="icon" size="sm" icon="visibility" matTooltip="View details" [ariaLabel]="'View invoice ' + i.id" (clicked)="openInvoice(i)"></app-button>
+                    <app-button variant="icon" size="sm" icon="download" matTooltip="Download invoice" [ariaLabel]="'Download invoice ' + i.id" (clicked)="downloadInvoice(i)"></app-button>
+                    @if (canPay(i)) {
+                      <app-button variant="outline" size="sm" [icon]="i.activeAttemptRef ? 'hourglass_top' : 'payments'" [ariaLabel]="(i.activeAttemptRef ? 'Check payment status for ' : 'Pay ') + i.id" (clicked)="pay(i)">{{ i.activeAttemptRef ? 'Check status' : 'Pay Now' }}</app-button>
+                    }
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </app-table-card>
+    } @else {
+      <app-table-card
+        role="tabpanel"
+        [empty]="transactions.length === 0"
+        emptyIcon="history"
+        emptyMessage="No payments yet"
+        emptyHint="Your payments and their receipts will appear here."
+        [page]="txSafePage"
+        [totalPages]="txTotalPages"
+        [pageSize]="txPageSize"
+        (pageChange)="txPage = $event"
+        (pageSizeChange)="onTxPageSizeChange($event)"
+      >
+        <table class="saas-table tf__table" aria-label="Your payment history">
+          <thead>
+            <tr><th>Reference</th><th>Date</th><th>Invoice</th><th>Method</th><th class="tf__num">Amount</th><th>Status</th><th>Receipt</th><th class="actions-header">Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (t of txPaged; track t.ref) {
+              <tr>
+                <td><strong class="tf__ref">{{ t.ref }}</strong>@if (t.note) { <small class="tf__sub">{{ t.note }}</small> }</td>
+                <td class="tf__nowrap">{{ fmt.date(t.date, 'datetime') }}</td>
+                <td>{{ t.invoiceId }}<small class="tf__sub">{{ t.invoiceLabel }}</small></td>
+                <td>{{ t.method }}</td>
+                <td class="tf__num">{{ fmt.money(t.amount) }}</td>
+                <td><span class="status-badge status-badge--{{ txTone[t.status] }}">{{ t.status }}</span></td>
+                <td>{{ t.receiptNumber || '—' }}</td>
+                <td class="actions-cell">
+                  <span class="tf__actions">
+                    @if (t.status === 'Successful' && t.paymentId) {
+                      <app-button variant="outline" size="sm" icon="receipt_long" [ariaLabel]="'Download receipt for ' + t.ref" (clicked)="downloadReceipt(t)">Receipt</app-button>
+                    }
+                    @if (isOpenAttempt(t)) {
+                      <app-button variant="outline" size="sm" icon="hourglass_top" [ariaLabel]="'Check status of ' + t.ref" (clicked)="checkStatus(t)">Check status</app-button>
+                      <app-button variant="text" size="sm" [ariaLabel]="'Open payment window for ' + t.ref" (clicked)="openPending(t)">Open</app-button>
+                    }
+                    @if (t.status === 'Failed') {
+                      <small class="tf__sub">Nothing was charged to the invoice.</small>
+                    }
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </app-table-card>
+      <p class="tf__help"><mat-icon fontSet="material-icons-outlined">support_agent</mat-icon>Payment delayed or disputed? Keep the reference number and contact the hostel office from Help &amp; Support.</p>
+    }
+  }
+</div>
