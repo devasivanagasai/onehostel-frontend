@@ -420,27 +420,38 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
 .brand-scene {
   position: relative;
   flex: 1;
-  min-height: 380px;
+  min-height: 390px;
   max-height: 470px;
   width: 100%;
   max-width: 600px;
 }
 
+// Dashboard cards stack on the right; the building sits behind-left.
+.brand-scene__cards {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+}
+
 .brand-scene__building {
   position: absolute;
-  left: -2%;
+  left: -4%;
   bottom: 0;
-  width: 88%;
+  width: 96%;
   max-width: 520px;
   max-height: 100%;
   filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.5));
 }
 
 .glass {
-  position: absolute;
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 14px;
   background: rgba(17, 24, 64, 0.72);
   border: 1px solid rgba(165, 180, 252, 0.25);
@@ -484,9 +495,7 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
 
 // Dashboard Overview: three stat tiles + occupancy chart
 .glass--overview {
-  top: 0;
-  right: 0;
-  width: 300px;
+  width: 100%;
   animation-delay: -2s;
 }
 
@@ -554,9 +563,9 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
 
 // Recent Activity
 .glass--activity {
-  bottom: 6%;
-  right: 6%;
-  width: 230px;
+  width: 78%;
+  align-self: flex-end;
+  margin-top: 12px; // sits below the overview card, as in the design
   animation-delay: -4.5s;
 }
 
@@ -566,7 +575,7 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 6px;
 
   li {
     display: flex;
@@ -677,8 +686,8 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
     font-size: 42px;
   }
 
-  .glass--overview {
-    right: 6%;
+  .brand-scene__cards {
+    right: 2%;
   }
 }
 
