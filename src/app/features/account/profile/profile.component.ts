@@ -1,6 +1,7 @@
 import { Component, DestroyRef, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
@@ -57,7 +58,8 @@ export class ProfileComponent implements UnsavedChangesAware {
     lastName: ['', [Validators.required, CustomValidators.noWhitespace, Validators.maxLength(50)]],
     email: ['', [Validators.required, Validators.email]],
     mobileCode: ['+91', Validators.required],
-    mobile: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+    // Same rule as the backend (MobileNumber): 10 digits starting with 6-9
+    mobile: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
     avatarDataUrl: [''],
   });
 
@@ -194,11 +196,18 @@ export class ProfileComponent implements UnsavedChangesAware {
         mobile: v.mobile,
         avatarDataUrl: v.avatarDataUrl,
       })
-      .subscribe((changes) => {
-        this.saving = false;
-        this.form.markAsPristine();
-        if (this.profile) this.resetForm(this.profile);
-        this.toast(changes.length ? 'Profile updated successfully' : 'No changes to save');
+      .subscribe({
+        next: (changes) => {
+          this.saving = false;
+          this.form.markAsPristine();
+          if (this.profile) this.resetForm(this.profile);
+          this.toast(changes.length ? 'Profile updated successfully' : 'No changes to save');
+        },
+        error: (error: HttpErrorResponse) => {
+          // The edits stay in the form so the user can correct them (e.g. an email another account uses)
+          this.saving = false;
+          this.toast(error.error?.errors?.[0]?.message || error.error?.message || 'Could not save your profile. Please try again.', true);
+        },
       });
   }
 

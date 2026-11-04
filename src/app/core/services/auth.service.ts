@@ -40,6 +40,8 @@ import { AuditLogService } from './audit-log.service';
 import { HostelAdminAccount, HostelAdminAccountService } from './hostel-admin-account.service';
 import { builtInPassword, findBuiltInAccount } from '../models/built-in-accounts';
 import { SystemSettingsService } from './system-settings.service';
+import { PrivilegeService } from './privilege.service';
+import { matchesRoute } from '../utils/route-match';
 
 const TOKEN_KEY = 'onehostel_token';
 const USER_KEY = 'onehostel_user';
@@ -99,12 +101,6 @@ export const HOSTEL_OWNER_ROUTES = [
   '/hostel-settings',
 ];
 
-/** True when `route` is `base` or a page under it ("/fees", "/fees/123", "/fees?tab=charges"). */
-export function matchesRoute(route: string, base: string): boolean {
-  const path = route.split(/[?#]/)[0];
-  return path === base || path.startsWith(base + '/');
-}
-
 /** When this browser last signed in (ISO). Kept after sign-out so My Profile can show it. */
 const LAST_LOGIN_KEY = 'onehostel_last_login';
 /** Used if Security Settings has no valid Maximum Login Attempts. */
@@ -145,6 +141,7 @@ export class AuthService {
     private auditLog: AuditLogService,
     private hostelAdmins: HostelAdminAccountService,
     private systemSettings: SystemSettingsService,
+    private privileges: PrivilegeService,
   ) {}
 
   get currentUser(): AuthUser | null {
@@ -155,7 +152,7 @@ export class AuthService {
     return environment.useMockAuth ? this.mockLogin(request) : this.backendLogin(request);
   }
 
-  /** POST /auth/login on oh-auth-gtwy, which signs in with Keycloak and returns its tokens. */
+  /** POST /auth/login through the gateway to onehostel-access-core, which signs in with Keycloak and returns its tokens. */
   private backendLogin(request: LoginRequest): Observable<LoginResponse> {
     const identifier = normalizeIdentifier(request.identifier);
     const credentials: LoginCredentials = { identifier, password: request.password };
@@ -329,6 +326,8 @@ export class AuthService {
       tap((res) => {
         this.setSession(res, rememberMe);
         this.auditLog.record('Login', res.user.name);
+        // What each privToken bit means; until it arrives canAccess() falls back to the role rules
+        this.privileges.load().subscribe();
       }),
       catchError((error: HttpErrorResponse) => {
         this.auditLog.record('Login', identifier, { status: 'Failed', details: error.error?.message });
@@ -495,18 +494,47 @@ export class AuthService {
   }
 
   /**
-   * Whether the signed-in user may open this route. The single source for role-based visibility:
+   * Whether the signed-in user may open this route. The single source for page visibility:
    * the sidebar, global search, dashboard shortcuts, notifications and adminGuard all use it.
-   *  - Hostel Owner modules (HOSTEL_OWNER_ROUTES): Hostel Owners only.
+   *
+   * Signed in through the backend, a page covered by a privilege opens only when the user's privToken
+   * has that privilege's bit (the gateway refuses its API calls otherwise). Pages no privilege covers,
+   * mock sign-in, and the moment before the catalogue has loaded use the role rules:
+   *  - Hostel Owner modules (HOSTEL_OWNER_ROUTES): Hostel Owners and Hostel Managers.
    *  - Admin modules (ADMIN_ONLY_ROUTES): Admins only.
    *  - Everything else (Dashboard, Profile, Change Password): every signed-in user.
    */
   canAccess(route: string): boolean {
+    const token = this.currentUser?.privToken;
+    if (!environment.useMockAuth && token !== undefined) {
+      const allowed = this.privileges.routeAccess(token, route);
+      if (allowed !== null) return allowed;
+    }
     if (OWNER_ONLY_ROUTES.some((r) => matchesRoute(route, r))) return this.isHostelOwner;
     if (MANAGER_ONLY_ROUTES.some((r) => matchesRoute(route, r))) return this.isHostelManager;
     if (HOSTEL_OWNER_ROUTES.some((r) => matchesRoute(route, r))) return this.isHostelOwner || this.isHostelManager;
     if (ADMIN_ONLY_ROUTES.some((r) => matchesRoute(route, r))) return this.isAdmin;
     return true;
+  }
+
+  /**
+   * Whether the signed-in user holds a privilege, e.g. 'ROOMS_MANAGE' (see *ohPrivilege). Mock sign-in
+   * has no privileges, so there it only depends on the page being open (canAccess).
+   */
+  hasPrivilege(code: string): boolean {
+    if (environment.useMockAuth) return true;
+    return this.privileges.has(this.currentUser?.privToken, code);
+  }
+
+  /** Changes whenever what the user may see can change: their roles, their privToken, the catalogue. */
+  get accessKey(): string {
+    const user = this.currentUser;
+    return [user?.roles?.join(','), user?.privToken, this.privileges.catalog()?.length ?? 'none'].join('|');
+  }
+
+  /** Loads the privilege catalogue for a session restored at startup (backend sign-in only). */
+  loadPrivileges(): void {
+    if (!environment.useMockAuth && this.currentUser?.privToken !== undefined) this.privileges.load().subscribe();
   }
 
   /**
@@ -697,7 +725,7 @@ function toLoginResponse(res: ApiResponse<KeycloakTokenResponse>, identifier: st
     refreshToken: tokens.refresh_token,
     expiresIn: tokens.expires_in,
     refreshExpiresIn: tokens.refresh_expires_in,
-    user: userFromAccessToken(tokens.access_token, identifier),
+    user: { ...userFromAccessToken(tokens.access_token, identifier), privToken: tokens.priv_token },
   };
 }
 
@@ -775,7 +803,8 @@ export function decodeAccessToken(token: string): JwtUserPayload | null {
   const username = claims.preferred_username ?? claims.email ?? claims.sub;
 
   return {
-    userId: claims.sub,
+    // The OneHostel user id (what the backend records as createdBy and in audit logs); sub is Keycloak's own id
+    userId: claims.user_id ?? claims.sub,
     username,
     email: claims.email ?? '',
     name: claims.name ?? (fullName || username),

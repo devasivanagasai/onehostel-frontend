@@ -18,6 +18,11 @@ export interface AuthUser {
   /** Keycloak username (preferred_username). */
   username?: string;
   organizationId?: string;
+  /**
+   * One character per privilege bit, "1" where granted (priv_token from sign-in and refresh). Checked
+   * against the privilege catalogue by PrivilegeService. Absent in mock sign-in.
+   */
+  privToken?: string;
   /** Profile photo as a data URL, when one has been uploaded. */
   avatarUrl?: string;
 }
@@ -32,7 +37,7 @@ export interface LoginResponse {
   user: AuthUser;
 }
 
-/** Envelope every backend endpoint replies with (CommonResponseObject in oh-access-core). */
+/** Envelope every backend endpoint replies with (CommonResponseObject in onehostel-common). */
 export interface CommonResponseObject<T> {
   success: boolean;
   message?: string;
@@ -47,10 +52,10 @@ export interface CommonResponseObject<T> {
 /** Shorter name used across the services. */
 export type ApiResponse<T> = CommonResponseObject<T>;
 
-/** Origin of a request (ClientSource in oh-access-core). */
+/** Origin of a request (ClientSource in onehostel-common). */
 export type ClientSource = 'WEB' | 'MOBILE_ANDROID' | 'MOBILE_IOS';
 
-/** Envelope every backend endpoint takes (CommonRequestObject in oh-access-core). */
+/** Envelope every backend endpoint takes (CommonRequestObject in onehostel-common). */
 export interface CommonRequestObject<T> {
   requestObject: T;
   requestId?: string;
@@ -75,9 +80,11 @@ export interface LoginCredentials {
 /** What a one-time code from POST /auth/otp/send is for; a code only works for its own purpose. */
 export type OtpPurpose = 'LOGIN' | 'FORGOT_PASSWORD';
 
-/** The claims of a Keycloak access token issued by oh-auth-gtwy. */
+/** The claims of a Keycloak access token issued through onehostel-access-core. */
 export interface AccessTokenClaims {
   sub: string;
+  /** OneHostel user id (realm mapper "user-id"); prefer it over sub. */
+  user_id?: string;
   /** Expiry, seconds since the epoch. */
   exp: number;
   iat?: number;
@@ -106,7 +113,7 @@ export interface JwtUserPayload {
   expiresAt: number;
 }
 
-/** Body of POST /auth/login and /auth/refresh-token (KeycloakTokenResponse). */
+/** Body of POST /auth/login, /auth/otp/verify and /auth/refresh-token (AuthTokenResponse in onehostel-access-core). */
 export interface KeycloakTokenResponse {
   access_token: string;
   expires_in: number;
@@ -116,6 +123,20 @@ export interface KeycloakTokenResponse {
   id_token?: string;
   session_state?: string;
   scope?: string;
+  /** The privToken of the roles in access_token. */
+  priv_token?: string;
+}
+
+/** One entry of GET /access/privileges: what a privToken bit stands for. */
+export interface Privilege {
+  /** Stable name, e.g. ROOMS_MANAGE. */
+  code: string;
+  /** 1-based position in the privToken. */
+  bit: number;
+  name: string;
+  module: string;
+  /** App pages this privilege opens ("/rooms" also covers "/rooms/123"). */
+  uiRoutes: string[];
 }
 
 /** How the gateway sent a code: by email to an email address, by SMS to a mobile number. */

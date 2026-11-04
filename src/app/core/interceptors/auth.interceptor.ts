@@ -29,7 +29,7 @@ function isUnauthorized(error: unknown): error is HttpErrorResponse {
  * For calls to the gateway:
  *  - adds X-Device-Id to every call and `Authorization: Bearer <access token>` to protected ones;
  *  - renews an access token that has already expired before sending, instead of waiting for the 401;
- *  - on a 401 (the gateway's is an empty body), refreshes once and retries. Requests failing at the
+ *  - on a 401 (an UNAUTHORIZED ApiErrorResponse from the gateway), refreshes once and retries. Requests failing at the
  *    same time share that one refresh (AuthService.refreshToken), so none of them are dropped;
  *  - signs out to /login (keeping the page as returnUrl) when the session can't be renewed.
  * Calls to other hosts pass through untouched, so the token never leaves for a third party.
