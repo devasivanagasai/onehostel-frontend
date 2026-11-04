@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../core/models/auth.models';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
@@ -59,6 +61,8 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
   visible: Record<PasswordField, boolean> = { currentPassword: false, newPassword: false, confirmPassword: false };
   capsLockOn = false;
   saving = false;
+  /** A failure reported by the backend, shown above the Update button. */
+  serverError = '';
   /** Set after a successful change; swaps the form for a confirmation panel. */
   done = false;
 
@@ -171,19 +175,30 @@ export class ChangePasswordComponent implements UnsavedChangesAware {
     }
     const { currentPassword, newPassword } = this.form.getRawValue();
     this.saving = true;
+    this.serverError = '';
 
-    this.account.changePassword(currentPassword, newPassword).subscribe((result) => {
-      this.saving = false;
-      if (result === 'wrong-current') {
-        const current = this.form.controls.currentPassword;
-        current.setErrors({ incorrect: true });
-        current.markAsTouched();
-        this.currentInput?.nativeElement.focus();
-        this.currentInput?.nativeElement.select();
-        return;
-      }
-      this.form.reset();
-      this.done = true;
+    this.account.changePassword(currentPassword, newPassword).subscribe({
+      next: (result) => {
+        this.saving = false;
+        if (result === 'wrong-current') {
+          const current = this.form.controls.currentPassword;
+          current.setErrors({ incorrect: true });
+          current.markAsTouched();
+          this.currentInput?.nativeElement.focus();
+          this.currentInput?.nativeElement.select();
+          return;
+        }
+        this.form.reset();
+        this.done = true;
+      },
+      // Rules the backend enforces too (format, not reusing the current password), or a network failure.
+      error: (error: HttpErrorResponse) => {
+        this.saving = false;
+        this.serverError = apiErrorMessage(error, {
+          fallback: 'Could not change the password. Please try again.',
+          unavailable: 'Changing the password is not available yet. Please try again later.',
+        });
+      },
     });
   }
 

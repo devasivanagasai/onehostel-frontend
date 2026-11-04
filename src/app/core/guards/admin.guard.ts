@@ -9,5 +9,5 @@ import { AuthService } from '../services/auth.service';
 export const adminGuard: CanActivateChildFn = (_route, state) => {
   const authService = inject(AuthService);
   const path = state.url.split(/[?#]/)[0];
-  return authService.canAccess(path) ? true : inject(Router).createUrlTree(['/dashboard']);
+  return authService.canAccess(path) ? true : inject(Router).parseUrl(authService.landingRoute);
 };

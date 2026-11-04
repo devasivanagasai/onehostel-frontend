@@ -32,6 +32,8 @@ const MESSAGES: Record<string, (error: unknown, fieldLabel: string) => string> =
   bedsLessThanRooms: () => `Total beds cannot be fewer than the number of rooms.`,
   endBeforeStart: () => `End date cannot be earlier than the start date.`,
   fieldMismatch: (_e, label) => `${label} does not match.`,
+  /** Set by a form from the backend's reply; the value is the backend's message. */
+  server: (e) => String(e),
   minAge: (e, label) => {
     const err = e as { requiredAge: number };
     return `${label} must be at least ${err.requiredAge} years.`;

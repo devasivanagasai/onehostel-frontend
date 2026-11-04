@@ -7,87 +7,139 @@
         <span class="login-panel__logo-text">ONEHOSTEL</span>
       </header>
 
-      <div class="login-card" [class.login-card--shake]="loginFailed">
+      <div class="login-card" [class.login-card--shake]="loginFailed()">
         <div class="login-card__header">
           <h1 class="login-card__title">Welcome Back</h1>
-          <p class="login-card__subtitle">Enter your login ID and password to access your account.</p>
+          <p class="login-card__subtitle">{{ subtitle() }}</p>
         </div>
 
-        @if (signedOutForInactivity) {
+        <div class="login-tabs" role="tablist" aria-label="Sign-in method">
+          <button
+            type="button"
+            role="tab"
+            class="login-tab"
+            [class.login-tab--active]="mode() === 'password'"
+            [attr.aria-selected]="mode() === 'password'"
+            (click)="setMode('password')"
+          >
+            <mat-icon fontSet="material-icons-outlined">lock</mat-icon>
+            Password
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="login-tab"
+            [class.login-tab--active]="mode() === 'otp'"
+            [attr.aria-selected]="mode() === 'otp'"
+            (click)="setMode('otp')"
+          >
+            <mat-icon fontSet="material-icons-outlined">sms</mat-icon>
+            OTP
+          </button>
+        </div>
+
+        @if (error()) {
+          <p class="login-alert" [class.login-alert--info]="mobileAppOnly()" role="alert">
+            <mat-icon fontSet="material-icons-outlined">{{ mobileAppOnly() ? 'smartphone' : 'error_outline' }}</mat-icon>
+            {{ error() }}
+          </p>
+        } @else if (signOutNotice) {
           <p class="login-notice" role="status">
             <mat-icon fontSet="material-icons-outlined">schedule</mat-icon>
-            You were signed out because you were inactive. Please log in again.
+            {{ signOutNotice }}
           </p>
         }
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form" novalidate>
-          <!-- Login ID -->
-          <div class="login-form__field">
-            <label class="login-form__label" for="login-username">Login ID</label>
-            <mat-form-field appearance="outline" class="full-width custom-outline-field">
-              <input
-                id="login-username"
-                matInput
-                type="text"
-                placeholder="Email, mobile number or username"
-                formControlName="username"
-                autocomplete="username"
-                required
-              />
-            </mat-form-field>
-            <app-form-error [control]="form.get('username')" label="Login ID"></app-form-error>
-          </div>
-
-          <!-- Password -->
-          <div class="login-form__field">
-            <!-- Label and "Forgot Password?" share one line -->
-            <div class="login-form__label-row">
-              <label class="login-form__label" for="login-password">Password</label>
-              <a href="#" class="login-form__forgot" (click)="onForgotPassword($event)">Forgot Password?</a>
+          @if (!otpSentTo()) {
+            <!-- Email or mobile number: shared by both tabs -->
+            <div class="login-form__field">
+              <label class="login-form__label" for="login-identifier">Email or Mobile Number</label>
+              <mat-form-field appearance="outline" class="full-width custom-outline-field">
+                <input
+                  #identifierInput
+                  id="login-identifier"
+                  matInput
+                  type="text"
+                  placeholder="you@example.com or 10-digit mobile"
+                  formControlName="identifier"
+                  autocomplete="username"
+                  required
+                />
+              </mat-form-field>
+              <app-form-error [control]="form.controls.identifier" label="Email or Mobile Number"></app-form-error>
             </div>
-            <mat-form-field appearance="outline" class="full-width custom-outline-field">
-              <input
-                #passwordInput
-                id="login-password"
-                matInput
-                [type]="hidePassword ? 'password' : 'text'"
-                placeholder="Enter your password"
-                formControlName="password"
-                autocomplete="current-password"
-                required
-                (keyup)="onPasswordKeyEvent($event)"
-                (keydown)="onPasswordKeyEvent($event)"
-              />
-              <button
-                mat-icon-button
-                matSuffix
-                type="button"
-                (click)="togglePasswordVisibility()"
-                [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'"
-                [attr.aria-pressed]="!hidePassword"
-                class="eye-icon-button"
-                [class.eye-icon-button--active]="!hidePassword"
-              >
-                <mat-icon fontSet="material-icons-outlined" class="eye-icon">{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
-              </button>
-            </mat-form-field>
-            @if (capsLockOn) {
-              <p class="login-form__caps-warning" role="alert">
-                <mat-icon>info</mat-icon>
-                Caps Lock is on
-              </p>
-            }
-            <app-form-error [control]="form.get('password')" label="Password"></app-form-error>
-          </div>
+          }
 
-          <app-button
-            variant="primary"
-            type="submit"
-            [loading]="loading"
-            class="login-form__submit-btn"
-          >
-            Login
-          </app-button>
+          @if (mode() === 'password') {
+            <div class="login-form__field">
+              <label class="login-form__label" for="login-password">Password</label>
+              <mat-form-field appearance="outline" class="full-width custom-outline-field">
+                <input
+                  #passwordInput
+                  id="login-password"
+                  matInput
+                  [type]="hidePassword() ? 'password' : 'text'"
+                  placeholder="Enter your password"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  required
+                  (keyup)="onPasswordKeyEvent($event)"
+                  (keydown)="onPasswordKeyEvent($event)"
+                />
+                <button
+                  mat-icon-button
+                  matSuffix
+                  type="button"
+                  (click)="hidePassword.set(!hidePassword())"
+                  [attr.aria-label]="hidePassword() ? 'Show password' : 'Hide password'"
+                  [attr.aria-pressed]="!hidePassword()"
+                  class="eye-icon-button"
+                  [class.eye-icon-button--active]="!hidePassword()"
+                >
+                  <mat-icon fontSet="material-icons-outlined" class="eye-icon">{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+                </button>
+              </mat-form-field>
+              @if (capsLockOn()) {
+                <p class="login-form__caps-warning" role="alert">
+                  <mat-icon>info</mat-icon>
+                  Caps Lock is on
+                </p>
+              }
+              <app-form-error [control]="form.controls.password" label="Password"></app-form-error>
+              <div class="login-form__forgot-row">
+                <a href="#" class="login-form__forgot" (click)="onForgotPassword($event)">Forgot Password?</a>
+              </div>
+            </div>
+
+            <app-button variant="primary" type="submit" [loading]="loading()" class="login-form__submit-btn">Login</app-button>
+          } @else if (!otpSentTo()) {
+            <app-button variant="primary" type="submit" [loading]="loading()" class="login-form__submit-btn">Send OTP</app-button>
+          } @else {
+            <!-- OTP step 2: the 6-digit code -->
+            <div class="login-form__field">
+              <div class="login-form__label-row">
+                <span class="login-form__label">Code sent to {{ otpSentTo() }}</span>
+                <a href="#" class="login-form__forgot" (click)="$event.preventDefault(); changeOtpIdentifier()">Change</a>
+              </div>
+              <app-otp-input
+                formControlName="otp"
+                ariaLabel="6-digit sign-in code"
+                [invalid]="form.controls.otp.invalid && form.controls.otp.touched"
+              ></app-otp-input>
+              <app-form-error [control]="form.controls.otp" label="OTP"></app-form-error>
+              <p class="login-form__resend">
+                @if (resendIn() > 0) {
+                  Resend OTP in {{ resendIn() }}s
+                } @else {
+                  Didn't get it?
+                  <a href="#" class="login-form__forgot" (click)="$event.preventDefault(); sendOtp()">Resend OTP</a>
+                }
+              </p>
+            </div>
+
+            <app-button variant="primary" type="submit" [loading]="loading()" class="login-form__submit-btn">Verify &amp; Login</app-button>
+          }
         </form>
 
         <p class="login-card__secure">

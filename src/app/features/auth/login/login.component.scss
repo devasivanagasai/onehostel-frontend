@@ -351,6 +351,102 @@ $primary-dark: #2563eb; // accents (tabs, links, focus) use the same electric bl
   }
 }
 
+// Password / OTP switch.
+.login-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px;
+  border-radius: 12px;
+  background: $field-bg;
+}
+
+.login-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: $muted;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    color: $text;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $primary-dark;
+    outline-offset: 2px;
+  }
+}
+
+.login-tab--active,
+.login-tab--active:hover {
+  background: #ffffff;
+  color: $primary-dark;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+// "Forgot Password?" right-aligned under the password field.
+.login-form__forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+// Sign-in failures, from the backend's message.
+.login-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: -6px 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #b91c1c;
+
+  mat-icon {
+    flex-shrink: 0;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// Tenants and guards: not an error, a pointer to the mobile app.
+.login-alert--info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.login-form__resend {
+  margin: 6px 4px 0;
+  font-size: 13px;
+  color: $muted;
+
+  .login-form__forgot {
+    font-size: 13px;
+  }
+}
+
 .login-card__secure {
   display: flex;
   align-items: center;
